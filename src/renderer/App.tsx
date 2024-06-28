@@ -1,41 +1,35 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
-import icon from '../../assets/icon.svg';
 import './App.css';
+import { useEffect, useState } from 'react';
+import Settings from './Settings';
 
 function Hello() {
+  // settings
+  const [gotSettings, setGotSettings] = useState(false);
+  const [startggApiKey, setStartggApiKey] = useState('');
+  const [appVersion, setAppVersion] = useState('');
+  const [latestAppVersion, setLatestAppVersion] = useState('');
+  useEffect(() => {
+    const inner = async () => {
+      const appVersionPromise = window.electron.getVersion();
+      const latestAppVersionPromise = window.electron.getLatestVersion();
+      const startggKeyPromise = window.electron.getStartggKey();
+      setAppVersion(await appVersionPromise);
+      setLatestAppVersion(await latestAppVersionPromise);
+      setStartggApiKey(await startggKeyPromise);
+      setGotSettings(true);
+    };
+    inner();
+  }, []);
+
   return (
-    <div>
-      <div className="Hello">
-        <img width="200" alt="icon" src={icon} />
-      </div>
-      <h1>electron-react-boilerplate</h1>
-      <div className="Hello">
-        <a
-          href="https://electron-react-boilerplate.js.org/"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <button type="button">
-            <span role="img" aria-label="books">
-              📚
-            </span>
-            Read our docs
-          </button>
-        </a>
-        <a
-          href="https://github.com/sponsors/electron-react-boilerplate"
-          target="_blank"
-          rel="noreferrer"
-        >
-          <button type="button">
-            <span role="img" aria-label="folded hands">
-              🙏
-            </span>
-            Donate
-          </button>
-        </a>
-      </div>
-    </div>
+    <Settings
+      startggApiKey={startggApiKey}
+      setStartggApiKey={setStartggApiKey}
+      appVersion={appVersion}
+      latestAppVersion={latestAppVersion}
+      gotSettings={gotSettings}
+    />
   );
 }
 
