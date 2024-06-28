@@ -17,9 +17,13 @@ import {
 import Store from 'electron-store';
 import { readFile } from 'fs/promises';
 import { parse } from 'papaparse';
-import { CsvParticipant, DiscordConfig, DiscordStatus } from '../common/types';
+import {
+  CSV_DISCORD_KEY,
+  CsvParticipant,
+  DiscordConfig,
+  DiscordStatus,
+} from '../common/types';
 
-const CSV_DISCORD_KEY = 'JoinOnDiscord';
 export default function setupIPCs(mainWindow: BrowserWindow) {
   const store = new Store();
   let discordConfig = store.has('discordConfig')

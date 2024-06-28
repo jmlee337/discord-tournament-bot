@@ -1,3 +1,4 @@
+export const CSV_DISCORD_KEY = 'JoinOnDiscord';
 export type CsvParticipant = {
   Id: string;
   JoinOnDiscord: string;
