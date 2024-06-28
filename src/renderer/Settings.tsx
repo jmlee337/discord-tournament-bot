@@ -14,12 +14,16 @@ import { ContentCopy, Settings as SettingsIcon } from '@mui/icons-material';
 import { useMemo, useState } from 'react';
 
 export default function Settings({
+  discordToken,
+  setDiscordToken,
   startggApiKey,
   setStartggApiKey,
   appVersion,
   latestAppVersion,
   gotSettings,
 }: {
+  discordToken: string;
+  setDiscordToken: (discordToken: string) => void;
   startggApiKey: string;
   setStartggApiKey: (startggApiKey: string) => void;
   appVersion: string;
@@ -62,7 +66,11 @@ export default function Settings({
     return false;
   }, [appVersion, latestAppVersion]);
 
-  if (gotSettings && !hasAutoOpened && (!startggApiKey || needUpdate)) {
+  if (
+    gotSettings &&
+    !hasAutoOpened &&
+    (!discordToken || !startggApiKey || needUpdate)
+  ) {
     setOpen(true);
     setHasAutoOpened(true);
   }
@@ -82,7 +90,10 @@ export default function Settings({
         fullWidth
         open={open}
         onClose={async () => {
-          await Promise.all([window.electron.setStartggKey(startggApiKey)]);
+          await Promise.all([
+            window.electron.setDiscordToken(discordToken),
+            window.electron.setStartggApiKey(startggApiKey),
+          ]);
           setOpen(false);
         }}
       >
@@ -98,6 +109,44 @@ export default function Settings({
           </Typography>
         </Stack>
         <DialogContent sx={{ pt: 0 }}>
+          <DialogContentText>
+            Get your bot&apos;s token by clicking “Reset Token” on the “Bot”
+            settings tab in the appropriate app found on{' '}
+            <a
+              href="https://discord.com/developers/applications"
+              target="_blank"
+              rel="noreferrer"
+            >
+              this page
+            </a>
+            . Keep it private!
+          </DialogContentText>
+          <Stack alignItems="center" direction="row" gap="8px">
+            <TextField
+              autoFocus
+              fullWidth
+              label="Discord token (Keep it private!)"
+              onChange={(event) => {
+                setDiscordToken(event.target.value);
+              }}
+              size="small"
+              type="password"
+              value={discordToken}
+              variant="standard"
+            />
+            <Button
+              disabled={copied}
+              endIcon={copied ? undefined : <ContentCopy />}
+              onClick={async () => {
+                await window.electron.copyToClipboard(discordToken);
+                setCopied(true);
+                setTimeout(() => setCopied(false), 5000);
+              }}
+              variant="contained"
+            >
+              {copied ? 'Copied!' : 'Copy'}
+            </Button>
+          </Stack>
           <DialogContentText>
             Get your start.gg API key by clicking “Create new token” in the
             <br />

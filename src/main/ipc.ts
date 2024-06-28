@@ -3,9 +3,24 @@ import Store from 'electron-store';
 
 export default function setupIPCs() {
   const store = new Store();
+  let discordToken = store.has('discordToken')
+    ? (store.get('discordToken') as string)
+    : '';
   let startggApiKey = store.has('startggApiKey')
     ? (store.get('startggApiKey') as string)
     : '';
+
+  ipcMain.removeHandler('getDiscordToken');
+  ipcMain.handle('getDiscordToken', () => discordToken);
+
+  ipcMain.removeHandler('setDiscordToken');
+  ipcMain.handle(
+    'setDiscordToken',
+    (event: IpcMainInvokeEvent, newDiscordToken: string) => {
+      store.set('discordToken', newDiscordToken);
+      discordToken = newDiscordToken;
+    },
+  );
 
   ipcMain.removeHandler('getStartggApiKey');
   ipcMain.handle('getStartggApiKey', () => startggApiKey);

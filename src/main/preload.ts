@@ -3,9 +3,13 @@
 import { contextBridge, ipcRenderer } from 'electron';
 
 const electronHandler = {
-  getStartggKey: (): Promise<string> => ipcRenderer.invoke('getStartggApiKey'),
-  setStartggKey: (startggKey: string): Promise<void> =>
-    ipcRenderer.invoke('setStartggApiKey', startggKey),
+  getDiscordToken: (): Promise<string> => ipcRenderer.invoke('getDiscordToken'),
+  setDiscordToken: (discordToken: string): Promise<void> =>
+    ipcRenderer.invoke('setDiscordToken', discordToken),
+  getStartggApiKey: (): Promise<string> =>
+    ipcRenderer.invoke('getStartggApiKey'),
+  setStartggApiKey: (startggApiKey: string): Promise<void> =>
+    ipcRenderer.invoke('setStartggApiKey', startggApiKey),
   getVersion: (): Promise<string> => ipcRenderer.invoke('getVersion'),
   getLatestVersion: (): Promise<string> =>
     ipcRenderer.invoke('getLatestVersion'),
