@@ -25,7 +25,14 @@ function Hello() {
   const [gotSettings, setGotSettings] = useState(false);
   const [discordApplicationId, setDiscordApplicationId] = useState('');
   const [discordToken, setDiscordToken] = useState('');
+  const [discordStatus, setDiscordStatus] = useState(DiscordStatus.NONE);
   const [startggApiKey, setStartggApiKey] = useState('');
+  const [tournament, setTournament] = useState<StartggTournament>({
+    name: '',
+    slug: '',
+    events: [],
+  });
+  const [eventDescription, setEventDescription] = useState('');
   const [appVersion, setAppVersion] = useState('');
   const [latestAppVersion, setLatestAppVersion] = useState('');
   useEffect(() => {
@@ -34,17 +41,25 @@ function Hello() {
       const latestAppVersionPromise = window.electron.getLatestVersion();
       const discordConfigPromise = window.electron.getDiscordConfig();
       const startggApiKeyPromise = window.electron.getStartggApiKey();
+      const startingStatePromise = window.electron.getStartingState();
       setAppVersion(await appVersionPromise);
       setLatestAppVersion(await latestAppVersionPromise);
       setDiscordApplicationId((await discordConfigPromise).applicationId);
       setDiscordToken((await discordConfigPromise).token);
+      setDiscordStatus((await startingStatePromise).discordStatus);
       setStartggApiKey(await startggApiKeyPromise);
+      setTournament((await startingStatePromise).tournament);
+
+      const tournamentName = (await startingStatePromise).tournament.name;
+      const { eventName } = await startingStatePromise;
+      if (tournamentName && eventName) {
+        setEventDescription(`${tournamentName}, ${eventName}`);
+      }
       setGotSettings(true);
     };
     inner();
   }, []);
 
-  const [discordStatus, setDiscordStatus] = useState(DiscordStatus.NONE);
   useEffect(() => {
     window.electron.onDiscordStatus((event, newDiscordStatus) => {
       setDiscordStatus(newDiscordStatus);
@@ -52,14 +67,8 @@ function Hello() {
   });
 
   const [csvPath, setCsvPath] = useState('');
-  const [eventDescription, setEventDescription] = useState('');
   const [tournamentDialogOpen, setTournamentDialogOpen] = useState(false);
   const [gettingTournament, setGettingTournament] = useState(false);
-  const [tournament, setTournament] = useState<StartggTournament>({
-    name: '',
-    slug: '',
-    events: [],
-  });
   const getStartggTournamentOnSubmit = async (
     event: FormEvent<HTMLFormElement>,
   ) => {
@@ -76,7 +85,7 @@ function Hello() {
         setTournament(newTournament);
         if (newTournament.events.length === 1) {
           const newEvent = newTournament.events[0];
-          await window.electron.setEventId(newEvent.id);
+          await window.electron.setEvent(newEvent.id, newEvent.name);
           setEventDescription(`${newTournament.name}, ${newEvent.name}`);
           setTournamentDialogOpen(false);
         }
@@ -164,7 +173,7 @@ function Hello() {
                   onClick={async () => {
                     try {
                       setGettingTournament(true);
-                      await window.electron.setEventId(event.id);
+                      await window.electron.setEvent(event.id, event.name);
                       setEventDescription(`${tournament.name}, ${event.name}`);
                       setTournamentDialogOpen(false);
                     } finally {

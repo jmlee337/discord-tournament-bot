@@ -41,3 +41,9 @@ export type StartggTournament = {
   slug: string;
   events: StartggEvent[];
 };
+
+export type StartingState = {
+  discordStatus: DiscordStatus;
+  eventName: string;
+  tournament: StartggTournament;
+};

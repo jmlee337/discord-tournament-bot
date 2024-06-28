@@ -5,6 +5,7 @@ import {
   DiscordConfig,
   DiscordStatus,
   StartggTournament,
+  StartingState,
 } from '../common/types';
 
 const electronHandler = {
@@ -19,8 +20,10 @@ const electronHandler = {
     ipcRenderer.invoke('setStartggApiKey', startggApiKey),
   getTournament: (slug: string): Promise<StartggTournament> =>
     ipcRenderer.invoke('getTournament', slug),
-  setEventId: (id: number): Promise<void> =>
-    ipcRenderer.invoke('setEventId', id),
+  setEvent: (id: number, name: string): Promise<void> =>
+    ipcRenderer.invoke('setEvent', id, name),
+  getStartingState: (): Promise<StartingState> =>
+    ipcRenderer.invoke('getStartingState'),
   getVersion: (): Promise<string> => ipcRenderer.invoke('getVersion'),
   getLatestVersion: (): Promise<string> =>
     ipcRenderer.invoke('getLatestVersion'),

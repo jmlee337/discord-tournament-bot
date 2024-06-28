@@ -23,6 +23,8 @@ import {
   DiscordConfig,
   DiscordStatus,
   StartggSet,
+  StartggTournament,
+  StartingState,
 } from '../common/types';
 import { getEventEntrants, getEventSets, getTournament } from './startgg';
 
@@ -46,7 +48,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
    * Discord
    */
   let client: Client | null = null;
+  let discordStatus = DiscordStatus.NONE;
   const updateDiscordStatus = (newDiscordStatus: DiscordStatus) => {
+    discordStatus = newDiscordStatus;
     mainWindow.webContents.send('discordStatus', newDiscordStatus);
   };
   const registerSlashCommands = async () => {
@@ -184,12 +188,22 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     return csvPath;
   });
 
+  let tournament: StartggTournament = {
+    name: '',
+    slug: '',
+    events: [],
+  };
   ipcMain.removeHandler('getTournament');
-  ipcMain.handle('getTournament', (event: IpcMainInvokeEvent, slug: string) =>
-    getTournament(slug),
+  ipcMain.handle(
+    'getTournament',
+    async (event: IpcMainInvokeEvent, slug: string) => {
+      tournament = await getTournament(slug);
+      return tournament;
+    },
   );
 
   let eventId = 0;
+  let eventName = '';
   let timeout: NodeJS.Timeout | null = null;
   const updateEntrantIdToSet = (sets: StartggSet[]) => {
     entrantIdToSet.clear();
@@ -210,8 +224,8 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
 
   ipcMain.removeHandler('setEventId');
   ipcMain.handle(
-    'setEventId',
-    async (event: IpcMainInvokeEvent, id: number) => {
+    'setEvent',
+    async (event: IpcMainInvokeEvent, id: number, name: string) => {
       if (!startggApiKey) {
         throw new Error('Please set start.gg API key');
       }
@@ -232,6 +246,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       updateEntrantIdToSet(sets);
 
       eventId = id;
+      eventName = name;
       if (timeout) {
         clearTimeout(timeout);
       }
@@ -241,6 +256,16 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         maybeStartDiscordClient();
       }
     },
+  );
+
+  ipcMain.removeHandler('getStartingState');
+  ipcMain.handle(
+    'getStartingState',
+    (): StartingState => ({
+      discordStatus,
+      eventName,
+      tournament,
+    }),
   );
 
   ipcMain.removeHandler('getVersion');
