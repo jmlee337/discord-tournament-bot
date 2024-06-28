@@ -1,10 +1,24 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
-import { useEffect, useState } from 'react';
-import { Description } from '@mui/icons-material';
-import { IconButton, InputBase, Stack, Tooltip } from '@mui/material';
+import { FormEvent, useEffect, useState } from 'react';
+import { Description, EventAvailable } from '@mui/icons-material';
+import {
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  IconButton,
+  InputBase,
+  ListItemButton,
+  ListItemText,
+  Stack,
+  TextField,
+  Tooltip,
+} from '@mui/material';
 import Settings from './Settings';
-import { DiscordStatus } from '../common/types';
+import { DiscordStatus, StartggTournament } from '../common/types';
 
 function Hello() {
   // settings
@@ -38,6 +52,41 @@ function Hello() {
   });
 
   const [csvPath, setCsvPath] = useState('');
+  const [eventDescription, setEventDescription] = useState('');
+  const [tournamentDialogOpen, setTournamentDialogOpen] = useState(false);
+  const [gettingTournament, setGettingTournament] = useState(false);
+  const [tournament, setTournament] = useState<StartggTournament>({
+    name: '',
+    slug: '',
+    events: [],
+  });
+  const getStartggTournamentOnSubmit = async (
+    event: FormEvent<HTMLFormElement>,
+  ) => {
+    const target = event.target as typeof event.target & {
+      slug: { value: string };
+    };
+    const newSlug = target.slug.value;
+    event.preventDefault();
+    event.stopPropagation();
+    if (newSlug) {
+      setGettingTournament(true);
+      try {
+        const newTournament = await window.electron.getTournament(newSlug);
+        setTournament(newTournament);
+        if (newTournament.events.length === 1) {
+          const newEvent = newTournament.events[0];
+          await window.electron.setEventId(newEvent.id);
+          setEventDescription(`${newTournament.name}, ${newEvent.name}`);
+          setTournamentDialogOpen(false);
+        }
+      } catch (e: any) {
+        /** TODO */
+      } finally {
+        setGettingTournament(false);
+      }
+    }
+  };
 
   return (
     <>
@@ -60,6 +109,75 @@ function Hello() {
             <Description />
           </IconButton>
         </Tooltip>
+      </Stack>
+      <Stack direction="row">
+        <InputBase
+          disabled
+          size="small"
+          value={eventDescription || 'Select start.gg event...'}
+          style={{ flexGrow: 1 }}
+        />
+        <Tooltip arrow title="Select start.gg event">
+          <IconButton
+            onClick={async () => {
+              setTournamentDialogOpen(true);
+            }}
+          >
+            <EventAvailable />
+          </IconButton>
+        </Tooltip>
+        <Dialog
+          open={tournamentDialogOpen}
+          onClose={() => {
+            setTournamentDialogOpen(false);
+          }}
+        >
+          <DialogTitle>Set start.gg tournament and event</DialogTitle>
+          <DialogContent>
+            <form
+              onSubmit={getStartggTournamentOnSubmit}
+              style={{
+                alignItems: 'center',
+                display: 'flex',
+                marginTop: '8px',
+              }}
+            >
+              <TextField
+                autoFocus
+                label="Tournament Slug"
+                name="slug"
+                placeholder={tournament.slug || 'super-smash-con-2023'}
+                size="small"
+                variant="outlined"
+              />
+              {gettingTournament ? (
+                <CircularProgress size="24px" style={{ marginLeft: '8px' }} />
+              ) : (
+                <Button type="submit">Set!</Button>
+              )}
+            </form>
+            <Stack>
+              <DialogContentText>{tournament.name}</DialogContentText>
+              {tournament.events.map((event) => (
+                <ListItemButton
+                  key={event.id}
+                  onClick={async () => {
+                    try {
+                      setGettingTournament(true);
+                      await window.electron.setEventId(event.id);
+                      setEventDescription(`${tournament.name}, ${event.name}`);
+                      setTournamentDialogOpen(false);
+                    } finally {
+                      setGettingTournament(false);
+                    }
+                  }}
+                >
+                  <ListItemText>{event.name}</ListItemText>
+                </ListItemButton>
+              ))}
+            </Stack>
+          </DialogContent>
+        </Dialog>
       </Stack>
       {discordStatus === DiscordStatus.STARTING && 'Discord Bot Starting...'}
       {discordStatus === DiscordStatus.BAD_TOKEN && 'Discord Bot Token Error!'}

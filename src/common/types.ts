@@ -16,3 +16,28 @@ export type DiscordConfig = {
   applicationId: string;
   token: string;
 };
+
+export type StartggSet = {
+  id: number;
+  entrant1Id: number;
+  entrant1Name: string;
+  entrant2Id: number;
+  entrant2Name: string;
+  fullRoundText: string;
+};
+
+export type StartggEntrant = {
+  id: number;
+  participantIds: number[];
+};
+
+export type StartggEvent = {
+  id: number;
+  name: string;
+};
+
+export type StartggTournament = {
+  name: string;
+  slug: string;
+  events: StartggEvent[];
+};

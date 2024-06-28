@@ -22,7 +22,9 @@ import {
   CsvParticipant,
   DiscordConfig,
   DiscordStatus,
+  StartggSet,
 } from '../common/types';
+import { getEventEntrants, getEventSets, getTournament } from './startgg';
 
 export default function setupIPCs(mainWindow: BrowserWindow) {
   const store = new Store();
@@ -37,6 +39,8 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     : '';
 
   const discordUsernameToParticipantId = new Map<string, number>();
+  const participantIdToEntrantId = new Map<number, number>();
+  const entrantIdToSet = new Map<number, StartggSet>();
 
   /**
    * Discord
@@ -75,7 +79,8 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     if (
       discordConfig.applicationId &&
       discordConfig.token &&
-      discordUsernameToParticipantId.size > 0
+      discordUsernameToParticipantId.size > 0 &&
+      participantIdToEntrantId.size > 0
     ) {
       if (client) {
         await client.destroy();
@@ -178,6 +183,65 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     }
     return csvPath;
   });
+
+  ipcMain.removeHandler('getTournament');
+  ipcMain.handle('getTournament', (event: IpcMainInvokeEvent, slug: string) =>
+    getTournament(slug),
+  );
+
+  let eventId = 0;
+  let timeout: NodeJS.Timeout | null = null;
+  const updateEntrantIdToSet = (sets: StartggSet[]) => {
+    entrantIdToSet.clear();
+    sets.forEach((set) => {
+      entrantIdToSet.set(set.entrant1Id, set);
+      entrantIdToSet.set(set.entrant2Id, set);
+    });
+  };
+  const refresh = async () => {
+    try {
+      updateEntrantIdToSet(await getEventSets(eventId, startggApiKey));
+    } catch {
+      // empty
+    } finally {
+      timeout = setTimeout(refresh, 60000);
+    }
+  };
+
+  ipcMain.removeHandler('setEventId');
+  ipcMain.handle(
+    'setEventId',
+    async (event: IpcMainInvokeEvent, id: number) => {
+      if (!startggApiKey) {
+        throw new Error('Please set start.gg API key');
+      }
+      const entrantsPromise = getEventEntrants(id);
+      const setsPromise = getEventSets(id, startggApiKey);
+
+      // await both, we don't want to proceed if either throws
+      const entrants = await entrantsPromise;
+      const sets = await setsPromise;
+
+      // all clear to clear maps and update
+      participantIdToEntrantId.clear();
+      entrants.forEach((entrant) => {
+        entrant.participantIds.forEach((participantId) => {
+          participantIdToEntrantId.set(participantId, entrant.id);
+        });
+      });
+      updateEntrantIdToSet(sets);
+
+      eventId = id;
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+      timeout = setTimeout(refresh, 60000);
+
+      if (client === null) {
+        maybeStartDiscordClient();
+      }
+    },
+  );
 
   ipcMain.removeHandler('getVersion');
   ipcMain.handle('getVersion', () => app.getVersion());
