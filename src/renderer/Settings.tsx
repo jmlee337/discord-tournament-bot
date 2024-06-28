@@ -35,7 +35,8 @@ export default function Settings({
   gotSettings: boolean;
 }) {
   const [open, setOpen] = useState(false);
-  const [copied, setCopied] = useState(false);
+  const [discordTokenCopied, setDiscordTokenCopied] = useState(false);
+  const [startggApiKeyCopied, setStartggApiKeyCopied] = useState(false);
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
 
   const needUpdate = useMemo(() => {
@@ -167,16 +168,16 @@ export default function Settings({
               variant="standard"
             />
             <Button
-              disabled={copied}
-              endIcon={copied ? undefined : <ContentCopy />}
+              disabled={discordTokenCopied}
+              endIcon={discordTokenCopied ? undefined : <ContentCopy />}
               onClick={async () => {
                 await window.electron.copyToClipboard(discordToken);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 5000);
+                setDiscordTokenCopied(true);
+                setTimeout(() => setDiscordTokenCopied(false), 5000);
               }}
               variant="contained"
             >
-              {copied ? 'Copied!' : 'Copy'}
+              {discordTokenCopied ? 'Copied!' : 'Copy'}
             </Button>
           </Stack>
           <DialogContentText>
@@ -206,16 +207,16 @@ export default function Settings({
               variant="standard"
             />
             <Button
-              disabled={copied}
-              endIcon={copied ? undefined : <ContentCopy />}
+              disabled={startggApiKeyCopied}
+              endIcon={startggApiKeyCopied ? undefined : <ContentCopy />}
               onClick={async () => {
                 await window.electron.copyToClipboard(startggApiKey);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 5000);
+                setStartggApiKeyCopied(true);
+                setTimeout(() => setStartggApiKeyCopied(false), 5000);
               }}
               variant="contained"
             >
-              {copied ? 'Copied!' : 'Copy'}
+              {startggApiKeyCopied ? 'Copied!' : 'Copy'}
             </Button>
           </Stack>
         </DialogContent>
