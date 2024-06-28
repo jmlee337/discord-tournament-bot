@@ -6,6 +6,7 @@ import Settings from './Settings';
 function Hello() {
   // settings
   const [gotSettings, setGotSettings] = useState(false);
+  const [discordApplicationId, setDiscordApplicationId] = useState('');
   const [discordToken, setDiscordToken] = useState('');
   const [startggApiKey, setStartggApiKey] = useState('');
   const [appVersion, setAppVersion] = useState('');
@@ -14,11 +15,12 @@ function Hello() {
     const inner = async () => {
       const appVersionPromise = window.electron.getVersion();
       const latestAppVersionPromise = window.electron.getLatestVersion();
-      const discordTokenPromise = window.electron.getDiscordToken();
+      const discordConfigPromise = window.electron.getDiscordConfig();
       const startggApiKeyPromise = window.electron.getStartggApiKey();
       setAppVersion(await appVersionPromise);
       setLatestAppVersion(await latestAppVersionPromise);
-      setDiscordToken(await discordTokenPromise);
+      setDiscordApplicationId((await discordConfigPromise).applicationId);
+      setDiscordToken((await discordConfigPromise).token);
       setStartggApiKey(await startggApiKeyPromise);
       setGotSettings(true);
     };
@@ -27,6 +29,8 @@ function Hello() {
 
   return (
     <Settings
+      discordApplicationId={discordApplicationId}
+      setDiscordApplicationId={setDiscordApplicationId}
       discordToken={discordToken}
       setDiscordToken={setDiscordToken}
       startggApiKey={startggApiKey}

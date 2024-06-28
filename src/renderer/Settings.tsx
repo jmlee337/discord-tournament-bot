@@ -14,6 +14,8 @@ import { ContentCopy, Settings as SettingsIcon } from '@mui/icons-material';
 import { useMemo, useState } from 'react';
 
 export default function Settings({
+  discordApplicationId,
+  setDiscordApplicationId,
   discordToken,
   setDiscordToken,
   startggApiKey,
@@ -22,6 +24,8 @@ export default function Settings({
   latestAppVersion,
   gotSettings,
 }: {
+  discordApplicationId: string;
+  setDiscordApplicationId: (discordApplicationId: string) => void;
   discordToken: string;
   setDiscordToken: (discordToken: string) => void;
   startggApiKey: string;
@@ -91,7 +95,10 @@ export default function Settings({
         open={open}
         onClose={async () => {
           await Promise.all([
-            window.electron.setDiscordToken(discordToken),
+            window.electron.setDiscordConfig({
+              applicationId: discordApplicationId,
+              token: discordToken,
+            }),
             window.electron.setStartggApiKey(startggApiKey),
           ]);
           setOpen(false);
@@ -109,6 +116,31 @@ export default function Settings({
           </Typography>
         </Stack>
         <DialogContent sx={{ pt: 0 }}>
+          <DialogContentText>
+            Get your bot&apos;s application id from the “General Information”
+            settings tab in the appropriate app found on{' '}
+            <a
+              href="https://discord.com/developers/applications"
+              target="_blank"
+              rel="noreferrer"
+            >
+              this page
+            </a>
+            .
+          </DialogContentText>
+          <Stack alignItems="center" direction="row" gap="8px">
+            <TextField
+              autoFocus
+              fullWidth
+              label="Discord application id"
+              onChange={(event) => {
+                setDiscordApplicationId(event.target.value);
+              }}
+              size="small"
+              value={discordApplicationId}
+              variant="standard"
+            />
+          </Stack>
           <DialogContentText>
             Get your bot&apos;s token by clicking “Reset Token” on the “Bot”
             settings tab in the appropriate app found on{' '}
