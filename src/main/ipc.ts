@@ -11,11 +11,15 @@ import {
   IpcMainInvokeEvent,
   app,
   clipboard,
+  dialog,
   ipcMain,
 } from 'electron';
 import Store from 'electron-store';
-import { DiscordConfig, DiscordStatus } from '../common/types';
+import { readFile } from 'fs/promises';
+import { parse } from 'papaparse';
+import { CsvParticipant, DiscordConfig, DiscordStatus } from '../common/types';
 
+const CSV_DISCORD_KEY = 'JoinOnDiscord';
 export default function setupIPCs(mainWindow: BrowserWindow) {
   const store = new Store();
   let discordConfig = store.has('discordConfig')
@@ -28,9 +32,13 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     ? (store.get('startggApiKey') as string)
     : '';
 
+  const discordUsernameToParticipantId = new Map<string, number>();
+
+  /**
+   * Discord
+   */
   let client: Client | null = null;
   const updateDiscordStatus = (newDiscordStatus: DiscordStatus) => {
-    console.log(newDiscordStatus);
     mainWindow.webContents.send('discordStatus', newDiscordStatus);
   };
   const registerSlashCommands = async () => {
@@ -56,14 +64,19 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       discordRegisteredVersion = version;
       updateDiscordStatus(DiscordStatus.READY);
     } catch {
-      updateDiscordStatus(DiscordStatus.BAD_CLIENT_ID);
+      updateDiscordStatus(DiscordStatus.BAD_APPLICATION_ID);
     }
   };
   const maybeStartDiscordClient = async () => {
-    if (discordConfig.applicationId && discordConfig.token) {
+    if (
+      discordConfig.applicationId &&
+      discordConfig.token &&
+      discordUsernameToParticipantId.size > 0
+    ) {
       if (client) {
         await client.destroy();
       }
+      updateDiscordStatus(DiscordStatus.STARTING);
       client = new Client({ intents: [GatewayIntentBits.Guilds] });
       client.once(Events.ClientReady, async () => {
         if (discordRegisteredVersion !== app.getVersion()) {
@@ -85,7 +98,6 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       }
     }
   };
-  maybeStartDiscordClient();
 
   ipcMain.removeHandler('getDiscordConfig');
   ipcMain.handle('getDiscordConfig', () => discordConfig);
@@ -104,6 +116,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
+  /**
+   * start.gg
+   */
   ipcMain.removeHandler('getStartggApiKey');
   ipcMain.handle('getStartggApiKey', () => startggApiKey);
 
@@ -115,6 +130,50 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       startggApiKey = newStartggApiKey;
     },
   );
+
+  ipcMain.removeHandler('loadCsv');
+  ipcMain.handle('loadCsv', async () => {
+    const openDialogRes = await dialog.showOpenDialog({
+      filters: [{ name: 'CSV', extensions: ['csv'] }],
+      properties: ['openFile', 'showHiddenFiles'],
+    });
+    if (openDialogRes.canceled) {
+      return '';
+    }
+
+    const [csvPath] = openDialogRes.filePaths;
+    const csvString = (await readFile(csvPath))
+      .toString()
+      .replace(/Join .* on Discord!/, CSV_DISCORD_KEY);
+    const results = parse(csvString, { header: true });
+    if (results.errors.length > 0) {
+      throw new Error(results.errors.map((error) => error.message).join('\n'));
+    }
+
+    const isParticipant = (value: unknown): value is CsvParticipant =>
+      value !== null &&
+      value !== undefined &&
+      typeof value === 'object' &&
+      'Id' in value &&
+      typeof (value as CsvParticipant).Id === 'string' &&
+      CSV_DISCORD_KEY in value &&
+      typeof (value as CsvParticipant)[CSV_DISCORD_KEY] === 'string';
+    const participants = results.data.filter(isParticipant);
+    if (participants.length === 0) {
+      return '';
+    }
+
+    participants.forEach((participant) => {
+      discordUsernameToParticipantId.set(
+        participant.JoinOnDiscord,
+        parseInt(participant.Id, 10),
+      );
+    });
+    if (client === null) {
+      maybeStartDiscordClient();
+    }
+    return csvPath;
+  });
 
   ipcMain.removeHandler('getVersion');
   ipcMain.handle('getVersion', () => app.getVersion());

@@ -1,7 +1,13 @@
+export type CsvParticipant = {
+  Id: string;
+  JoinOnDiscord: string;
+};
+
 export enum DiscordStatus {
   NONE,
+  STARTING,
   BAD_TOKEN,
-  BAD_CLIENT_ID,
+  BAD_APPLICATION_ID,
   READY,
 }
 

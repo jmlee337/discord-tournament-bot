@@ -4,6 +4,7 @@ import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import { DiscordConfig, DiscordStatus } from '../common/types';
 
 const electronHandler = {
+  loadCsv: (): Promise<string> => ipcRenderer.invoke('loadCsv'),
   getDiscordConfig: (): Promise<DiscordConfig> =>
     ipcRenderer.invoke('getDiscordConfig'),
   setDiscordConfig: (discordConfig: DiscordConfig): Promise<void> =>

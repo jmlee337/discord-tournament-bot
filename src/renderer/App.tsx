@@ -1,7 +1,10 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 import { useEffect, useState } from 'react';
+import { Description } from '@mui/icons-material';
+import { IconButton, InputBase, Stack, Tooltip } from '@mui/material';
 import Settings from './Settings';
+import { DiscordStatus } from '../common/types';
 
 function Hello() {
   // settings
@@ -27,18 +30,54 @@ function Hello() {
     inner();
   }, []);
 
+  const [discordStatus, setDiscordStatus] = useState(DiscordStatus.NONE);
+  useEffect(() => {
+    window.electron.onDiscordStatus((event, newDiscordStatus) => {
+      setDiscordStatus(newDiscordStatus);
+    });
+  });
+
+  const [csvPath, setCsvPath] = useState('');
+
   return (
-    <Settings
-      discordApplicationId={discordApplicationId}
-      setDiscordApplicationId={setDiscordApplicationId}
-      discordToken={discordToken}
-      setDiscordToken={setDiscordToken}
-      startggApiKey={startggApiKey}
-      setStartggApiKey={setStartggApiKey}
-      appVersion={appVersion}
-      latestAppVersion={latestAppVersion}
-      gotSettings={gotSettings}
-    />
+    <>
+      <Stack direction="row">
+        <InputBase
+          disabled
+          size="small"
+          value={csvPath || 'Load .csv...'}
+          style={{ flexGrow: 1 }}
+        />
+        <Tooltip arrow title="Load .csv">
+          <IconButton
+            onClick={async () => {
+              const newCsvPath = await window.electron.loadCsv();
+              if (newCsvPath) {
+                setCsvPath(newCsvPath);
+              }
+            }}
+          >
+            <Description />
+          </IconButton>
+        </Tooltip>
+      </Stack>
+      {discordStatus === DiscordStatus.STARTING && 'Discord Bot Starting...'}
+      {discordStatus === DiscordStatus.BAD_TOKEN && 'Discord Bot Token Error!'}
+      {discordStatus === DiscordStatus.BAD_APPLICATION_ID &&
+        'Discord Bot Application Id Error!'}
+      {discordStatus === DiscordStatus.READY && 'Discord Bot Ready'}
+      <Settings
+        discordApplicationId={discordApplicationId}
+        setDiscordApplicationId={setDiscordApplicationId}
+        discordToken={discordToken}
+        setDiscordToken={setDiscordToken}
+        startggApiKey={startggApiKey}
+        setStartggApiKey={setStartggApiKey}
+        appVersion={appVersion}
+        latestAppVersion={latestAppVersion}
+        gotSettings={gotSettings}
+      />
+    </>
   );
 }
 
