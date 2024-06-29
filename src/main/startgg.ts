@@ -60,21 +60,6 @@ export async function getTournament(slug: string): Promise<StartggTournament> {
   };
 }
 
-// 985241
-export async function getEventEntrants(id: number) {
-  const response = await wrappedFetch(
-    `https://api.smash.gg/event/${id}?expand[]=entrants`,
-  );
-  const json = await response.json();
-  const entrants = json.entities.entrants as any[];
-  return entrants.map(
-    (entrant: any): StartggEntrant => ({
-      id: entrant.id,
-      participantIds: entrant.participantIds,
-    }),
-  );
-}
-
 async function fetchGql(key: string, query: string, variables: any) {
   const response = await wrappedFetch('https://api.start.gg/gql/alpha', {
     method: 'POST',
@@ -90,6 +75,71 @@ async function fetchGql(key: string, query: string, variables: any) {
   }
 
   return json.data;
+}
+
+type ApiEntrant = {
+  id: number;
+  participants: {
+    id: number;
+    requiredConnections: {
+      type: string;
+      externalId: string;
+    }[];
+  }[];
+};
+const EVENT_ENTRANTS_QUERY = `
+  query EventQuery($id: ID, $page: Int) {
+    event(id: $id) {
+      entrants(query: {page: $page, perPage: 256}) {
+        pageInfo {
+          totalPages
+        }
+        nodes {
+          id
+          participants {
+            id
+            requiredConnections {
+              type
+              externalId
+            }
+          }
+        }
+      }
+    }
+  }
+`;
+// 985241
+export async function getEventEntrants(id: number, key: string) {
+  let page = 1;
+  let nextData;
+  const entrants: StartggEntrant[] = [];
+  do {
+    // eslint-disable-next-line no-await-in-loop
+    nextData = await fetchGql(key, EVENT_ENTRANTS_QUERY, {
+      id,
+      page,
+    });
+    const apiSets = nextData.event.entrants.nodes as ApiEntrant[];
+    const newEntrants = apiSets.map((entrant): StartggEntrant => {
+      const discordIds: string[] = [];
+      entrant.participants.forEach((participant) => {
+        const externalIds = participant.requiredConnections
+          .filter((rc) => rc.type === 'DISCORD')
+          .map((rc) => rc.externalId);
+        if (externalIds.length > 0) {
+          discordIds.push(externalIds[0]);
+        }
+      });
+      return {
+        id: entrant.id,
+        discordIds,
+      };
+    });
+    entrants.push(...newEntrants);
+
+    page += 1;
+  } while (page <= nextData.event.entrants.pageInfo.totalPages);
+  return entrants;
 }
 
 type ApiSet = {

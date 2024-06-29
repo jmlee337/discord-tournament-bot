@@ -1,7 +1,7 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 import { FormEvent, useEffect, useState } from 'react';
-import { Description, EventAvailable, Refresh } from '@mui/icons-material';
+import { EventAvailable, Refresh } from '@mui/icons-material';
 import {
   Alert,
   Button,
@@ -28,7 +28,6 @@ function Hello() {
   const [gotSettings, setGotSettings] = useState(false);
   const [discordApplicationId, setDiscordApplicationId] = useState('');
   const [discordToken, setDiscordToken] = useState('');
-  const [csvPath, setCsvPath] = useState('');
   const [discordStatus, setDiscordStatus] = useState(DiscordStatus.NONE);
   const [startggApiKey, setStartggApiKey] = useState('');
   const [tournament, setTournament] = useState<StartggTournament>({
@@ -52,7 +51,6 @@ function Hello() {
       setDiscordApplicationId((await discordConfigPromise).applicationId);
       setDiscordToken((await discordConfigPromise).token);
       setStartggApiKey(await startggApiKeyPromise);
-      setCsvPath((await startingStatePromise).csvPath);
       setDiscordStatus((await startingStatePromise).discordStatus);
       const tournamentName = (await startingStatePromise).tournament.name;
       const { eventName } = await startingStatePromise;
@@ -119,12 +117,6 @@ function Hello() {
           Please set Discord token
         </Alert>
       );
-    } else if (!csvPath) {
-      discordNotStartedExplanation = (
-        <Alert severity="warning" style={{ flexGrow: 1 }}>
-          Please load .csv
-        </Alert>
-      );
     } else if (tournament.events.length === 0) {
       discordNotStartedExplanation = (
         <Alert severity="warning" style={{ flexGrow: 1 }}>
@@ -153,26 +145,6 @@ function Hello() {
 
   return (
     <>
-      <Stack direction="row" alignItems="center">
-        <InputBase
-          disabled
-          size="small"
-          value={csvPath || 'Load .csv...'}
-          style={{ flexGrow: 1 }}
-        />
-        <Tooltip arrow title="Load .csv">
-          <IconButton
-            onClick={async () => {
-              const newCsvPath = await window.electron.loadCsv();
-              if (newCsvPath) {
-                setCsvPath(newCsvPath);
-              }
-            }}
-          >
-            <Description />
-          </IconButton>
-        </Tooltip>
-      </Stack>
       <Stack direction="row" alignItems="center">
         <InputBase
           disabled

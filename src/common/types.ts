@@ -1,9 +1,3 @@
-export const CSV_DISCORD_KEY = 'JoinOnDiscord';
-export type CsvParticipant = {
-  Id: string;
-  JoinOnDiscord: string;
-};
-
 export enum DiscordStatus {
   NONE,
   STARTING,
@@ -34,7 +28,7 @@ export type StartggSet = {
 
 export type StartggEntrant = {
   id: number;
-  participantIds: number[];
+  discordIds: string[];
 };
 
 export type StartggEvent = {
@@ -49,7 +43,6 @@ export type StartggTournament = {
 };
 
 export type StartingState = {
-  csvPath: string;
   discordStatus: DiscordStatus;
   eventName: string;
   sets: StartggSet[];
