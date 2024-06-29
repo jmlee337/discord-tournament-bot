@@ -77,8 +77,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     discordStatus = newDiscordStatus;
     mainWindow.webContents.send('discordStatus', newDiscordStatus);
   };
+  const getExpectedRegisteredVersion = () =>
+    `${discordConfig.applicationId}${discordConfig.token}${app.getVersion()}`;
   const registerSlashCommands = async () => {
-    if (!discordConfig.token || !discordConfig.applicationId) {
+    if (!discordConfig.applicationId || !discordConfig.token) {
       throw new Error(
         'need discord token and application id to register slash commands',
       );
@@ -95,9 +97,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         .put(Routes.applicationCommands(discordConfig.applicationId), {
           body,
         });
-      const version = app.getVersion();
-      store.set('discordRegisteredVersion', version);
-      discordRegisteredVersion = version;
+      const newRegisteredVersion = getExpectedRegisteredVersion();
+      store.set('discordRegisteredVersion', newRegisteredVersion);
+      discordRegisteredVersion = newRegisteredVersion;
       updateDiscordStatus(DiscordStatus.READY);
     } catch {
       updateDiscordStatus(DiscordStatus.BAD_APPLICATION_ID);
@@ -115,7 +117,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       updateDiscordStatus(DiscordStatus.STARTING);
       client = new Client({ intents: [GatewayIntentBits.Guilds] });
       client.once(Events.ClientReady, async () => {
-        if (discordRegisteredVersion !== app.getVersion()) {
+        if (discordRegisteredVersion !== getExpectedRegisteredVersion()) {
           await registerSlashCommands();
         } else {
           updateDiscordStatus(DiscordStatus.READY);
