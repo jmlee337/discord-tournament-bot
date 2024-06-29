@@ -3,6 +3,7 @@ import {
   ButtonBuilder,
   ButtonStyle,
   Client,
+  EmbedBuilder,
   Events,
   GatewayIntentBits,
   REST,
@@ -50,7 +51,13 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   const entrantIdToDiscordIds = new Map<number, string[]>();
   const entrantIdToSet = new Map<number, StartggSet>();
   let eventId = 0;
+  let eventName = '';
   let sets: StartggSet[] = [];
+  let tournament: StartggTournament = {
+    name: '',
+    slug: '',
+    events: [],
+  };
   const updateEntrantIdToSet = (newSets: StartggSet[]) => {
     entrantIdToSet.clear();
     newSets.forEach((newSet) => {
@@ -122,7 +129,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           const entrantId = discordIdToEntrantId.get(interaction.user.id);
           if (!entrantId) {
             interaction.reply({
-              content: 'new bracket who dis',
+              content:
+                "Sorry, I can't figure out who you are on start.gg. Please make sure you're registered for\n" +
+                `\`${tournament.name}, ${eventName}\`\n` +
+                `and that your Discord account \`${interaction.user.username}\`\n` +
+                'is connected here: https://www.start.gg/admin/profile/connected-accounts',
               ephemeral: true,
             });
             return;
@@ -130,80 +141,98 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           const set = entrantIdToSet.get(entrantId);
           if (!set) {
             interaction.reply({ content: 'No set to report', ephemeral: true });
-          } else {
-            const won = new ButtonBuilder()
-              .setCustomId(set.entrant1Id.toString(10))
-              .setLabel(`${set.entrant1Name} won the set`)
-              .setStyle(ButtonStyle.Primary);
-            const lost = new ButtonBuilder()
-              .setCustomId(set.entrant2Id.toString(10))
-              .setLabel(`${set.entrant2Name} won the set`)
-              .setStyle(ButtonStyle.Success);
-            const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-              won,
-              lost,
-            );
-            const response = await interaction.reply({
-              content: `${set.fullRoundText}: ${set.entrant1Name} vs ${set.entrant2Name}`,
-              components: [row],
-            });
+            return;
+          }
+          const response = await interaction.reply({
+            components: [
+              new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                  .setCustomId(set.entrant1Id.toString(10))
+                  .setLabel(set.entrant1Name)
+                  .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                  .setCustomId(set.entrant2Id.toString(10))
+                  .setLabel(set.entrant2Name)
+                  .setStyle(ButtonStyle.Success),
+              ),
+            ],
+            embeds: [
+              new EmbedBuilder()
+                .setColor('#3870e0')
+                .setTitle(`${set.entrant1Name} vs ${set.entrant2Name}`)
+                .setDescription(set.fullRoundText)
+                .setFooter({ text: 'Please click the set winner' }),
+            ],
+          });
 
-            const validDiscordIds = new Set<string>();
-            const forEachPredicate = (discordId: string) => {
-              validDiscordIds.add(discordId);
-            };
-            entrantIdToDiscordIds
-              .get(set.entrant1Id)
-              ?.forEach(forEachPredicate);
-            entrantIdToDiscordIds
-              .get(set.entrant2Id)
-              ?.forEach(forEachPredicate);
+          const validDiscordIds = new Set<string>();
+          const forEachPredicate = (discordId: string) => {
+            validDiscordIds.add(discordId);
+          };
+          entrantIdToDiscordIds.get(set.entrant1Id)?.forEach(forEachPredicate);
+          entrantIdToDiscordIds.get(set.entrant2Id)?.forEach(forEachPredicate);
+          try {
+            const confirmation = await response.awaitMessageComponent({
+              time: 15000,
+              filter: (confI) => validDiscordIds.has(confI.user.id),
+            });
+            const winnerId = parseInt(confirmation.customId, 10);
+            let updatedSets: Map<number, StartggSet>;
             try {
-              const confirmation = await response.awaitMessageComponent({
-                time: 15000,
-                filter: (confI) => validDiscordIds.has(confI.user.id),
-              });
-              const winnerId = parseInt(confirmation.customId, 10);
-              let updatedSets: Map<number, StartggSet>;
-              try {
-                updatedSets = await reportSet(
-                  { setId: set.id, winnerId, isDQ: false },
-                  startggApiKey,
-                );
-              } catch {
-                confirmation.update({
-                  content: 'Failed to report to start.gg',
-                  components: [],
-                });
-                return;
-              }
-              try {
-                updateEntrantIdToSet(
-                  await getEventSets(
-                    eventId,
-                    startggApiKey,
-                    set.id,
-                    updatedSets,
-                  ),
-                );
-              } catch {
-                // empty
-              }
-              const winnerName =
-                set.entrant1Id === winnerId
-                  ? set.entrant1Name
-                  : set.entrant2Name;
-              const loserName =
-                set.entrant1Id === winnerId
-                  ? set.entrant2Name
-                  : set.entrant1Name;
-              confirmation.update({
-                content: `Reported win for ${winnerName} (vs ${loserName}) in ${set.fullRoundText}`,
-                components: [],
-              });
+              updatedSets = await reportSet(
+                { setId: set.id, winnerId, isDQ: false },
+                startggApiKey,
+              );
             } catch {
-              interaction.editReply({ content: 'Timed out', components: [] });
+              confirmation.update({
+                components: [],
+                embeds: [
+                  new EmbedBuilder()
+                    .setColor('#e0225b')
+                    .setTitle(`${set.entrant1Name} vs ${set.entrant2Name}`)
+                    .setDescription(set.fullRoundText)
+                    .setFooter({
+                      text: 'Failed to report to start.gg. Please try again',
+                    }),
+                ],
+              });
+              return;
             }
+            try {
+              updateEntrantIdToSet(
+                await getEventSets(eventId, startggApiKey, set.id, updatedSets),
+              );
+            } catch {
+              // empty
+            }
+            const inner = winnerId === set.entrant1Id ? '[W - L]' : '[L - W]';
+            const reporterName =
+              discordIdToEntrantId.get(confirmation.user.id)! === set.entrant1Id
+                ? set.entrant1Name
+                : set.entrant2Name;
+            confirmation.update({
+              components: [],
+              embeds: [
+                new EmbedBuilder()
+                  .setColor('#22b24c')
+                  .setTitle(
+                    `${set.entrant1Name}  ${inner}  ${set.entrant2Name}`,
+                  )
+                  .setDescription(set.fullRoundText)
+                  .setFooter({ text: `Reported by ${reporterName}` }),
+              ],
+            });
+          } catch {
+            interaction.editReply({
+              components: [],
+              embeds: [
+                new EmbedBuilder()
+                  .setColor('#68717a')
+                  .setTitle(`${set.entrant1Name} vs ${set.entrant2Name}`)
+                  .setDescription(set.fullRoundText)
+                  .setFooter({ text: 'Timed out. You may try again' }),
+              ],
+            });
           }
         } else {
           interaction.reply(interaction.commandName);
@@ -249,11 +278,6 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
-  let tournament: StartggTournament = {
-    name: '',
-    slug: '',
-    events: [],
-  };
   ipcMain.removeHandler('getTournament');
   ipcMain.handle(
     'getTournament',
@@ -263,7 +287,6 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
-  let eventName = '';
   ipcMain.removeHandler('setEventId');
   ipcMain.handle(
     'setEvent',
