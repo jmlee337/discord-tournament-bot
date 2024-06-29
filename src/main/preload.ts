@@ -4,6 +4,7 @@ import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import {
   DiscordConfig,
   DiscordStatus,
+  StartggSet,
   StartggTournament,
   StartingState,
 } from '../common/types';
@@ -22,6 +23,9 @@ const electronHandler = {
     ipcRenderer.invoke('getTournament', slug),
   setEvent: (id: number, name: string): Promise<void> =>
     ipcRenderer.invoke('setEvent', id, name),
+  refreshSets: (): Promise<void> => ipcRenderer.invoke('refreshSets'),
+  reportSet: (setId: number, winnerId: number, isDQ: boolean): Promise<void> =>
+    ipcRenderer.invoke('reportSet', setId, winnerId, isDQ),
   getStartingState: (): Promise<StartingState> =>
     ipcRenderer.invoke('getStartingState'),
   getVersion: (): Promise<string> => ipcRenderer.invoke('getVersion'),
@@ -34,6 +38,10 @@ const electronHandler = {
   ) => {
     ipcRenderer.removeAllListeners('discordStatus');
     ipcRenderer.on('discordStatus', callback);
+  },
+  onSets: (callback: (event: IpcRendererEvent, sets: StartggSet[]) => void) => {
+    ipcRenderer.removeAllListeners('sets');
+    ipcRenderer.on('sets', callback);
   },
 };
 

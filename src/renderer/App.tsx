@@ -1,8 +1,9 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 import { FormEvent, useEffect, useState } from 'react';
-import { Description, EventAvailable } from '@mui/icons-material';
+import { Description, EventAvailable, Refresh } from '@mui/icons-material';
 import {
+  Alert,
   Button,
   CircularProgress,
   Dialog,
@@ -16,15 +17,18 @@ import {
   Stack,
   TextField,
   Tooltip,
+  Typography,
 } from '@mui/material';
 import Settings from './Settings';
-import { DiscordStatus, StartggTournament } from '../common/types';
+import { DiscordStatus, StartggSet, StartggTournament } from '../common/types';
+import Report from './Report';
 
 function Hello() {
   // settings
   const [gotSettings, setGotSettings] = useState(false);
   const [discordApplicationId, setDiscordApplicationId] = useState('');
   const [discordToken, setDiscordToken] = useState('');
+  const [csvPath, setCsvPath] = useState('');
   const [discordStatus, setDiscordStatus] = useState(DiscordStatus.NONE);
   const [startggApiKey, setStartggApiKey] = useState('');
   const [tournament, setTournament] = useState<StartggTournament>({
@@ -33,6 +37,7 @@ function Hello() {
     events: [],
   });
   const [eventDescription, setEventDescription] = useState('');
+  const [sets, setSets] = useState<StartggSet[]>([]);
   const [appVersion, setAppVersion] = useState('');
   const [latestAppVersion, setLatestAppVersion] = useState('');
   useEffect(() => {
@@ -46,15 +51,16 @@ function Hello() {
       setLatestAppVersion(await latestAppVersionPromise);
       setDiscordApplicationId((await discordConfigPromise).applicationId);
       setDiscordToken((await discordConfigPromise).token);
-      setDiscordStatus((await startingStatePromise).discordStatus);
       setStartggApiKey(await startggApiKeyPromise);
-      setTournament((await startingStatePromise).tournament);
-
+      setCsvPath((await startingStatePromise).csvPath);
+      setDiscordStatus((await startingStatePromise).discordStatus);
       const tournamentName = (await startingStatePromise).tournament.name;
       const { eventName } = await startingStatePromise;
       if (tournamentName && eventName) {
         setEventDescription(`${tournamentName}, ${eventName}`);
       }
+      setSets((await startingStatePromise).sets);
+      setTournament((await startingStatePromise).tournament);
       setGotSettings(true);
     };
     inner();
@@ -64,9 +70,11 @@ function Hello() {
     window.electron.onDiscordStatus((event, newDiscordStatus) => {
       setDiscordStatus(newDiscordStatus);
     });
+    window.electron.onSets((event, newSets) => {
+      setSets(newSets);
+    });
   });
 
-  const [csvPath, setCsvPath] = useState('');
   const [tournamentDialogOpen, setTournamentDialogOpen] = useState(false);
   const [gettingTournament, setGettingTournament] = useState(false);
   const getStartggTournamentOnSubmit = async (
@@ -89,17 +97,63 @@ function Hello() {
           setEventDescription(`${newTournament.name}, ${newEvent.name}`);
           setTournamentDialogOpen(false);
         }
-      } catch (e: any) {
-        /** TODO */
+      } catch {
+        // empty
       } finally {
         setGettingTournament(false);
       }
     }
   };
 
+  let discordNotStartedExplanation;
+  if (discordStatus === DiscordStatus.NONE) {
+    if (!discordApplicationId) {
+      discordNotStartedExplanation = (
+        <Alert severity="warning" style={{ flexGrow: 1 }}>
+          Please set Discord application id
+        </Alert>
+      );
+    } else if (!discordToken) {
+      discordNotStartedExplanation = (
+        <Alert severity="warning" style={{ flexGrow: 1 }}>
+          Please set Discord token
+        </Alert>
+      );
+    } else if (!csvPath) {
+      discordNotStartedExplanation = (
+        <Alert severity="warning" style={{ flexGrow: 1 }}>
+          Please load .csv
+        </Alert>
+      );
+    } else if (tournament.events.length === 0) {
+      discordNotStartedExplanation = (
+        <Alert severity="warning" style={{ flexGrow: 1 }}>
+          Please select tournament and event
+        </Alert>
+      );
+    } else if (!eventDescription) {
+      discordNotStartedExplanation = (
+        <Alert severity="warning" style={{ flexGrow: 1 }}>
+          Please select event
+        </Alert>
+      );
+    }
+  }
+
+  const [refreshingSets, setRefreshingSets] = useState(false);
+  const [selectedSet, setSelectedSet] = useState<StartggSet>({
+    id: 0,
+    entrant1Id: 0,
+    entrant1Name: '',
+    entrant2Id: 0,
+    entrant2Name: '',
+    fullRoundText: '',
+  });
+  const [reportingDialogOpen, setReportingDialogOpen] = useState(false);
+
   return (
     <>
-      <Stack direction="row">
+      <Stack direction="row" alignItems="center">
         <InputBase
           disabled
           size="small"
@@ -119,7 +173,7 @@ function Hello() {
           </IconButton>
         </Tooltip>
       </Stack>
-      <Stack direction="row">
+      <Stack direction="row" alignItems="center">
         <InputBase
           disabled
           size="small"
@@ -188,11 +242,78 @@ function Hello() {
           </DialogContent>
         </Dialog>
       </Stack>
-      {discordStatus === DiscordStatus.STARTING && 'Discord Bot Starting...'}
-      {discordStatus === DiscordStatus.BAD_TOKEN && 'Discord Bot Token Error!'}
-      {discordStatus === DiscordStatus.BAD_APPLICATION_ID &&
-        'Discord Bot Application Id Error!'}
-      {discordStatus === DiscordStatus.READY && 'Discord Bot Ready'}
+      <Stack direction="row" alignItems="center">
+        {discordStatus === DiscordStatus.NONE && discordNotStartedExplanation}
+        {discordStatus === DiscordStatus.BAD_TOKEN && (
+          <Alert severity="error" style={{ flexGrow: 1 }}>
+            Discord Bot Token Error!
+          </Alert>
+        )}
+        {discordStatus === DiscordStatus.BAD_APPLICATION_ID && (
+          <Alert severity="error" style={{ flexGrow: 1 }}>
+            Discord Bot Application Id Error!
+          </Alert>
+        )}
+        {discordStatus === DiscordStatus.STARTING && (
+          <Alert severity="info" style={{ flexGrow: 1 }}>
+            Discord Bot Starting...
+          </Alert>
+        )}
+        {discordStatus === DiscordStatus.READY && (
+          <Alert severity="success" style={{ flexGrow: 1 }}>
+            Discord Bot Running
+          </Alert>
+        )}
+        <Tooltip
+          arrow
+          title={refreshingSets ? 'Refreshing sets...' : 'Refresh sets'}
+        >
+          {refreshingSets ? (
+            <CircularProgress size="24px" style={{ margin: '9px' }} />
+          ) : (
+            <div>
+              <IconButton
+                disabled={!eventDescription}
+                onClick={async () => {
+                  try {
+                    setRefreshingSets(true);
+                    await window.electron.refreshSets();
+                  } catch {
+                    // empty
+                  } finally {
+                    setRefreshingSets(false);
+                  }
+                }}
+              >
+                <Refresh />
+              </IconButton>
+            </div>
+          )}
+        </Tooltip>
+      </Stack>
+      <Stack direction="row" gap="8px" flexWrap="wrap">
+        {sets.map((set) => (
+          <ListItemButton
+            key={set.id}
+            style={{ flexGrow: 0 }}
+            onClick={() => {
+              setSelectedSet(set);
+              setReportingDialogOpen(true);
+            }}
+          >
+            <Stack>
+              <Typography variant="caption">{set.fullRoundText}</Typography>
+              <Typography variant="body2">{set.entrant1Name}</Typography>
+              <Typography variant="body2">{set.entrant2Name}</Typography>
+            </Stack>
+          </ListItemButton>
+        ))}
+        <Report
+          open={reportingDialogOpen}
+          setOpen={setReportingDialogOpen}
+          set={selectedSet}
+        />
+      </Stack>
       <Settings
         discordApplicationId={discordApplicationId}
         setDiscordApplicationId={setDiscordApplicationId}

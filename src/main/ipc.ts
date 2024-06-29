@@ -26,7 +26,12 @@ import {
   StartggTournament,
   StartingState,
 } from '../common/types';
-import { getEventEntrants, getEventSets, getTournament } from './startgg';
+import {
+  getEventEntrants,
+  getEventSets,
+  getTournament,
+  reportSet,
+} from './startgg';
 
 export default function setupIPCs(mainWindow: BrowserWindow) {
   const store = new Store();
@@ -144,6 +149,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
+  let csvPath = '';
   ipcMain.removeHandler('loadCsv');
   ipcMain.handle('loadCsv', async () => {
     const openDialogRes = await dialog.showOpenDialog({
@@ -154,8 +160,8 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       return '';
     }
 
-    const [csvPath] = openDialogRes.filePaths;
-    const csvString = (await readFile(csvPath))
+    const [newCsvPath] = openDialogRes.filePaths;
+    const csvString = (await readFile(newCsvPath))
       .toString()
       .replace(/Join .* on Discord!/, CSV_DISCORD_KEY);
     const results = parse(csvString, { header: true });
@@ -185,7 +191,8 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     if (client === null) {
       maybeStartDiscordClient();
     }
-    return csvPath;
+    csvPath = newCsvPath;
+    return newCsvPath;
   });
 
   let tournament: StartggTournament = {
@@ -204,22 +211,15 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
 
   let eventId = 0;
   let eventName = '';
-  let timeout: NodeJS.Timeout | null = null;
-  const updateEntrantIdToSet = (sets: StartggSet[]) => {
+  let sets: StartggSet[] = [];
+  const updateEntrantIdToSet = (newSets: StartggSet[]) => {
     entrantIdToSet.clear();
-    sets.forEach((set) => {
-      entrantIdToSet.set(set.entrant1Id, set);
-      entrantIdToSet.set(set.entrant2Id, set);
+    newSets.forEach((newSet) => {
+      entrantIdToSet.set(newSet.entrant1Id, newSet);
+      entrantIdToSet.set(newSet.entrant2Id, newSet);
     });
-  };
-  const refresh = async () => {
-    try {
-      updateEntrantIdToSet(await getEventSets(eventId, startggApiKey));
-    } catch {
-      // empty
-    } finally {
-      timeout = setTimeout(refresh, 60000);
-    }
+    mainWindow.webContents.send('sets', newSets);
+    sets = newSets;
   };
 
   ipcMain.removeHandler('setEventId');
@@ -234,7 +234,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
 
       // await both, we don't want to proceed if either throws
       const entrants = await entrantsPromise;
-      const sets = await setsPromise;
+      const newSets = await setsPromise;
 
       // all clear to clear maps and update
       participantIdToEntrantId.clear();
@@ -243,18 +243,45 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           participantIdToEntrantId.set(participantId, entrant.id);
         });
       });
-      updateEntrantIdToSet(sets);
+      updateEntrantIdToSet(newSets);
 
       eventId = id;
       eventName = name;
-      if (timeout) {
-        clearTimeout(timeout);
-      }
-      timeout = setTimeout(refresh, 60000);
-
       if (client === null) {
         maybeStartDiscordClient();
       }
+    },
+  );
+
+  ipcMain.removeHandler('refreshSets');
+  ipcMain.handle('refreshSets', async () => {
+    if (!startggApiKey) {
+      throw new Error('Please set start.gg API key');
+    }
+
+    updateEntrantIdToSet(await getEventSets(eventId, startggApiKey));
+  });
+
+  ipcMain.removeHandler('reportSet');
+  ipcMain.handle(
+    'reportSet',
+    async (
+      event: IpcMainInvokeEvent,
+      setId: number,
+      winnerId: number,
+      isDQ: boolean,
+    ) => {
+      if (!startggApiKey) {
+        throw new Error('Please set start.gg API key');
+      }
+
+      const updatedSets = await reportSet(
+        { setId, winnerId, isDQ },
+        startggApiKey,
+      );
+      updateEntrantIdToSet(
+        await getEventSets(eventId, startggApiKey, setId, updatedSets),
+      );
     },
   );
 
@@ -262,8 +289,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   ipcMain.handle(
     'getStartingState',
     (): StartingState => ({
+      csvPath,
       discordStatus,
       eventName,
+      sets,
       tournament,
     }),
   );

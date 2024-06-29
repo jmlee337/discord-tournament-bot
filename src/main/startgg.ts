@@ -1,4 +1,5 @@
 import {
+  ReportStartggSet,
   StartggEntrant,
   StartggEvent,
   StartggSet,
@@ -100,6 +101,7 @@ type ApiSet = {
       name: string;
     } | null;
   }[];
+  state?: number;
 };
 function apiSetToStartggSet(set: ApiSet): StartggSet {
   return {
@@ -137,6 +139,7 @@ const EVENT_SETS_QUERY = `
 export async function getEventSets(
   id: number,
   key: string,
+  completedId?: number,
   updatedSets: Map<number, StartggSet> = new Map(),
 ) {
   let page = 1;
@@ -152,8 +155,9 @@ export async function getEventSets(
     const newSets = apiSets
       .filter(
         (set) =>
-          (set.slots[0].entrant && set.slots[1].entrant) ||
-          updatedSets.has(set.id),
+          set.id !== completedId &&
+          ((set.slots[0].entrant && set.slots[1].entrant) ||
+            updatedSets.has(set.id)),
       )
       .map((set) => updatedSets.get(set.id) || apiSetToStartggSet(set));
     sets.push(...newSets);
@@ -161,4 +165,36 @@ export async function getEventSets(
     page += 1;
   } while (page <= nextData.event.sets.pageInfo.totalPages);
   return sets;
+}
+
+const REPORT_BRACKET_SET_MUTATION = `
+  mutation ReportBracketSet($setId: ID!, $winnerId: ID, $isDQ: Boolean) {
+    reportBracketSet(setId: $setId, winnerId: $winnerId, isDQ: $isDQ) {
+      id
+      fullRoundText
+      slots {
+        entrant {
+          id
+          name
+        }
+      }
+      state
+    }
+  }
+`;
+export async function reportSet(set: ReportStartggSet, key: string) {
+  const data = await fetchGql(key, REPORT_BRACKET_SET_MUTATION, set);
+  const updatedSets = new Map<number, StartggSet>();
+  (data.reportBracketSet as ApiSet[])
+    .filter(
+      (updatedSet) =>
+        updatedSet.state !== 3 &&
+        updatedSet.slots[0].entrant &&
+        updatedSet.slots[1].entrant,
+    )
+    .map(apiSetToStartggSet)
+    .forEach((startggSet) => {
+      updatedSets.set(startggSet.id, startggSet);
+    });
+  return updatedSets;
 }

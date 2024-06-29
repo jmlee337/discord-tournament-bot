@@ -17,6 +17,12 @@ export type DiscordConfig = {
   token: string;
 };
 
+export type ReportStartggSet = {
+  setId: number;
+  winnerId: number;
+  isDQ: boolean;
+};
+
 export type StartggSet = {
   id: number;
   entrant1Id: number;
@@ -43,7 +49,9 @@ export type StartggTournament = {
 };
 
 export type StartingState = {
+  csvPath: string;
   discordStatus: DiscordStatus;
   eventName: string;
+  sets: StartggSet[];
   tournament: StartggTournament;
 };
