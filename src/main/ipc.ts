@@ -1,4 +1,7 @@
 import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
   Client,
   Events,
   GatewayIntentBits,
@@ -40,8 +43,23 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     ? (store.get('startggApiKey') as string)
     : '';
 
+  /**
+   * Needed for both Discord and start.gg
+   */
   const discordIdToEntrantId = new Map<string, number>();
+  const entrantIdToDiscordIds = new Map<number, string[]>();
   const entrantIdToSet = new Map<number, StartggSet>();
+  let eventId = 0;
+  let sets: StartggSet[] = [];
+  const updateEntrantIdToSet = (newSets: StartggSet[]) => {
+    entrantIdToSet.clear();
+    newSets.forEach((newSet) => {
+      entrantIdToSet.set(newSet.entrant1Id, newSet);
+      entrantIdToSet.set(newSet.entrant2Id, newSet);
+    });
+    mainWindow.webContents.send('sets', newSets);
+    sets = newSets;
+  };
 
   /**
    * Discord
@@ -82,7 +100,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     if (
       discordConfig.applicationId &&
       discordConfig.token &&
-      (discordIdToEntrantId.size > 0 || process.env.NODE_ENV === 'development')
+      discordIdToEntrantId.size > 0
     ) {
       if (client) {
         await client.destroy();
@@ -96,21 +114,96 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           updateDiscordStatus(DiscordStatus.READY);
         }
       });
-      client.on(Events.InteractionCreate, (interaction) => {
+      client.on(Events.InteractionCreate, async (interaction) => {
         if (!interaction.isChatInputCommand()) {
           return;
         }
         if (interaction.commandName === 'reportset') {
           const entrantId = discordIdToEntrantId.get(interaction.user.id);
           if (!entrantId) {
-            interaction.reply('new bracket who dis');
+            interaction.reply({
+              content: 'new bracket who dis',
+              ephemeral: true,
+            });
             return;
           }
           const set = entrantIdToSet.get(entrantId);
-          if (set) {
-            interaction.reply(JSON.stringify(set));
+          if (!set) {
+            interaction.reply({ content: 'No set to report', ephemeral: true });
           } else {
-            interaction.reply('No set to report');
+            const won = new ButtonBuilder()
+              .setCustomId(set.entrant1Id.toString(10))
+              .setLabel(`${set.entrant1Name} won the set`)
+              .setStyle(ButtonStyle.Primary);
+            const lost = new ButtonBuilder()
+              .setCustomId(set.entrant2Id.toString(10))
+              .setLabel(`${set.entrant2Name} won the set`)
+              .setStyle(ButtonStyle.Success);
+            const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
+              won,
+              lost,
+            );
+            const response = await interaction.reply({
+              content: `${set.fullRoundText}: ${set.entrant1Name} vs ${set.entrant2Name}`,
+              components: [row],
+            });
+
+            const validDiscordIds = new Set<string>();
+            const forEachPredicate = (discordId: string) => {
+              validDiscordIds.add(discordId);
+            };
+            entrantIdToDiscordIds
+              .get(set.entrant1Id)
+              ?.forEach(forEachPredicate);
+            entrantIdToDiscordIds
+              .get(set.entrant2Id)
+              ?.forEach(forEachPredicate);
+            try {
+              const confirmation = await response.awaitMessageComponent({
+                time: 15000,
+                filter: (confI) => validDiscordIds.has(confI.user.id),
+              });
+              const winnerId = parseInt(confirmation.customId, 10);
+              let updatedSets: Map<number, StartggSet>;
+              try {
+                updatedSets = await reportSet(
+                  { setId: set.id, winnerId, isDQ: false },
+                  startggApiKey,
+                );
+              } catch {
+                confirmation.update({
+                  content: 'Failed to report to start.gg',
+                  components: [],
+                });
+                return;
+              }
+              try {
+                updateEntrantIdToSet(
+                  await getEventSets(
+                    eventId,
+                    startggApiKey,
+                    set.id,
+                    updatedSets,
+                  ),
+                );
+              } catch {
+                // empty
+              }
+              const winnerName =
+                set.entrant1Id === winnerId
+                  ? set.entrant1Name
+                  : set.entrant2Name;
+              const loserName =
+                set.entrant1Id === winnerId
+                  ? set.entrant2Name
+                  : set.entrant1Name;
+              confirmation.update({
+                content: `Reported win for ${winnerName} (vs ${loserName}) in ${set.fullRoundText}`,
+                components: [],
+              });
+            } catch {
+              interaction.editReply({ content: 'Timed out', components: [] });
+            }
           }
         } else {
           interaction.reply(interaction.commandName);
@@ -123,9 +216,6 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       }
     }
   };
-  if (process.env.NODE_ENV === 'development') {
-    maybeStartDiscordClient();
-  }
 
   ipcMain.removeHandler('getDiscordConfig');
   ipcMain.handle('getDiscordConfig', () => discordConfig);
@@ -173,19 +263,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
-  let eventId = 0;
   let eventName = '';
-  let sets: StartggSet[] = [];
-  const updateEntrantIdToSet = (newSets: StartggSet[]) => {
-    entrantIdToSet.clear();
-    newSets.forEach((newSet) => {
-      entrantIdToSet.set(newSet.entrant1Id, newSet);
-      entrantIdToSet.set(newSet.entrant2Id, newSet);
-    });
-    mainWindow.webContents.send('sets', newSets);
-    sets = newSets;
-  };
-
   ipcMain.removeHandler('setEventId');
   ipcMain.handle(
     'setEvent',
@@ -202,7 +280,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
 
       // all clear to clear maps and update
       discordIdToEntrantId.clear();
+      entrantIdToDiscordIds.clear();
       entrants.forEach((entrant) => {
+        entrantIdToDiscordIds.set(entrant.id, entrant.discordIds);
         entrant.discordIds.forEach((discordId) => {
           discordIdToEntrantId.set(discordId, entrant.id);
         });
