@@ -1,7 +1,7 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 import { FormEvent, useEffect, useState } from 'react';
-import { EventAvailable, Refresh } from '@mui/icons-material';
+import { EventAvailable, Refresh, TaskAlt } from '@mui/icons-material';
 import {
   Alert,
   Button,
@@ -174,6 +174,7 @@ function Hello() {
               style={{
                 alignItems: 'center',
                 display: 'flex',
+                gap: '8px',
                 marginTop: '8px',
               }}
             >
@@ -185,11 +186,20 @@ function Hello() {
                 size="small"
                 variant="outlined"
               />
-              {gettingTournament ? (
-                <CircularProgress size="24px" style={{ marginLeft: '8px' }} />
-              ) : (
-                <Button type="submit">Set!</Button>
-              )}
+              <Button
+                disabled={gettingTournament}
+                endIcon={
+                  gettingTournament ? (
+                    <CircularProgress size="24px" />
+                  ) : (
+                    <TaskAlt />
+                  )
+                }
+                type="submit"
+                variant="contained"
+              >
+                Set
+              </Button>
             </form>
             <Stack>
               <DialogContentText>{tournament.name}</DialogContentText>
@@ -236,13 +246,13 @@ function Hello() {
             Discord Bot Running
           </Alert>
         )}
-        <Tooltip
-          arrow
-          title={refreshingSets ? 'Refreshing sets...' : 'Refresh sets'}
-        >
-          {refreshingSets ? (
-            <CircularProgress size="24px" style={{ margin: '9px' }} />
-          ) : (
+        {refreshingSets ? (
+          <CircularProgress size="24px" style={{ margin: '9px' }} />
+        ) : (
+          <Tooltip
+            arrow
+            title={refreshingSets ? 'Refreshing sets...' : 'Refresh sets'}
+          >
             <div>
               <IconButton
                 disabled={!eventDescription}
@@ -260,8 +270,8 @@ function Hello() {
                 <Refresh />
               </IconButton>
             </div>
-          )}
-        </Tooltip>
+          </Tooltip>
+        )}
       </Stack>
       <Stack direction="row" gap="8px" flexWrap="wrap">
         {sets.map((set) => (

@@ -43,14 +43,26 @@ async function wrappedFetch(
   return response;
 }
 
+type TournamentJSON = {
+  entities: {
+    event: {
+      id: number;
+      name: string;
+    }[];
+    tournament: {
+      name: string;
+      slug: string;
+    };
+  };
+};
 export async function getTournament(slug: string): Promise<StartggTournament> {
   const response = await wrappedFetch(
     `https://api.smash.gg/tournament/${slug}?expand%5B%5D=event`,
   );
-  const json = await response.json();
+  const json = (await response.json()) as TournamentJSON;
   return {
     name: json.entities.tournament.name,
-    slug: json.entities.tournament.slug,
+    slug: json.entities.tournament.slug.slice(11),
     events: json.entities.event.map(
       (event: any): StartggEvent => ({
         id: event.id,
