@@ -1,5 +1,7 @@
 # Nicolet's Discord Tournament Bot
 
+### [Setup instructions with screenshots here!](https://imgur.com/a/DkL5Gmu)
+
 ## Users
 Please [check discussions/ask for help](https://github.com/jmlee337/discord-tournament-bot/discussions) before [checking issues/filing a bug report or feature request](https://github.com/jmlee337/discord-tournament-bot/issues).
 

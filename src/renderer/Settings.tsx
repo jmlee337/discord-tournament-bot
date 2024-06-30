@@ -181,8 +181,7 @@ export default function Settings({
             </Button>
           </Stack>
           <DialogContentText>
-            Get your start.gg API key by clicking “Create new token” in the
-            <br />
+            Get your start.gg token by clicking “Create new token” in the
             “Personal Access Tokens” tab of{' '}
             <a
               href="https://start.gg/admin/profile/developer"
@@ -197,7 +196,7 @@ export default function Settings({
             <TextField
               autoFocus
               fullWidth
-              label="start.gg API key (Keep it private!)"
+              label="start.gg token (Keep it private!)"
               onChange={(event) => {
                 setStartggApiKey(event.target.value);
               }}

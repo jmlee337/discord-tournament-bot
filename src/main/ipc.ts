@@ -294,7 +294,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     'setEvent',
     async (event: IpcMainInvokeEvent, id: number, name: string) => {
       if (!startggApiKey) {
-        throw new Error('Please set start.gg API key');
+        throw new Error('Please set start.gg token');
       }
       const entrantsPromise = getEventEntrants(id, startggApiKey);
       const setsPromise = getEventSets(id, startggApiKey);
@@ -325,7 +325,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   ipcMain.removeHandler('refreshSets');
   ipcMain.handle('refreshSets', async () => {
     if (!startggApiKey) {
-      throw new Error('Please set start.gg API key');
+      throw new Error('Please set start.gg token');
     }
 
     updateEntrantIdToSet(await getEventSets(eventId, startggApiKey));
@@ -341,7 +341,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       isDQ: boolean,
     ) => {
       if (!startggApiKey) {
-        throw new Error('Please set start.gg API key');
+        throw new Error('Please set start.gg token');
       }
 
       const updatedSets = await reportSet(
