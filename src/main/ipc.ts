@@ -151,7 +151,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
                 new ButtonBuilder()
                   .setCustomId(set.entrant1Id.toString(10))
                   .setLabel(set.entrant1Name)
-                  .setStyle(ButtonStyle.Primary),
+                  .setStyle(ButtonStyle.Success),
                 new ButtonBuilder()
                   .setCustomId(set.entrant2Id.toString(10))
                   .setLabel(set.entrant2Name)
@@ -178,6 +178,18 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
               time: 15000,
               filter: (confI) => validDiscordIds.has(confI.user.id),
             });
+            confirmation.update({
+              components: [],
+              embeds: [
+                new EmbedBuilder()
+                  .setColor('#68717a')
+                  .setTitle(`${set.entrant1Name} vs ${set.entrant2Name}`)
+                  .setDescription(set.fullRoundText)
+                  .setFooter({
+                    text: 'Reporting to start.gg...',
+                  }),
+              ],
+            });
             const winnerId = parseInt(confirmation.customId, 10);
             let updatedSets: Map<number, StartggSet>;
             try {
@@ -186,7 +198,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
                 startggApiKey,
               );
             } catch {
-              confirmation.update({
+              confirmation.editReply({
                 components: [],
                 embeds: [
                   new EmbedBuilder()
@@ -212,7 +224,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
               discordIdToEntrantId.get(confirmation.user.id)! === set.entrant1Id
                 ? set.entrant1Name
                 : set.entrant2Name;
-            confirmation.update({
+            confirmation.editReply({
               components: [],
               embeds: [
                 new EmbedBuilder()
@@ -229,7 +241,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
               components: [],
               embeds: [
                 new EmbedBuilder()
-                  .setColor('#68717a')
+                  .setColor('#031221')
                   .setTitle(`${set.entrant1Name} vs ${set.entrant2Name}`)
                   .setDescription(set.fullRoundText)
                   .setFooter({ text: 'Timed out. You may try again' }),
