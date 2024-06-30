@@ -145,6 +145,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             interaction.reply({ content: 'No set to report', ephemeral: true });
             return;
           }
+          const embed = new EmbedBuilder()
+            .setColor('#3870e0')
+            .setTitle(`${set.entrant1Name} vs ${set.entrant2Name}`)
+            .setDescription(set.fullRoundText)
+            .setFooter({ text: 'Please click the set winner' });
           const response = await interaction.reply({
             components: [
               new ActionRowBuilder<ButtonBuilder>().addComponents(
@@ -158,13 +163,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
                   .setStyle(ButtonStyle.Success),
               ),
             ],
-            embeds: [
-              new EmbedBuilder()
-                .setColor('#3870e0')
-                .setTitle(`${set.entrant1Name} vs ${set.entrant2Name}`)
-                .setDescription(set.fullRoundText)
-                .setFooter({ text: 'Please click the set winner' }),
-            ],
+            embeds: [embed],
           });
 
           const validDiscordIds = new Set<string>();
@@ -181,13 +180,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             confirmation.update({
               components: [],
               embeds: [
-                new EmbedBuilder()
-                  .setColor('#68717a')
-                  .setTitle(`${set.entrant1Name} vs ${set.entrant2Name}`)
-                  .setDescription(set.fullRoundText)
-                  .setFooter({
-                    text: 'Reporting to start.gg...',
-                  }),
+                embed.setColor('#68717a').setFooter({
+                  text: 'Reporting to start.gg...',
+                }),
               ],
             });
             const winnerId = parseInt(confirmation.customId, 10);
@@ -201,13 +196,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
               confirmation.editReply({
                 components: [],
                 embeds: [
-                  new EmbedBuilder()
-                    .setColor('#e0225b')
-                    .setTitle(`${set.entrant1Name} vs ${set.entrant2Name}`)
-                    .setDescription(set.fullRoundText)
-                    .setFooter({
-                      text: 'Failed to report to start.gg. Please try again',
-                    }),
+                  embed.setColor('#e0225b').setFooter({
+                    text: 'Failed to report to start.gg. Please try again',
+                  }),
                 ],
               });
               return;
@@ -227,12 +218,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             confirmation.editReply({
               components: [],
               embeds: [
-                new EmbedBuilder()
+                embed
                   .setColor('#22b24c')
                   .setTitle(
                     `${set.entrant1Name}  ${inner}  ${set.entrant2Name}`,
                   )
-                  .setDescription(set.fullRoundText)
                   .setFooter({ text: `Reported by ${reporterName}` }),
               ],
             });
@@ -240,10 +230,8 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             interaction.editReply({
               components: [],
               embeds: [
-                new EmbedBuilder()
+                embed
                   .setColor('#031221')
-                  .setTitle(`${set.entrant1Name} vs ${set.entrant2Name}`)
-                  .setDescription(set.fullRoundText)
                   .setFooter({ text: 'Timed out. You may try again' }),
               ],
             });
