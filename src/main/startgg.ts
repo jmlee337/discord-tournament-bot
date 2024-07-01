@@ -163,6 +163,7 @@ type ApiPhaseGroup = {
 };
 type ApiSet = {
   id: number;
+  displayScore: string;
   fullRoundText: string;
   phaseGroup: ApiPhaseGroup;
   slots: {
@@ -172,6 +173,7 @@ type ApiSet = {
     } | null;
   }[];
   state: number;
+  winnerId: number | null;
 };
 type ApiPhase = {
   id: number;
@@ -186,11 +188,13 @@ type ApiPhase = {
 function apiSetToStartggSet(set: ApiSet): StartggSet {
   return {
     id: set.id,
+    isDQ: set.displayScore === 'DQ',
     entrant1Id: set.slots[0].entrant!.id,
     entrant1Name: set.slots[0].entrant!.name,
     entrant2Id: set.slots[1].entrant!.id,
     entrant2Name: set.slots[1].entrant!.name,
     fullRoundText: set.fullRoundText,
+    winnerId: set.winnerId,
   };
 }
 
@@ -201,12 +205,13 @@ const EVENT_SETS_QUERY = `
       phases(state: ACTIVE) {
         id
         name
-        sets(page: $page, perPage: 166, sortType: CALL_ORDER, filters: {hideEmpty: true}) {
+        sets(page: $page, perPage: 142, sortType: CALL_ORDER, filters: {hideEmpty: true}) {
           pageInfo {
             totalPages
           }
           nodes {
             id
+            displayScore
             fullRoundText
             phaseGroup {
               id
@@ -219,6 +224,7 @@ const EVENT_SETS_QUERY = `
               }
             }
             state
+            winnerId
           }
         }
       }
@@ -231,6 +237,7 @@ export async function getEventSets(id: number, key: string): Promise<Sets> {
   const completedPhases = new Map<number, StartggPhase>();
   const pendingPhaseGroups = new Map<number, StartggPhaseGroup>();
   const completedPhaseGroups = new Map<number, StartggPhaseGroup>();
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     // eslint-disable-next-line no-await-in-loop
     const nextData = await fetchGql(key, EVENT_SETS_QUERY, {
@@ -299,6 +306,7 @@ const REPORT_BRACKET_SET_MUTATION = `
   mutation ReportBracketSet($setId: ID!, $winnerId: ID, $isDQ: Boolean) {
     reportBracketSet(setId: $setId, winnerId: $winnerId, isDQ: $isDQ) {
       id
+      displayScore
       fullRoundText
       phaseGroup {
         id
@@ -311,11 +319,73 @@ const REPORT_BRACKET_SET_MUTATION = `
         }
       }
       state
+      winnerId
     }
   }
 `;
 export async function reportSet(set: ReportStartggSet, key: string) {
   const data = await fetchGql(key, REPORT_BRACKET_SET_MUTATION, set);
+  const updatedSets = new Map<number, StartggSet>();
+  (data.reportBracketSet as ApiSet[])
+    .filter(
+      (updatedSet) =>
+        updatedSet.state !== 3 &&
+        updatedSet.slots[0].entrant &&
+        updatedSet.slots[1].entrant,
+    )
+    .map(apiSetToStartggSet)
+    .forEach((startggSet) => {
+      updatedSets.set(startggSet.id, startggSet);
+    });
+  return updatedSets;
+}
+
+const RESET_SET_MUTATION = `
+  mutation ResetSetMutation($id:ID!) {
+    resetSet(setId: $id) {
+      id
+    }
+  }
+`;
+export async function resetSet(id: number, key: string) {
+  const data = await fetchGql(key, RESET_SET_MUTATION, { id });
+  return data.resetSet.id;
+}
+
+const SWAP_WINNER_MUTATION = `
+  mutation SwapWinnerMutation($id:ID!, $newWinnerId: ID, $isDQ: Boolean) {
+    resetSet(setId: $id) {
+      id
+    }
+    reportBracketSet(setId: $id, winnerId: $newWinnerId, isDQ: $isDQ) {
+      id
+      fullRoundText
+      phaseGroup {
+        id
+        displayIdentifier
+      }
+      slots {
+        entrant {
+          id
+          name
+        }
+      }
+      state
+      winnerId
+    }
+  }
+`;
+export async function swapWinner(
+  id: number,
+  newWinnerId: number,
+  isDQ: boolean,
+  key: string,
+) {
+  const data = await fetchGql(key, SWAP_WINNER_MUTATION, {
+    id,
+    newWinnerId,
+    isDQ,
+  });
   const updatedSets = new Map<number, StartggSet>();
   (data.reportBracketSet as ApiSet[])
     .filter(

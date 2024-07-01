@@ -31,6 +31,8 @@ import {
   getEventSets,
   getTournament,
   reportSet,
+  resetSet,
+  swapWinner,
 } from './startgg';
 
 export default function setupIPCs(mainWindow: BrowserWindow) {
@@ -360,6 +362,38 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       }
 
       await reportSet({ setId, winnerId, isDQ }, startggApiKey);
+    },
+  );
+
+  ipcMain.removeHandler('resetSet');
+  ipcMain.handle(
+    'resetSet',
+    async (event: IpcMainInvokeEvent, setId: number) => {
+      if (!startggApiKey) {
+        throw new Error('Please set start.gg token');
+      }
+
+      await resetSet(setId, startggApiKey);
+    },
+  );
+
+  ipcMain.removeHandler('swapWinner');
+  ipcMain.handle(
+    'swapWinner',
+    async (event: IpcMainInvokeEvent, set: StartggSet) => {
+      if (!startggApiKey) {
+        throw new Error('Please set start.gg token');
+      }
+      if (!set.winnerId) {
+        throw new Error('Set does not have a winner');
+      }
+
+      await swapWinner(
+        set.id,
+        set.winnerId === set.entrant1Id ? set.entrant2Id : set.entrant1Id,
+        set.isDQ,
+        startggApiKey,
+      );
     },
   );
 

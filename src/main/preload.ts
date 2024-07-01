@@ -5,6 +5,7 @@ import {
   DiscordConfig,
   DiscordStatus,
   Sets,
+  StartggSet,
   StartggTournament,
   StartingState,
 } from '../common/types';
@@ -25,6 +26,10 @@ const electronHandler = {
   refreshSets: (): Promise<void> => ipcRenderer.invoke('refreshSets'),
   reportSet: (setId: number, winnerId: number, isDQ: boolean): Promise<void> =>
     ipcRenderer.invoke('reportSet', setId, winnerId, isDQ),
+  resetSet: (setId: number): Promise<void> =>
+    ipcRenderer.invoke('resetSet', setId),
+  swapWinner: (set: StartggSet): Promise<void> =>
+    ipcRenderer.invoke('swapWinner', set),
   getStartingState: (): Promise<StartingState> =>
     ipcRenderer.invoke('getStartingState'),
   getVersion: (): Promise<string> => ipcRenderer.invoke('getVersion'),

@@ -29,6 +29,18 @@ import {
   StartggTournament,
 } from '../common/types';
 import Report from './Report';
+import Reset from './Reset';
+
+const EMPTY_STARTGG_SET: StartggSet = {
+  id: 0,
+  isDQ: false,
+  entrant1Id: 0,
+  entrant1Name: '',
+  entrant2Id: 0,
+  entrant2Name: '',
+  fullRoundText: '',
+  winnerId: null,
+};
 
 function Hello() {
   // settings
@@ -140,15 +152,11 @@ function Hello() {
   }
 
   const [refreshingSets, setRefreshingSets] = useState(false);
-  const [selectedSet, setSelectedSet] = useState<StartggSet>({
-    id: 0,
-    entrant1Id: 0,
-    entrant1Name: '',
-    entrant2Id: 0,
-    entrant2Name: '',
-    fullRoundText: '',
-  });
+  const [selectedSet, setSelectedSet] = useState<StartggSet>(EMPTY_STARTGG_SET);
   const [reportingDialogOpen, setReportingDialogOpen] = useState(false);
+  const [resetSelectedSet, setResetSelectedSet] =
+    useState<StartggSet>(EMPTY_STARTGG_SET);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
 
   const mapStartggPhasePredicate = (phase: StartggPhase, pending: boolean) => {
     const prefix = pending ? 'pending' : 'completed';
@@ -166,6 +174,9 @@ function Hello() {
                 if (pending) {
                   setSelectedSet(set);
                   setReportingDialogOpen(true);
+                } else {
+                  setResetSelectedSet(set);
+                  setResetDialogOpen(true);
                 }
               }}
             >
@@ -349,6 +360,11 @@ function Hello() {
           open={reportingDialogOpen}
           setOpen={setReportingDialogOpen}
           set={selectedSet}
+        />
+        <Reset
+          open={resetDialogOpen}
+          setOpen={setResetDialogOpen}
+          set={resetSelectedSet}
         />
       </Stack>
     </>

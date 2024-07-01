@@ -19,11 +19,13 @@ export type ReportStartggSet = {
 
 export type StartggSet = {
   id: number;
+  isDQ: boolean;
   entrant1Id: number;
   entrant1Name: string;
   entrant2Id: number;
   entrant2Name: string;
   fullRoundText: string;
+  winnerId: number | null;
 };
 
 export type StartggPhaseGroup = {
