@@ -148,6 +148,12 @@ function Hello() {
           Please select event
         </Alert>
       );
+    } else {
+      discordNotStartedExplanation = (
+        <Alert severity="warning" style={{ flexGrow: 1 }}>
+          Selected event has no entrants with Discord connected
+        </Alert>
+      );
     }
   }
 

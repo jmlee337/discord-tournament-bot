@@ -245,7 +245,11 @@ export async function getEventSets(id: number, key: string): Promise<Sets> {
       page,
     });
     let totalPages = 0;
-    const apiPhases = nextData.event.phases as ApiPhase[];
+    const apiPhases = nextData.event.phases as ApiPhase[] | null;
+    if (!apiPhases) {
+      break;
+    }
+
     apiPhases.forEach((apiPhase) => {
       totalPages = Math.max(totalPages, apiPhase.sets.pageInfo.totalPages);
       apiPhase.sets.nodes.forEach((set) => {
