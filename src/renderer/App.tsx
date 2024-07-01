@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from 'react';
 import { EventAvailable, Refresh, TaskAlt } from '@mui/icons-material';
 import {
   Alert,
+  Box,
   Button,
   CircularProgress,
   Dialog,
@@ -20,7 +21,13 @@ import {
   Typography,
 } from '@mui/material';
 import Settings from './Settings';
-import { DiscordStatus, StartggSet, StartggTournament } from '../common/types';
+import {
+  DiscordStatus,
+  Sets,
+  StartggPhase,
+  StartggSet,
+  StartggTournament,
+} from '../common/types';
 import Report from './Report';
 
 function Hello() {
@@ -36,7 +43,7 @@ function Hello() {
     events: [],
   });
   const [eventDescription, setEventDescription] = useState('');
-  const [sets, setSets] = useState<StartggSet[]>([]);
+  const [sets, setSets] = useState<Sets>({ pending: [], completed: [] });
   const [appVersion, setAppVersion] = useState('');
   const [latestAppVersion, setLatestAppVersion] = useState('');
   useEffect(() => {
@@ -143,6 +150,37 @@ function Hello() {
   });
   const [reportingDialogOpen, setReportingDialogOpen] = useState(false);
 
+  const mapStartggPhasePredicate = (phase: StartggPhase, pending: boolean) => {
+    const prefix = pending ? 'pending' : 'completed';
+    return phase.phaseGroups.map((phaseGroup) => (
+      <Box key={`${prefix}${phase.name}${phaseGroup.name}`}>
+        <Typography variant="h6">
+          {phase.name}, {phaseGroup.name}
+        </Typography>
+        <Stack direction="row" gap="8px" flexWrap="wrap">
+          {phaseGroup.sets.map((set) => (
+            <ListItemButton
+              key={set.id}
+              style={{ flexGrow: 0 }}
+              onClick={() => {
+                if (pending) {
+                  setSelectedSet(set);
+                  setReportingDialogOpen(true);
+                }
+              }}
+            >
+              <Stack>
+                <Typography variant="caption">{set.fullRoundText}</Typography>
+                <Typography variant="body2">{set.entrant1Name}</Typography>
+                <Typography variant="body2">{set.entrant2Name}</Typography>
+              </Stack>
+            </ListItemButton>
+          ))}
+        </Stack>
+      </Box>
+    ));
+  };
+
   return (
     <>
       <Stack direction="row" alignItems="center">
@@ -246,6 +284,19 @@ function Hello() {
             Discord Bot Running
           </Alert>
         )}
+      </Stack>
+      <Stack direction="row" alignItems="center" justifyContent="end">
+        <Settings
+          discordApplicationId={discordApplicationId}
+          setDiscordApplicationId={setDiscordApplicationId}
+          discordToken={discordToken}
+          setDiscordToken={setDiscordToken}
+          startggApiKey={startggApiKey}
+          setStartggApiKey={setStartggApiKey}
+          appVersion={appVersion}
+          latestAppVersion={latestAppVersion}
+          gotSettings={gotSettings}
+        />
         {refreshingSets ? (
           <CircularProgress size="24px" style={{ margin: '9px' }} />
         ) : (
@@ -273,40 +324,33 @@ function Hello() {
           </Tooltip>
         )}
       </Stack>
-      <Stack direction="row" gap="8px" flexWrap="wrap">
-        {sets.map((set) => (
-          <ListItemButton
-            key={set.id}
-            style={{ flexGrow: 0 }}
-            onClick={() => {
-              setSelectedSet(set);
-              setReportingDialogOpen(true);
-            }}
-          >
+      <Stack>
+        {sets.pending.length > 0 && (
+          <>
+            <Typography variant="h5">Pending</Typography>
             <Stack>
-              <Typography variant="caption">{set.fullRoundText}</Typography>
-              <Typography variant="body2">{set.entrant1Name}</Typography>
-              <Typography variant="body2">{set.entrant2Name}</Typography>
+              {sets.pending.map((phase) =>
+                mapStartggPhasePredicate(phase, true),
+              )}
             </Stack>
-          </ListItemButton>
-        ))}
+          </>
+        )}
+        {sets.completed.length > 0 && (
+          <>
+            <Typography variant="h5">Completed</Typography>
+            <Stack>
+              {sets.completed.map((phase) =>
+                mapStartggPhasePredicate(phase, false),
+              )}
+            </Stack>
+          </>
+        )}
         <Report
           open={reportingDialogOpen}
           setOpen={setReportingDialogOpen}
           set={selectedSet}
         />
       </Stack>
-      <Settings
-        discordApplicationId={discordApplicationId}
-        setDiscordApplicationId={setDiscordApplicationId}
-        discordToken={discordToken}
-        setDiscordToken={setDiscordToken}
-        startggApiKey={startggApiKey}
-        setStartggApiKey={setStartggApiKey}
-        appVersion={appVersion}
-        latestAppVersion={latestAppVersion}
-        gotSettings={gotSettings}
-      />
     </>
   );
 }

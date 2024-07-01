@@ -21,6 +21,7 @@ import Store from 'electron-store';
 import {
   DiscordConfig,
   DiscordStatus,
+  Sets,
   StartggSet,
   StartggTournament,
   StartingState,
@@ -52,17 +53,24 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   const entrantIdToSet = new Map<number, StartggSet>();
   let eventId = 0;
   let eventName = '';
-  let sets: StartggSet[] = [];
+  let sets: Sets = {
+    pending: [],
+    completed: [],
+  };
   let tournament: StartggTournament = {
     name: '',
     slug: '',
     events: [],
   };
-  const updateEntrantIdToSet = (newSets: StartggSet[]) => {
+  const updateEntrantIdToSet = (newSets: Sets) => {
     entrantIdToSet.clear();
-    newSets.forEach((newSet) => {
-      entrantIdToSet.set(newSet.entrant1Id, newSet);
-      entrantIdToSet.set(newSet.entrant2Id, newSet);
+    newSets.pending.forEach((pendingPhase) => {
+      pendingPhase.phaseGroups.forEach((pendingPhaseGroup) => {
+        pendingPhaseGroup.sets.forEach((pendingSet) => {
+          entrantIdToSet.set(pendingSet.entrant1Id, pendingSet);
+          entrantIdToSet.set(pendingSet.entrant2Id, pendingSet);
+        });
+      });
     });
     mainWindow.webContents.send('sets', newSets);
     sets = newSets;
@@ -186,12 +194,28 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
               ],
             });
             const winnerId = parseInt(confirmation.customId, 10);
-            let updatedSets: Map<number, StartggSet>;
             try {
-              updatedSets = await reportSet(
+              await reportSet(
                 { setId: set.id, winnerId, isDQ: false },
                 startggApiKey,
               );
+              const inner = winnerId === set.entrant1Id ? '[W - L]' : '[L - W]';
+              const reporterName =
+                discordIdToEntrantId.get(confirmation.user.id)! ===
+                set.entrant1Id
+                  ? set.entrant1Name
+                  : set.entrant2Name;
+              confirmation.editReply({
+                components: [],
+                embeds: [
+                  embed
+                    .setColor('#22b24c')
+                    .setTitle(
+                      `${set.entrant1Name}  ${inner}  ${set.entrant2Name}`,
+                    )
+                    .setFooter({ text: `Reported by ${reporterName}` }),
+                ],
+              });
             } catch {
               confirmation.editReply({
                 components: [],
@@ -201,31 +225,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
                   }),
                 ],
               });
-              return;
             }
-            try {
-              updateEntrantIdToSet(
-                await getEventSets(eventId, startggApiKey, set.id, updatedSets),
-              );
-            } catch {
-              // empty
-            }
-            const inner = winnerId === set.entrant1Id ? '[W - L]' : '[L - W]';
-            const reporterName =
-              discordIdToEntrantId.get(confirmation.user.id)! === set.entrant1Id
-                ? set.entrant1Name
-                : set.entrant2Name;
-            confirmation.editReply({
-              components: [],
-              embeds: [
-                embed
-                  .setColor('#22b24c')
-                  .setTitle(
-                    `${set.entrant1Name}  ${inner}  ${set.entrant2Name}`,
-                  )
-                  .setFooter({ text: `Reported by ${reporterName}` }),
-              ],
-            });
           } catch {
             interaction.editReply({
               components: [],
@@ -289,12 +289,22 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
+  let timeoutId: NodeJS.Timeout | undefined;
+  const setGetEventSetsTimeout = () => {
+    timeoutId = setTimeout(async () => {
+      updateEntrantIdToSet(await getEventSets(eventId, startggApiKey));
+      setGetEventSetsTimeout();
+    }, 30000);
+  };
   ipcMain.removeHandler('setEventId');
   ipcMain.handle(
     'setEvent',
     async (event: IpcMainInvokeEvent, id: number, name: string) => {
       if (!startggApiKey) {
         throw new Error('Please set start.gg token');
+      }
+      if (timeoutId) {
+        clearTimeout(timeoutId);
       }
       const entrantsPromise = getEventEntrants(id, startggApiKey);
       const setsPromise = getEventSets(id, startggApiKey);
@@ -316,6 +326,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
 
       eventId = id;
       eventName = name;
+      setGetEventSetsTimeout();
       if (client === null) {
         maybeStartDiscordClient();
       }
@@ -328,7 +339,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       throw new Error('Please set start.gg token');
     }
 
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
     updateEntrantIdToSet(await getEventSets(eventId, startggApiKey));
+    setGetEventSetsTimeout();
   });
 
   ipcMain.removeHandler('reportSet');
@@ -344,13 +359,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         throw new Error('Please set start.gg token');
       }
 
-      const updatedSets = await reportSet(
-        { setId, winnerId, isDQ },
-        startggApiKey,
-      );
-      updateEntrantIdToSet(
-        await getEventSets(eventId, startggApiKey, setId, updatedSets),
-      );
+      await reportSet({ setId, winnerId, isDQ }, startggApiKey);
     },
   );
 

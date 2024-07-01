@@ -1,7 +1,10 @@
 import {
   ReportStartggSet,
+  Sets,
   StartggEntrant,
   StartggEvent,
+  StartggPhase,
+  StartggPhaseGroup,
   StartggSet,
   StartggTournament,
 } from '../common/types';
@@ -154,16 +157,31 @@ export async function getEventEntrants(id: number, key: string) {
   return entrants;
 }
 
+type ApiPhaseGroup = {
+  id: number;
+  displayIdentifier: string;
+};
 type ApiSet = {
   id: number;
   fullRoundText: string;
+  phaseGroup: ApiPhaseGroup;
   slots: {
     entrant: {
       id: number;
       name: string;
     } | null;
   }[];
-  state?: number;
+  state: number;
+};
+type ApiPhase = {
+  id: number;
+  name: string;
+  sets: {
+    pageInfo: {
+      totalPages: number;
+    };
+    nodes: ApiSet[];
+  };
 };
 function apiSetToStartggSet(set: ApiSet): StartggSet {
   return {
@@ -176,57 +194,105 @@ function apiSetToStartggSet(set: ApiSet): StartggSet {
   };
 }
 
-// 985241
+// 1008143
 const EVENT_SETS_QUERY = `
   query EventSetsQuery($id: ID, $page: Int) {
     event(id: $id) {
-      sets(page: $page, perPage: 199, filters: {hideEmpty: true, state: [1, 2, 6]}) {
-        pageInfo {
-          totalPages
-        }
-        nodes {
-          id
-          fullRoundText
-          slots {
-            entrant {
+      phases(state: ACTIVE) {
+        id
+        name
+        sets(page: $page, perPage: 166, sortType: CALL_ORDER, filters: {hideEmpty: true}) {
+          pageInfo {
+            totalPages
+          }
+          nodes {
+            id
+            fullRoundText
+            phaseGroup {
               id
-              name
+              displayIdentifier
             }
+            slots {
+              entrant {
+                id
+                name
+              }
+            }
+            state
           }
         }
       }
     }
   }
 `;
-export async function getEventSets(
-  id: number,
-  key: string,
-  completedId?: number,
-  updatedSets: Map<number, StartggSet> = new Map(),
-) {
+export async function getEventSets(id: number, key: string): Promise<Sets> {
   let page = 1;
-  let nextData;
-  const sets: StartggSet[] = [];
-  do {
+  const pendingPhases = new Map<number, StartggPhase>();
+  const completedPhases = new Map<number, StartggPhase>();
+  const pendingPhaseGroups = new Map<number, StartggPhaseGroup>();
+  const completedPhaseGroups = new Map<number, StartggPhaseGroup>();
+  while (true) {
     // eslint-disable-next-line no-await-in-loop
-    nextData = await fetchGql(key, EVENT_SETS_QUERY, {
+    const nextData = await fetchGql(key, EVENT_SETS_QUERY, {
       id,
       page,
     });
-    const apiSets = nextData.event.sets.nodes as ApiSet[];
-    const newSets = apiSets
-      .filter(
-        (set) =>
-          set.id !== completedId &&
-          ((set.slots[0].entrant && set.slots[1].entrant) ||
-            updatedSets.has(set.id)),
-      )
-      .map((set) => updatedSets.get(set.id) || apiSetToStartggSet(set));
-    sets.push(...newSets);
-
+    let totalPages = 0;
+    const apiPhases = nextData.event.phases as ApiPhase[];
+    apiPhases.forEach((apiPhase) => {
+      totalPages = Math.max(totalPages, apiPhase.sets.pageInfo.totalPages);
+      apiPhase.sets.nodes.forEach((set) => {
+        const startggSet = apiSetToStartggSet(set);
+        if (set.state === 3) {
+          if (!completedPhases.has(apiPhase.id)) {
+            completedPhases.set(apiPhase.id, {
+              name: apiPhase.name,
+              phaseGroups: [],
+            });
+          }
+          if (!completedPhaseGroups.has(set.phaseGroup.id)) {
+            const startggPhaseGroup: StartggPhaseGroup = {
+              name: `Pool ${set.phaseGroup.displayIdentifier}`,
+              sets: [],
+            };
+            completedPhaseGroups.set(set.phaseGroup.id, startggPhaseGroup);
+            completedPhases
+              .get(apiPhase.id)!
+              .phaseGroups.push(startggPhaseGroup);
+          }
+          completedPhaseGroups.get(set.phaseGroup.id)!.sets.push(startggSet);
+        } else {
+          if (!pendingPhases.has(apiPhase.id)) {
+            pendingPhases.set(apiPhase.id, {
+              name: apiPhase.name,
+              phaseGroups: [],
+            });
+          }
+          if (!pendingPhaseGroups.has(set.phaseGroup.id)) {
+            const startggPhaseGroup: StartggPhaseGroup = {
+              name: `Pool ${set.phaseGroup.displayIdentifier}`,
+              sets: [],
+            };
+            pendingPhaseGroups.set(set.phaseGroup.id, startggPhaseGroup);
+            pendingPhases.get(apiPhase.id)!.phaseGroups.push(startggPhaseGroup);
+          }
+          pendingPhaseGroups.get(set.phaseGroup.id)!.sets.push(startggSet);
+        }
+      });
+    });
     page += 1;
-  } while (page <= nextData.event.sets.pageInfo.totalPages);
-  return sets;
+    if (page > totalPages) {
+      break;
+    }
+  }
+  return {
+    pending: Array.from(pendingPhases.entries())
+      .sort(([aId], [bId]) => aId - bId)
+      .map(([, startggPhase]) => startggPhase),
+    completed: Array.from(completedPhases.entries())
+      .sort(([aId], [bId]) => aId - bId)
+      .map(([, startggPhase]) => startggPhase),
+  };
 }
 
 const REPORT_BRACKET_SET_MUTATION = `
@@ -234,6 +300,10 @@ const REPORT_BRACKET_SET_MUTATION = `
     reportBracketSet(setId: $setId, winnerId: $winnerId, isDQ: $isDQ) {
       id
       fullRoundText
+      phaseGroup {
+        id
+        displayIdentifier
+      }
       slots {
         entrant {
           id

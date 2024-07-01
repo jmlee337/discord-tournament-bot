@@ -4,7 +4,7 @@ import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import {
   DiscordConfig,
   DiscordStatus,
-  StartggSet,
+  Sets,
   StartggTournament,
   StartingState,
 } from '../common/types';
@@ -38,7 +38,7 @@ const electronHandler = {
     ipcRenderer.removeAllListeners('discordStatus');
     ipcRenderer.on('discordStatus', callback);
   },
-  onSets: (callback: (event: IpcRendererEvent, sets: StartggSet[]) => void) => {
+  onSets: (callback: (event: IpcRendererEvent, sets: Sets) => void) => {
     ipcRenderer.removeAllListeners('sets');
     ipcRenderer.on('sets', callback);
   },

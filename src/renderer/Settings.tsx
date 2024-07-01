@@ -5,7 +5,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Fab,
+  IconButton,
   Stack,
   TextField,
   Tooltip,
@@ -84,13 +84,9 @@ export default function Settings({
   return (
     <>
       <Tooltip title="Settings">
-        <Fab
-          onClick={() => setOpen(true)}
-          size="small"
-          style={{ position: 'absolute', bottom: 8, left: 8 }}
-        >
+        <IconButton onClick={() => setOpen(true)}>
           <SettingsIcon />
-        </Fab>
+        </IconButton>
       </Tooltip>
       <Dialog
         fullWidth

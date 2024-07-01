@@ -26,6 +26,21 @@ export type StartggSet = {
   fullRoundText: string;
 };
 
+export type StartggPhaseGroup = {
+  name: string;
+  sets: StartggSet[];
+};
+
+export type StartggPhase = {
+  name: string;
+  phaseGroups: StartggPhaseGroup[];
+};
+
+export type Sets = {
+  pending: StartggPhase[];
+  completed: StartggPhase[];
+};
+
 export type StartggEntrant = {
   id: number;
   discordIds: string[];
@@ -45,6 +60,6 @@ export type StartggTournament = {
 export type StartingState = {
   discordStatus: DiscordStatus;
   eventName: string;
-  sets: StartggSet[];
+  sets: Sets;
   tournament: StartggTournament;
 };
