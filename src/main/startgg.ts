@@ -252,44 +252,48 @@ export async function getEventSets(id: number, key: string): Promise<Sets> {
 
     apiPhases.forEach((apiPhase) => {
       totalPages = Math.max(totalPages, apiPhase.sets.pageInfo.totalPages);
-      apiPhase.sets.nodes.forEach((set) => {
-        const startggSet = apiSetToStartggSet(set);
-        if (set.state === 3) {
-          if (!completedPhases.has(apiPhase.id)) {
-            completedPhases.set(apiPhase.id, {
-              name: apiPhase.name,
-              phaseGroups: [],
-            });
+      apiPhase.sets.nodes
+        .filter((set) => set.slots[0].entrant && set.slots[1].entrant)
+        .forEach((set) => {
+          const startggSet = apiSetToStartggSet(set);
+          if (set.state === 3) {
+            if (!completedPhases.has(apiPhase.id)) {
+              completedPhases.set(apiPhase.id, {
+                name: apiPhase.name,
+                phaseGroups: [],
+              });
+            }
+            if (!completedPhaseGroups.has(set.phaseGroup.id)) {
+              const startggPhaseGroup: StartggPhaseGroup = {
+                name: `Pool ${set.phaseGroup.displayIdentifier}`,
+                sets: [],
+              };
+              completedPhaseGroups.set(set.phaseGroup.id, startggPhaseGroup);
+              completedPhases
+                .get(apiPhase.id)!
+                .phaseGroups.push(startggPhaseGroup);
+            }
+            completedPhaseGroups.get(set.phaseGroup.id)!.sets.push(startggSet);
+          } else {
+            if (!pendingPhases.has(apiPhase.id)) {
+              pendingPhases.set(apiPhase.id, {
+                name: apiPhase.name,
+                phaseGroups: [],
+              });
+            }
+            if (!pendingPhaseGroups.has(set.phaseGroup.id)) {
+              const startggPhaseGroup: StartggPhaseGroup = {
+                name: `Pool ${set.phaseGroup.displayIdentifier}`,
+                sets: [],
+              };
+              pendingPhaseGroups.set(set.phaseGroup.id, startggPhaseGroup);
+              pendingPhases
+                .get(apiPhase.id)!
+                .phaseGroups.push(startggPhaseGroup);
+            }
+            pendingPhaseGroups.get(set.phaseGroup.id)!.sets.push(startggSet);
           }
-          if (!completedPhaseGroups.has(set.phaseGroup.id)) {
-            const startggPhaseGroup: StartggPhaseGroup = {
-              name: `Pool ${set.phaseGroup.displayIdentifier}`,
-              sets: [],
-            };
-            completedPhaseGroups.set(set.phaseGroup.id, startggPhaseGroup);
-            completedPhases
-              .get(apiPhase.id)!
-              .phaseGroups.push(startggPhaseGroup);
-          }
-          completedPhaseGroups.get(set.phaseGroup.id)!.sets.push(startggSet);
-        } else {
-          if (!pendingPhases.has(apiPhase.id)) {
-            pendingPhases.set(apiPhase.id, {
-              name: apiPhase.name,
-              phaseGroups: [],
-            });
-          }
-          if (!pendingPhaseGroups.has(set.phaseGroup.id)) {
-            const startggPhaseGroup: StartggPhaseGroup = {
-              name: `Pool ${set.phaseGroup.displayIdentifier}`,
-              sets: [],
-            };
-            pendingPhaseGroups.set(set.phaseGroup.id, startggPhaseGroup);
-            pendingPhases.get(apiPhase.id)!.phaseGroups.push(startggPhaseGroup);
-          }
-          pendingPhaseGroups.get(set.phaseGroup.id)!.sets.push(startggSet);
-        }
-      });
+        });
     });
     page += 1;
     if (page > totalPages) {
