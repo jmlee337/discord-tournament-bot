@@ -1,4 +1,5 @@
 import {
+  Alert,
   Button,
   Dialog,
   DialogContent,
@@ -218,6 +219,18 @@ export default function Settings({
               {startggApiKeyCopied ? 'Copied!' : 'Copy'}
             </Button>
           </Stack>
+          {needUpdate && (
+            <Alert severity="warning">
+              Update available!{' '}
+              <a
+                href="https://github.com/jmlee337/discord-tournament-bot/releases/latest"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Version {latestAppVersion}
+              </a>
+            </Alert>
+          )}
         </DialogContent>
       </Dialog>
     </>
