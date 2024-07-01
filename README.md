@@ -1,6 +1,4 @@
 # Nicolet's Discord Tournament Bot
-
-### Player reporting
 <img width="280" alt="Screenshot 2024-07-01 at 10 41 24 PM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/a59b2f42-821e-4028-9fb5-f2e785bffab5">
 
 ### TO Dashboard
