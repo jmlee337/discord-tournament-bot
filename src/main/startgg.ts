@@ -1,3 +1,4 @@
+import Bottleneck from 'bottleneck';
 import {
   ReportStartggSet,
   Sets,
@@ -75,15 +76,34 @@ export async function getTournament(slug: string): Promise<StartggTournament> {
   };
 }
 
-async function fetchGql(key: string, query: string, variables: any) {
-  const response = await wrappedFetch('https://api.start.gg/gql/alpha', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ query, variables }),
+let limiter: Bottleneck;
+export function initStartgg() {
+  if (limiter) {
+    return;
+  }
+
+  limiter = new Bottleneck({
+    reservoir: 80,
+    reservoirRefreshAmount: 80,
+    reservoirRefreshInterval: 60000,
   });
+}
+
+async function fetchGql(key: string, query: string, variables: any) {
+  if (!limiter) {
+    throw new Error('start.gg not initialized');
+  }
+
+  const response = await limiter.schedule(() =>
+    wrappedFetch('https://api.start.gg/gql/alpha', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${key}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query, variables }),
+    }),
+  );
   const json = await response.json();
   if (json.errors) {
     throw new Error(json.errors[0].message);

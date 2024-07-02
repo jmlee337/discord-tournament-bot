@@ -36,6 +36,7 @@ import {
   getEventEntrants,
   getEventSets,
   getTournament,
+  initStartgg,
   reportSet,
   resetSet,
   swapWinner,
@@ -80,6 +81,7 @@ function timeOutInteraction(
 }
 
 export default function setupIPCs(mainWindow: BrowserWindow) {
+  initStartgg();
   const store = new Store();
   let discordConfig = store.has('discordConfig')
     ? (store.get('discordConfig') as DiscordConfig)
