@@ -1,7 +1,7 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
 import { FormEvent, useEffect, useState } from 'react';
-import { EventAvailable, Refresh, TaskAlt } from '@mui/icons-material';
+import { Clear, EventAvailable, Refresh, TaskAlt } from '@mui/icons-material';
 import {
   Alert,
   Box,
@@ -12,6 +12,7 @@ import {
   DialogContentText,
   DialogTitle,
   IconButton,
+  InputAdornment,
   InputBase,
   ListItemButton,
   ListItemText,
@@ -30,6 +31,19 @@ import {
 } from '../common/types';
 import Report from './Report';
 import Reset from './Reset';
+
+type Highlight = {
+  start: number;
+  end: number;
+};
+
+type SetWithHighlight = {
+  highlights: Highlight[];
+  set: StartggSet;
+};
+
+// yellow 400
+const HIGHLIGHT_COLOR = '#ffee58';
 
 const EMPTY_STARTGG_SET: StartggSet = {
   id: 0,
@@ -157,6 +171,7 @@ function Hello() {
     }
   }
 
+  const [searchSubstr, setSearchSubstr] = useState('');
   const [refreshingSets, setRefreshingSets] = useState(false);
   const [selectedSet, setSelectedSet] = useState<StartggSet>(EMPTY_STARTGG_SET);
   const [reportingDialogOpen, setReportingDialogOpen] = useState(false);
@@ -166,41 +181,116 @@ function Hello() {
 
   const mapStartggPhasePredicate = (phase: StartggPhase, pending: boolean) => {
     const prefix = pending ? 'pending' : 'completed';
-    return phase.phaseGroups.map((phaseGroup) => (
-      <Box key={`${prefix}${phase.name}${phaseGroup.name}`}>
-        <Typography variant="h6">
-          {phase.name}, {phaseGroup.name}
-        </Typography>
-        <Stack direction="row" gap="8px" flexWrap="wrap">
-          {phaseGroup.sets.map((set) => (
-            <ListItemButton
-              key={set.id}
-              style={{ flexGrow: 0 }}
-              onClick={() => {
-                if (pending) {
-                  setSelectedSet(set);
-                  setReportingDialogOpen(true);
-                } else {
-                  setResetSelectedSet(set);
-                  setResetDialogOpen(true);
-                }
-              }}
-            >
-              <Stack>
-                <Typography variant="caption">{set.fullRoundText}</Typography>
-                <Typography variant="body2">{set.entrant1Name}</Typography>
-                <Typography variant="body2">{set.entrant2Name}</Typography>
-              </Stack>
-            </ListItemButton>
-          ))}
-        </Stack>
-      </Box>
-    ));
+    return phase.phaseGroups.map((phaseGroup) => {
+      const groupSets: SetWithHighlight[] = [];
+      phaseGroup.sets.forEach((set) => {
+        if (!searchSubstr) {
+          groupSets.push({ highlights: [], set });
+        } else {
+          const highlights: Highlight[] = [];
+          let include = false;
+          const includeStr = searchSubstr.toLowerCase();
+          const start1 = set.entrant1Name.toLowerCase().indexOf(includeStr);
+          if (start1 >= 0) {
+            include = true;
+            highlights[0] = { start: start1, end: start1 + includeStr.length };
+          }
+          const start2 = set.entrant2Name.toLowerCase().indexOf(includeStr);
+          if (start2 >= 0) {
+            include = true;
+            highlights[1] = { start: start2, end: start2 + includeStr.length };
+          }
+          if (include) {
+            groupSets.push({ highlights, set });
+          }
+        }
+      });
+      return (
+        <Box key={`${prefix}${phase.name}${phaseGroup.name}`}>
+          <Typography variant="h6">
+            {phase.name}, {phaseGroup.name}
+          </Typography>
+          <Stack direction="row" gap="8px" flexWrap="wrap">
+            {groupSets.map((setWithHighlight) => (
+              <ListItemButton
+                key={setWithHighlight.set.id}
+                style={{ flexGrow: 0 }}
+                onClick={() => {
+                  if (pending) {
+                    setSelectedSet(setWithHighlight.set);
+                    setReportingDialogOpen(true);
+                  } else {
+                    setResetSelectedSet(setWithHighlight.set);
+                    setResetDialogOpen(true);
+                  }
+                }}
+              >
+                <Stack>
+                  <Typography variant="caption">
+                    {setWithHighlight.set.fullRoundText}
+                  </Typography>
+                  {setWithHighlight.highlights[0] ? (
+                    <Typography variant="body2">
+                      <span>
+                        {setWithHighlight.set.entrant1Name.substring(
+                          0,
+                          setWithHighlight.highlights[0].start,
+                        )}
+                      </span>
+                      <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+                        {setWithHighlight.set.entrant1Name.substring(
+                          setWithHighlight.highlights[0].start,
+                          setWithHighlight.highlights[0].end,
+                        )}
+                      </span>
+                      <span>
+                        {setWithHighlight.set.entrant1Name.substring(
+                          setWithHighlight.highlights[0].end,
+                        )}
+                      </span>
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2">
+                      {setWithHighlight.set.entrant1Name}
+                    </Typography>
+                  )}
+                  {setWithHighlight.highlights[1] ? (
+                    <Typography variant="body2">
+                      <span>
+                        {setWithHighlight.set.entrant2Name.substring(
+                          0,
+                          setWithHighlight.highlights[1].start,
+                        )}
+                      </span>
+                      <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+                        {setWithHighlight.set.entrant2Name.substring(
+                          setWithHighlight.highlights[1].start,
+                          setWithHighlight.highlights[1].end,
+                        )}
+                      </span>
+                      <span>
+                        {setWithHighlight.set.entrant2Name.substring(
+                          setWithHighlight.highlights[1].end,
+                        )}
+                      </span>
+                    </Typography>
+                  ) : (
+                    <Typography variant="body2">
+                      {setWithHighlight.set.entrant2Name}
+                    </Typography>
+                  )}
+                </Stack>
+              </ListItemButton>
+            ))}
+          </Stack>
+        </Box>
+      );
+    });
   };
 
   return (
     <>
-      <Stack direction="row" alignItems="center">
+      <Stack direction="row" alignItems="center" paddingBottom="8px">
         <InputBase
           disabled
           size="small"
@@ -302,7 +392,12 @@ function Hello() {
           </Alert>
         )}
       </Stack>
-      <Stack direction="row" alignItems="center" justifyContent="end">
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="end"
+        padding="8px 0"
+      >
         <Settings
           discordApplicationId={discordApplicationId}
           setDiscordApplicationId={setDiscordApplicationId}
@@ -313,6 +408,25 @@ function Hello() {
           appVersion={appVersion}
           latestAppVersion={latestAppVersion}
           gotSettings={gotSettings}
+        />
+        <TextField
+          label="Search"
+          onChange={(event) => {
+            setSearchSubstr(event.target.value);
+          }}
+          size="small"
+          value={searchSubstr}
+          InputProps={{
+            endAdornment: (
+              <InputAdornment position="end">
+                <Tooltip title="Clear search">
+                  <IconButton onClick={() => setSearchSubstr('')}>
+                    <Clear />
+                  </IconButton>
+                </Tooltip>
+              </InputAdornment>
+            ),
+          }}
         />
         {refreshingSets ? (
           <CircularProgress size="24px" style={{ margin: '9px' }} />
