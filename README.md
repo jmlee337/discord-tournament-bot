@@ -2,9 +2,10 @@
 <img width="280" alt="Screenshot 2024-07-01 at 10 41 24 PM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/a59b2f42-821e-4028-9fb5-f2e785bffab5">
 
 ### TO Dashboard
-<img width="498" alt="Screenshot 2024-07-01 at 10 44 39 PM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/ad6224f7-4f64-4f15-afe6-c56b70937700">
-<img width="498" alt="Screenshot 2024-07-01 at 10 44 47 PM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/6f4e379b-55b3-4216-9754-f74190859c93">
-<img width="498" alt="Screenshot 2024-07-01 at 10 44 54 PM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/129ff09e-9a12-4087-8441-d8ee0d42b16b">
+<img width="498" alt="Screenshot 2024-07-02 at 9 23 26 AM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/140582be-1145-4f4f-9889-dde054b0d99c">
+<img width="498" alt="Screenshot 2024-07-02 at 9 23 47 AM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/70468d87-44ca-4003-92b6-ceae64726f42">
+<img width="498" alt="Screenshot 2024-07-02 at 9 23 31 AM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/9373c1c0-420d-47c9-b0c3-8459f1e613f6">
+<img width="498" alt="Screenshot 2024-07-02 at 9 23 37 AM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/deee7d8d-93b5-4bb5-a78d-4a3e691f6ec6">
 
 ## Setup
 This will only work for start.gg tournaments that `Require Discord connection to register`.
