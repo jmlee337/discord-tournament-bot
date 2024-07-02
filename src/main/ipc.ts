@@ -209,7 +209,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             embed
               .setColor('#22b24c')
               .setTitle(`${set.entrant1Name}  ${inner}  ${set.entrant2Name}`)
-              .setFooter({ text: `Reported by ${reporterName}` }),
+              .setFooter({
+                text: `Reported by ${reporterName} (${confirmation.user.displayName})`,
+              }),
           ],
         });
       } catch {
@@ -255,7 +257,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
               content:
                 "Sorry, I can't figure out who you are on start.gg. Please make sure you're registered for\n" +
                 `\`${tournament.name}, ${eventName}\`\n` +
-                `and that your Discord account \`${interaction.user.username}\`\n` +
+                `and that your Discord account \`${interaction.user.tag}\`\n` +
                 'is connected here: https://www.start.gg/admin/profile/connected-accounts',
               ephemeral: true,
             });
