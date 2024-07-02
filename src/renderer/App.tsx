@@ -57,6 +57,9 @@ const EMPTY_STARTGG_SET: StartggSet = {
 };
 
 function Hello() {
+  const [error, setError] = useState('');
+  const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+
   // settings
   const [gotSettings, setGotSettings] = useState(false);
   const [discordApplicationId, setDiscordApplicationId] = useState('');
@@ -118,20 +121,32 @@ function Hello() {
     event.preventDefault();
     event.stopPropagation();
     if (newSlug) {
+      let newTournament;
       setGettingTournament(true);
       try {
-        const newTournament = await window.electron.getTournament(newSlug);
+        newTournament = await window.electron.getTournament(newSlug);
         setTournament(newTournament);
-        if (newTournament.events.length === 1) {
-          const newEvent = newTournament.events[0];
+      } catch (e: any) {
+        const message = e instanceof Error ? e.message : e;
+        setError(message);
+        setErrorDialogOpen(true);
+      } finally {
+        setGettingTournament(false);
+      }
+      if (newTournament && newTournament.events.length === 1) {
+        const newEvent = newTournament.events[0];
+        setGettingTournament(true);
+        try {
           await window.electron.setEvent(newEvent.id, newEvent.name);
           setEventDescription(`${newTournament.name}, ${newEvent.name}`);
           setTournamentDialogOpen(false);
+        } catch (e: any) {
+          const message = e instanceof Error ? e.message : e;
+          setError(message);
+          setErrorDialogOpen(true);
+        } finally {
+          setGettingTournament(false);
         }
-      } catch {
-        // empty
-      } finally {
-        setGettingTournament(false);
       }
     }
   };
@@ -357,6 +372,10 @@ function Hello() {
                       await window.electron.setEvent(event.id, event.name);
                       setEventDescription(`${tournament.name}, ${event.name}`);
                       setTournamentDialogOpen(false);
+                    } catch (e: any) {
+                      const message = e instanceof Error ? e.message : e;
+                      setError(message);
+                      setErrorDialogOpen(true);
                     } finally {
                       setGettingTournament(false);
                     }
@@ -442,8 +461,10 @@ function Hello() {
                   try {
                     setRefreshingSets(true);
                     await window.electron.refreshSets();
-                  } catch {
-                    // empty
+                  } catch (e: any) {
+                    const message = e instanceof Error ? e.message : e;
+                    setError(message);
+                    setErrorDialogOpen(message);
                   } finally {
                     setRefreshingSets(false);
                   }
@@ -487,6 +508,21 @@ function Hello() {
           set={resetSelectedSet}
         />
       </Stack>
+      <Dialog
+        open={errorDialogOpen}
+        onClose={() => {
+          setError('');
+          setErrorDialogOpen(false);
+        }}
+      >
+        <DialogTitle>Error!</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            You may want to copy or screenshot this error:
+          </DialogContentText>
+          <Alert severity="error">{error}</Alert>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
