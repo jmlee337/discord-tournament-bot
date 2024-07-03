@@ -110,6 +110,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     slug: '',
     events: [],
   };
+  const setIdToCompletedAt = new Map<number, number>();
   const updateEntrantIdToSet = (newSets: Sets) => {
     entrantIdToSets.clear();
     newSets.pending.forEach((pendingPhase) => {
@@ -196,6 +197,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       try {
         await reportSet(
           { setId: set.id, winnerId, isDQ: false },
+          setIdToCompletedAt,
           startggApiKey,
         );
         const inner = winnerId === set.entrant1Id ? '[W - L]' : '[L - W]';
@@ -263,8 +265,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             });
             return;
           }
-          const entrantSets = entrantIdToSets.get(entrantId);
-          if (!entrantSets) {
+          const entrantSets = entrantIdToSets
+            .get(entrantId)
+            ?.filter((set) => !setIdToCompletedAt.has(set.id));
+          if (!entrantSets || entrantSets.length === 0) {
             interaction.reply({ content: 'No set to report', ephemeral: true });
             return;
           }
@@ -387,7 +391,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let timeoutId: NodeJS.Timeout | undefined;
   const setGetEventSetsTimeout = () => {
     timeoutId = setTimeout(async () => {
-      updateEntrantIdToSet(await getEventSets(eventId, startggApiKey));
+      updateEntrantIdToSet(
+        await getEventSets(eventId, setIdToCompletedAt, startggApiKey),
+      );
       setGetEventSetsTimeout();
     }, 30000);
   };
@@ -402,7 +408,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         clearTimeout(timeoutId);
       }
       const entrantsPromise = getEventEntrants(id, startggApiKey);
-      const setsPromise = getEventSets(id, startggApiKey);
+      const setsPromise = getEventSets(id, setIdToCompletedAt, startggApiKey);
 
       // await both, we don't want to proceed if either throws
       const entrants = await entrantsPromise;
@@ -437,7 +443,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
-    updateEntrantIdToSet(await getEventSets(eventId, startggApiKey));
+    updateEntrantIdToSet(
+      await getEventSets(eventId, setIdToCompletedAt, startggApiKey),
+    );
     setGetEventSetsTimeout();
   });
 
@@ -454,7 +462,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         throw new Error('Please set start.gg token');
       }
 
-      await reportSet({ setId, winnerId, isDQ }, startggApiKey);
+      await reportSet(
+        { setId, winnerId, isDQ },
+        setIdToCompletedAt,
+        startggApiKey,
+      );
     },
   );
 
@@ -485,6 +497,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         set.id,
         set.winnerId === set.entrant1Id ? set.entrant2Id : set.entrant1Id,
         set.isDQ,
+        setIdToCompletedAt,
         startggApiKey,
       );
     },

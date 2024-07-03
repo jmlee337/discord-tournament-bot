@@ -144,6 +144,7 @@ const EVENT_ENTRANTS_QUERY = `
   }
 `;
 // 985241
+// 1166836
 export async function getEventEntrants(id: number, key: string) {
   let page = 1;
   let nextData;
@@ -183,6 +184,7 @@ type ApiPhaseGroup = {
 };
 type ApiSet = {
   id: number;
+  completedAt: number | null;
   displayScore: string;
   fullRoundText: string;
   phaseGroup: ApiPhaseGroup;
@@ -231,6 +233,7 @@ const EVENT_SETS_QUERY = `
           }
           nodes {
             id
+            completedAt
             displayScore
             fullRoundText
             phaseGroup {
@@ -251,7 +254,11 @@ const EVENT_SETS_QUERY = `
     }
   }
 `;
-export async function getEventSets(id: number, key: string): Promise<Sets> {
+export async function getEventSets(
+  id: number,
+  setIdToCompletedAt: Map<number, number>,
+  key: string,
+): Promise<Sets> {
   let page = 1;
   const pendingPhases = new Map<number, StartggPhase>();
   const completedPhases = new Map<number, StartggPhase>();
@@ -275,8 +282,18 @@ export async function getEventSets(id: number, key: string): Promise<Sets> {
       apiPhase.sets.nodes
         .filter((set) => set.slots[0].entrant && set.slots[1].entrant)
         .forEach((set) => {
+          let isCompleted = set.state === 3;
+          const reportedTimestampS = setIdToCompletedAt.get(set.id);
+          if (reportedTimestampS) {
+            if (set.completedAt && set.completedAt >= reportedTimestampS) {
+              setIdToCompletedAt.delete(set.id);
+            } else {
+              isCompleted = true;
+            }
+          }
+
           const startggSet = apiSetToStartggSet(set);
-          if (set.state === 3) {
+          if (isCompleted) {
             if (!completedPhases.has(apiPhase.id)) {
               completedPhases.set(apiPhase.id, {
                 name: apiPhase.name,
@@ -330,42 +347,30 @@ export async function getEventSets(id: number, key: string): Promise<Sets> {
   };
 }
 
+type ReportedSet = {
+  id: number;
+  completedAt: number;
+};
 const REPORT_BRACKET_SET_MUTATION = `
   mutation ReportBracketSet($setId: ID!, $winnerId: ID, $isDQ: Boolean) {
     reportBracketSet(setId: $setId, winnerId: $winnerId, isDQ: $isDQ) {
       id
-      displayScore
-      fullRoundText
-      phaseGroup {
-        id
-        displayIdentifier
-      }
-      slots {
-        entrant {
-          id
-          name
-        }
-      }
-      state
-      winnerId
+      completedAt
     }
   }
 `;
-export async function reportSet(set: ReportStartggSet, key: string) {
+export async function reportSet(
+  set: ReportStartggSet,
+  setIdToCompletedAt: Map<number, number>,
+  key: string,
+) {
   const data = await fetchGql(key, REPORT_BRACKET_SET_MUTATION, set);
-  const updatedSets = new Map<number, StartggSet>();
-  (data.reportBracketSet as ApiSet[])
-    .filter(
-      (updatedSet) =>
-        updatedSet.state !== 3 &&
-        updatedSet.slots[0].entrant &&
-        updatedSet.slots[1].entrant,
-    )
-    .map(apiSetToStartggSet)
-    .forEach((startggSet) => {
-      updatedSets.set(startggSet.id, startggSet);
-    });
-  return updatedSets;
+  const reportedSet = (data.reportBracketSet as ReportedSet[]).find(
+    (reportBracketSet) => reportBracketSet.id === set.setId,
+  );
+  if (reportedSet) {
+    setIdToCompletedAt.set(reportedSet.id, reportedSet.completedAt);
+  }
 }
 
 const RESET_SET_MUTATION = `
@@ -387,19 +392,7 @@ const SWAP_WINNER_MUTATION = `
     }
     reportBracketSet(setId: $id, winnerId: $newWinnerId, isDQ: $isDQ) {
       id
-      fullRoundText
-      phaseGroup {
-        id
-        displayIdentifier
-      }
-      slots {
-        entrant {
-          id
-          name
-        }
-      }
-      state
-      winnerId
+      completedAt
     }
   }
 `;
@@ -407,6 +400,7 @@ export async function swapWinner(
   id: number,
   newWinnerId: number,
   isDQ: boolean,
+  setIdToCompletedAt: Map<number, number>,
   key: string,
 ) {
   const data = await fetchGql(key, SWAP_WINNER_MUTATION, {
@@ -414,17 +408,10 @@ export async function swapWinner(
     newWinnerId,
     isDQ,
   });
-  const updatedSets = new Map<number, StartggSet>();
-  (data.reportBracketSet as ApiSet[])
-    .filter(
-      (updatedSet) =>
-        updatedSet.state !== 3 &&
-        updatedSet.slots[0].entrant &&
-        updatedSet.slots[1].entrant,
-    )
-    .map(apiSetToStartggSet)
-    .forEach((startggSet) => {
-      updatedSets.set(startggSet.id, startggSet);
-    });
-  return updatedSets;
+  const reportedSet = (data.reportBracketSet as ReportedSet[]).find(
+    (set) => set.id === id,
+  );
+  if (reportedSet) {
+    setIdToCompletedAt.set(reportedSet.id, reportedSet.completedAt);
+  }
 }
