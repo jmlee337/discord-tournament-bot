@@ -371,6 +371,7 @@ function Hello() {
               <DialogContentText>{tournament.name}</DialogContentText>
               {tournament.events.map((event) => (
                 <ListItemButton
+                  disabled={gettingTournament}
                   key={event.id}
                   onClick={async () => {
                     try {

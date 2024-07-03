@@ -452,7 +452,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       if (client === null) {
         maybeStartDiscordClient();
       }
-      return linkedParticipants;
+      return linkedParticipants.sort((lpA, lpB) =>
+        lpA.gamerTag.localeCompare(lpB.gamerTag),
+      );
     },
   );
 

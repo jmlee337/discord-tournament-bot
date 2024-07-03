@@ -357,10 +357,20 @@ export async function getEventSets(
   return {
     pending: Array.from(pendingPhases.entries())
       .sort(([aId], [bId]) => aId - bId)
-      .map(([, startggPhase]) => startggPhase),
+      .map(([, startggPhase]) => {
+        startggPhase.phaseGroups.sort((pgA, pgB) =>
+          pgA.name.localeCompare(pgB.name),
+        );
+        return startggPhase;
+      }),
     completed: Array.from(completedPhases.entries())
       .sort(([aId], [bId]) => aId - bId)
-      .map(([, startggPhase]) => startggPhase),
+      .map(([, startggPhase]) => {
+        startggPhase.phaseGroups.sort((pgA, pgB) =>
+          pgA.name.localeCompare(pgB.name),
+        );
+        return startggPhase;
+      }),
   };
 }
 
