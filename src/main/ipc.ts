@@ -82,6 +82,16 @@ function timeOutInteraction(
   });
 }
 
+function getOpponentName(set: StartggSet, entrantId: number) {
+  if (entrantId === set.entrant1Id) {
+    return set.entrant2Name;
+  }
+  if (entrantId === set.entrant2Id) {
+    return set.entrant1Name;
+  }
+  throw new Error('entrantId not in set.');
+}
+
 export default function setupIPCs(mainWindow: BrowserWindow) {
   initStartgg();
   const store = new Store();
@@ -272,7 +282,12 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           }
           const entrantSets = entrantIdToSets
             .get(entrantId)
-            ?.filter((set) => !setIdToCompletedAt.has(set.id));
+            ?.filter((set) => !setIdToCompletedAt.has(set.id))
+            .sort((setA, setB) =>
+              getOpponentName(setA, entrantId).localeCompare(
+                getOpponentName(setB, entrantId),
+              ),
+            );
           if (!entrantSets || entrantSets.length === 0) {
             interaction.reply({ content: 'No set to report', ephemeral: true });
             return;
@@ -301,11 +316,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
                       entrantSets.map((entrantSet) =>
                         new StringSelectMenuOptionBuilder()
                           .setLabel(
-                            `vs ${
-                              entrantId === entrantSet.entrant1Id
-                                ? entrantSet.entrant2Name
-                                : entrantSet.entrant1Name
-                            }`,
+                            `vs ${getOpponentName(entrantSet, entrantId)}`,
                           )
                           .setValue(entrantSet.id.toString(10)),
                       ),
