@@ -5,6 +5,7 @@ import {
   DiscordConfig,
   DiscordStatus,
   Sets,
+  StartggEvent,
   StartggSet,
   StartggTournament,
   StartingState,
@@ -21,8 +22,8 @@ const electronHandler = {
     ipcRenderer.invoke('setStartggApiKey', startggApiKey),
   getTournament: (slug: string): Promise<StartggTournament> =>
     ipcRenderer.invoke('getTournament', slug),
-  setEvent: (id: number, name: string): Promise<void> =>
-    ipcRenderer.invoke('setEvent', id, name),
+  setEvent: (event: StartggEvent): Promise<void> =>
+    ipcRenderer.invoke('setEvent', event),
   refreshSets: (): Promise<void> => ipcRenderer.invoke('refreshSets'),
   reportSet: (setId: number, winnerId: number, isDQ: boolean): Promise<void> =>
     ipcRenderer.invoke('reportSet', setId, winnerId, isDQ),

@@ -28,6 +28,7 @@ import {
   DiscordConfig,
   DiscordStatus,
   Sets,
+  StartggEvent,
   StartggSet,
   StartggTournament,
   StartingState,
@@ -99,8 +100,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   const discordIdToEntrantId = new Map<string, number>();
   const entrantIdToDiscordIds = new Map<number, string[]>();
   const entrantIdToSets = new Map<number, StartggSet[]>();
-  let eventId = 0;
-  let eventName = '';
+  let startggEvent: StartggEvent = {
+    id: 0,
+    name: '',
+    slug: '',
+  };
   let sets: Sets = {
     pending: [],
     completed: [],
@@ -258,7 +262,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             interaction.reply({
               content:
                 "Sorry, I can't figure out who you are on start.gg. Please make sure you're registered for\n" +
-                `\`${tournament.name}, ${eventName}\`\n` +
+                `\`${tournament.name}, ${startggEvent.name}\`\n` +
                 `and that your Discord account \`${interaction.user.tag}\`\n` +
                 'is connected here: https://www.start.gg/admin/profile/connected-accounts',
               ephemeral: true,
@@ -392,23 +396,27 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   const setGetEventSetsTimeout = () => {
     timeoutId = setTimeout(async () => {
       updateEntrantIdToSet(
-        await getEventSets(eventId, setIdToCompletedAt, startggApiKey),
+        await getEventSets(startggEvent, setIdToCompletedAt, startggApiKey),
       );
       setGetEventSetsTimeout();
     }, 30000);
   };
-  ipcMain.removeHandler('setEventId');
+  ipcMain.removeHandler('setEvent');
   ipcMain.handle(
     'setEvent',
-    async (event: IpcMainInvokeEvent, id: number, name: string) => {
+    async (event: IpcMainInvokeEvent, newEvent: StartggEvent) => {
       if (!startggApiKey) {
         throw new Error('Please set start.gg token');
       }
       if (timeoutId) {
         clearTimeout(timeoutId);
       }
-      const entrantsPromise = getEventEntrants(id, startggApiKey);
-      const setsPromise = getEventSets(id, setIdToCompletedAt, startggApiKey);
+      const entrantsPromise = getEventEntrants(newEvent.id, startggApiKey);
+      const setsPromise = getEventSets(
+        newEvent,
+        setIdToCompletedAt,
+        startggApiKey,
+      );
 
       // await both, we don't want to proceed if either throws
       const entrants = await entrantsPromise;
@@ -425,8 +433,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       });
       updateEntrantIdToSet(newSets);
 
-      eventId = id;
-      eventName = name;
+      startggEvent = newEvent;
       setGetEventSetsTimeout();
       if (client === null) {
         maybeStartDiscordClient();
@@ -444,7 +451,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       clearTimeout(timeoutId);
     }
     updateEntrantIdToSet(
-      await getEventSets(eventId, setIdToCompletedAt, startggApiKey),
+      await getEventSets(startggEvent, setIdToCompletedAt, startggApiKey),
     );
     setGetEventSetsTimeout();
   });
@@ -508,7 +515,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     'getStartingState',
     (): StartingState => ({
       discordStatus,
-      eventName,
+      eventName: startggEvent.name,
       sets,
       tournament,
     }),

@@ -137,7 +137,7 @@ function Hello() {
         const newEvent = newTournament.events[0];
         setGettingTournament(true);
         try {
-          await window.electron.setEvent(newEvent.id, newEvent.name);
+          await window.electron.setEvent(newEvent);
           setEventDescription(`${newTournament.name}, ${newEvent.name}`);
           setTournamentDialogOpen(false);
         } catch (e: any) {
@@ -369,7 +369,7 @@ function Hello() {
                   onClick={async () => {
                     try {
                       setGettingTournament(true);
-                      await window.electron.setEvent(event.id, event.name);
+                      await window.electron.setEvent(event);
                       setEventDescription(`${tournament.name}, ${event.name}`);
                       setTournamentDialogOpen(false);
                     } catch (e: any) {

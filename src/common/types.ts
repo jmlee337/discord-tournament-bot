@@ -51,6 +51,7 @@ export type StartggEntrant = {
 export type StartggEvent = {
   id: number;
   name: string;
+  slug: string;
 };
 
 export type StartggTournament = {

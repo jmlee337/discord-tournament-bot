@@ -52,6 +52,7 @@ type TournamentJSON = {
     event: {
       id: number;
       name: string;
+      slug: string;
     }[];
     tournament: {
       name: string;
@@ -61,16 +62,17 @@ type TournamentJSON = {
 };
 export async function getTournament(slug: string): Promise<StartggTournament> {
   const response = await wrappedFetch(
-    `https://api.smash.gg/tournament/${slug}?expand%5B%5D=event`,
+    `https://api.smash.gg/tournament/${slug}?expand[]=event`,
   );
   const json = (await response.json()) as TournamentJSON;
   return {
     name: json.entities.tournament.name,
     slug: json.entities.tournament.slug.slice(11),
     events: json.entities.event.map(
-      (event: any): StartggEvent => ({
+      (event): StartggEvent => ({
         id: event.id,
         name: event.name,
+        slug: event.slug,
       }),
     ),
   };
@@ -178,9 +180,22 @@ export async function getEventEntrants(id: number, key: string) {
   return entrants;
 }
 
+type EventJSON = {
+  entities: {
+    phase: {
+      id: number;
+      state: number;
+    }[];
+  };
+};
+type ApiPhase = {
+  id: number;
+  name: string;
+};
 type ApiPhaseGroup = {
   id: number;
   displayIdentifier: string;
+  phase: ApiPhase;
 };
 type ApiSet = {
   id: number;
@@ -197,16 +212,6 @@ type ApiSet = {
   state: number;
   winnerId: number | null;
 };
-type ApiPhase = {
-  id: number;
-  name: string;
-  sets: {
-    pageInfo: {
-      totalPages: number;
-    };
-    nodes: ApiSet[];
-  };
-};
 function apiSetToStartggSet(set: ApiSet): StartggSet {
   return {
     id: set.id,
@@ -222,121 +227,125 @@ function apiSetToStartggSet(set: ApiSet): StartggSet {
 
 // 1008143
 const EVENT_SETS_QUERY = `
-  query EventSetsQuery($id: ID, $page: Int) {
+  query EventSetsQuery($id: ID, $phaseIds: [ID], $page: Int) {
     event(id: $id) {
-      phases(state: ACTIVE) {
-        id
-        name
-        sets(page: $page, perPage: 142, sortType: CALL_ORDER, filters: {hideEmpty: true}) {
-          pageInfo {
-            totalPages
-          }
-          nodes {
+      sets(
+        page: $page
+        perPage: 124
+        sortType: CALL_ORDER
+        filters: {hideEmpty: true, phaseIds: $phaseIds}
+      ) {
+        pageInfo {
+          totalPages
+        }
+        nodes {
+          id
+          completedAt
+          displayScore
+          fullRoundText
+          phaseGroup {
             id
-            completedAt
-            displayScore
-            fullRoundText
-            phaseGroup {
+            displayIdentifier
+            phase {
               id
-              displayIdentifier
+              name
             }
-            slots {
-              entrant {
-                id
-                name
-              }
-            }
-            state
-            winnerId
           }
+          slots {
+            entrant {
+              id
+              name
+            }
+          }
+          state
+          winnerId
         }
       }
     }
   }
 `;
 export async function getEventSets(
-  id: number,
+  event: StartggEvent,
   setIdToCompletedAt: Map<number, number>,
   key: string,
 ): Promise<Sets> {
-  let page = 1;
+  const response = await wrappedFetch(
+    `https://api.smash.gg/${event.slug}?expand[]=phase`,
+  );
+  const json = (await response.json()) as EventJSON;
+  const phaseIds = json.entities.phase
+    .filter((phase) => phase.state === 2)
+    .map((phase) => phase.id);
+
   const pendingPhases = new Map<number, StartggPhase>();
   const completedPhases = new Map<number, StartggPhase>();
   const pendingPhaseGroups = new Map<number, StartggPhaseGroup>();
   const completedPhaseGroups = new Map<number, StartggPhaseGroup>();
+  let page = 1;
+  let nextData;
   // eslint-disable-next-line no-constant-condition
-  while (true) {
+  do {
     // eslint-disable-next-line no-await-in-loop
-    const nextData = await fetchGql(key, EVENT_SETS_QUERY, {
-      id,
+    nextData = await fetchGql(key, EVENT_SETS_QUERY, {
+      id: event.id,
+      phaseIds,
       page,
     });
-    let totalPages = 0;
-    const apiPhases = nextData.event.phases as ApiPhase[] | null;
-    if (!apiPhases) {
-      break;
-    }
-
-    apiPhases.forEach((apiPhase) => {
-      totalPages = Math.max(totalPages, apiPhase.sets.pageInfo.totalPages);
-      apiPhase.sets.nodes
-        .filter((set) => set.slots[0].entrant && set.slots[1].entrant)
-        .forEach((set) => {
-          let isCompleted = set.state === 3;
-          const reportedTimestampS = setIdToCompletedAt.get(set.id);
-          if (reportedTimestampS) {
-            if (set.completedAt && set.completedAt >= reportedTimestampS) {
-              setIdToCompletedAt.delete(set.id);
-            } else {
-              isCompleted = true;
-            }
-          }
-
-          const startggSet = apiSetToStartggSet(set);
-          if (isCompleted) {
-            if (!completedPhases.has(apiPhase.id)) {
-              completedPhases.set(apiPhase.id, {
-                name: apiPhase.name,
-                phaseGroups: [],
-              });
-            }
-            if (!completedPhaseGroups.has(set.phaseGroup.id)) {
-              const startggPhaseGroup: StartggPhaseGroup = {
-                name: `Pool ${set.phaseGroup.displayIdentifier}`,
-                sets: [],
-              };
-              completedPhaseGroups.set(set.phaseGroup.id, startggPhaseGroup);
-              completedPhases
-                .get(apiPhase.id)!
-                .phaseGroups.push(startggPhaseGroup);
-            }
-            completedPhaseGroups.get(set.phaseGroup.id)!.sets.push(startggSet);
+    const apiSets = nextData.event.sets.nodes as ApiSet[];
+    apiSets
+      .filter((apiSet) => apiSet.slots[0].entrant && apiSet.slots[1].entrant)
+      .forEach((apiSet) => {
+        let isCompleted = apiSet.state === 3;
+        const reportedTimestampS = setIdToCompletedAt.get(apiSet.id);
+        if (reportedTimestampS) {
+          if (apiSet.completedAt && apiSet.completedAt >= reportedTimestampS) {
+            setIdToCompletedAt.delete(apiSet.id);
           } else {
-            if (!pendingPhases.has(apiPhase.id)) {
-              pendingPhases.set(apiPhase.id, {
-                name: apiPhase.name,
-                phaseGroups: [],
-              });
-            }
-            if (!pendingPhaseGroups.has(set.phaseGroup.id)) {
-              const startggPhaseGroup: StartggPhaseGroup = {
-                name: `Pool ${set.phaseGroup.displayIdentifier}`,
-                sets: [],
-              };
-              pendingPhaseGroups.set(set.phaseGroup.id, startggPhaseGroup);
-              pendingPhases
-                .get(apiPhase.id)!
-                .phaseGroups.push(startggPhaseGroup);
-            }
-            pendingPhaseGroups.get(set.phaseGroup.id)!.sets.push(startggSet);
+            isCompleted = true;
           }
-        });
-    });
+        }
+
+        const apiPhaseGroup = apiSet.phaseGroup;
+        const apiPhase = apiSet.phaseGroup.phase;
+        const startggSet = apiSetToStartggSet(apiSet);
+        if (isCompleted) {
+          if (!completedPhases.has(apiPhase.id)) {
+            completedPhases.set(apiPhase.id, {
+              name: apiPhase.name,
+              phaseGroups: [],
+            });
+          }
+          if (!completedPhaseGroups.has(apiPhaseGroup.id)) {
+            const startggPhaseGroup: StartggPhaseGroup = {
+              name: `Pool ${apiPhaseGroup.displayIdentifier}`,
+              sets: [],
+            };
+            completedPhaseGroups.set(apiPhaseGroup.id, startggPhaseGroup);
+            completedPhases
+              .get(apiPhase.id)!
+              .phaseGroups.push(startggPhaseGroup);
+          }
+          completedPhaseGroups.get(apiPhaseGroup.id)!.sets.push(startggSet);
+        } else {
+          if (!pendingPhases.has(apiPhase.id)) {
+            pendingPhases.set(apiPhase.id, {
+              name: apiPhase.name,
+              phaseGroups: [],
+            });
+          }
+          if (!pendingPhaseGroups.has(apiPhaseGroup.id)) {
+            const startggPhaseGroup: StartggPhaseGroup = {
+              name: `Pool ${apiPhaseGroup.displayIdentifier}`,
+              sets: [],
+            };
+            pendingPhaseGroups.set(apiPhaseGroup.id, startggPhaseGroup);
+            pendingPhases.get(apiPhase.id)!.phaseGroups.push(startggPhaseGroup);
+          }
+          pendingPhaseGroups.get(apiPhaseGroup.id)!.sets.push(startggSet);
+        }
+      });
     page += 1;
-    if (page > totalPages) {
-      break;
-    }
-  }
+  } while (page <= nextData.event.sets.pageInfo.totalPages);
   return {
     pending: Array.from(pendingPhases.entries())
       .sort(([aId], [bId]) => aId - bId)
