@@ -49,6 +49,9 @@ const electronHandler = {
     ipcRenderer.removeAllListeners('sets');
     ipcRenderer.on('sets', callback);
   },
+  // exposed for dev only
+  registerSlashCommands: (): Promise<void> =>
+    ipcRenderer.invoke('registerSlashCommands'),
 };
 
 contextBridge.exposeInMainWorld('electron', electronHandler);

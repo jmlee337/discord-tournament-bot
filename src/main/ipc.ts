@@ -163,6 +163,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     }
     const body = [
       new SlashCommandBuilder()
+        .setName('dq')
+        .setDescription('forfeit your pending set(s).')
+        .toJSON(),
+      new SlashCommandBuilder()
         .setName('reportset')
         .setDescription('report the result of your set.')
         .toJSON(),
@@ -379,6 +383,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       }
     },
   );
+
+  // for dev only
+  ipcMain.removeHandler('registerSlashCommands');
+  ipcMain.handle('registerSlashCommands', () => registerSlashCommands());
 
   /**
    * start.gg
