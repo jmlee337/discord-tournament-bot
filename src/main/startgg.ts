@@ -4,6 +4,7 @@ import {
   Sets,
   StartggEntrant,
   StartggEvent,
+  StartggParticipant,
   StartggPhase,
   StartggPhaseGroup,
   StartggSet,
@@ -117,27 +118,29 @@ async function fetchGql(key: string, query: string, variables: any) {
 type ApiEntrant = {
   id: number;
   participants: {
-    id: number;
+    gamerTag: string;
     requiredConnections: {
       type: string;
       externalId: string;
+      externalUsername: string;
     }[];
   }[];
 };
 const EVENT_ENTRANTS_QUERY = `
   query EventQuery($id: ID, $page: Int) {
     event(id: $id) {
-      entrants(query: {page: $page, perPage: 256}) {
+      entrants(query: {page: $page, perPage: 500}) {
         pageInfo {
           totalPages
         }
         nodes {
           id
           participants {
-            id
+            gamerTag
             requiredConnections {
               type
               externalId
+              externalUsername
             }
           }
         }
@@ -159,18 +162,23 @@ export async function getEventEntrants(id: number, key: string) {
     });
     const apiSets = nextData.event.entrants.nodes as ApiEntrant[];
     const newEntrants = apiSets.map((entrant): StartggEntrant => {
-      const discordIds: string[] = [];
-      entrant.participants.forEach((participant) => {
-        const externalIds = participant.requiredConnections
-          .filter((rc) => rc.type === 'DISCORD')
-          .map((rc) => rc.externalId);
-        if (externalIds.length > 0) {
-          discordIds.push(externalIds[0]);
-        }
-      });
       return {
         id: entrant.id,
-        discordIds,
+        participants: entrant.participants.map((participant) => {
+          const startggParticipant: StartggParticipant = {
+            gamerTag: participant.gamerTag,
+          };
+          const discords = participant.requiredConnections
+            .filter((rc) => rc.type === 'DISCORD')
+            .map((rc) => ({
+              id: rc.externalId,
+              username: rc.externalUsername,
+            }));
+          if (discords.length > 0) {
+            [startggParticipant.discord] = discords;
+          }
+          return startggParticipant;
+        }),
       };
     });
     entrants.push(...newEntrants);

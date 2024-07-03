@@ -4,6 +4,7 @@ import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import {
   DiscordConfig,
   DiscordStatus,
+  LinkedParticipant,
   Sets,
   StartggEvent,
   StartggSet,
@@ -22,7 +23,7 @@ const electronHandler = {
     ipcRenderer.invoke('setStartggApiKey', startggApiKey),
   getTournament: (slug: string): Promise<StartggTournament> =>
     ipcRenderer.invoke('getTournament', slug),
-  setEvent: (event: StartggEvent): Promise<void> =>
+  setEvent: (event: StartggEvent): Promise<LinkedParticipant[]> =>
     ipcRenderer.invoke('setEvent', event),
   refreshSets: (): Promise<void> => ipcRenderer.invoke('refreshSets'),
   reportSet: (setId: number, winnerId: number, isDQ: boolean): Promise<void> =>

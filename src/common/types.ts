@@ -43,9 +43,17 @@ export type Sets = {
   completed: StartggPhase[];
 };
 
+export type StartggParticipant = {
+  discord?: {
+    id: string;
+    username: string;
+  };
+  gamerTag: string;
+};
+
 export type StartggEntrant = {
   id: number;
-  discordIds: string[];
+  participants: StartggParticipant[];
 };
 
 export type StartggEvent = {
@@ -60,9 +68,22 @@ export type StartggTournament = {
   events: StartggEvent[];
 };
 
+export type LinkedParticipant = {
+  gamerTag: string;
+  username: string;
+};
+
 export type StartingState = {
   discordStatus: DiscordStatus;
   eventName: string;
+  linkedParticipants: LinkedParticipant[];
   sets: Sets;
   tournament: StartggTournament;
+};
+
+// yellow 400
+export const HIGHLIGHT_COLOR = '#ffee58';
+export type Highlight = {
+  start: number;
+  end: number;
 };

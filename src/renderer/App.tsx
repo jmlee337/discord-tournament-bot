@@ -1,7 +1,11 @@
 import { MemoryRouter as Router, Routes, Route } from 'react-router-dom';
 import './App.css';
+import '@fontsource/roboto/300.css';
+import '@fontsource/roboto/400.css';
+import '@fontsource/roboto/500.css';
+import '@fontsource/roboto/700.css';
 import { FormEvent, useEffect, useState } from 'react';
-import { Clear, EventAvailable, Refresh, TaskAlt } from '@mui/icons-material';
+import { EventAvailable, Refresh, TaskAlt } from '@mui/icons-material';
 import {
   Alert,
   Box,
@@ -12,7 +16,6 @@ import {
   DialogContentText,
   DialogTitle,
   IconButton,
-  InputAdornment,
   InputBase,
   ListItemButton,
   ListItemText,
@@ -24,6 +27,9 @@ import {
 import Settings from './Settings';
 import {
   DiscordStatus,
+  HIGHLIGHT_COLOR,
+  Highlight,
+  LinkedParticipant,
   Sets,
   StartggPhase,
   StartggSet,
@@ -31,19 +37,13 @@ import {
 } from '../common/types';
 import Report from './Report';
 import Reset from './Reset';
-
-type Highlight = {
-  start: number;
-  end: number;
-};
+import ParticipantLinks from './ParticipantLinks';
+import SearchBar from './SearchBar';
 
 type SetWithHighlight = {
   highlights: Highlight[];
   set: StartggSet;
 };
-
-// yellow 400
-const HIGHLIGHT_COLOR = '#ffee58';
 
 const EMPTY_STARTGG_SET: StartggSet = {
   id: 0,
@@ -64,17 +64,21 @@ function Hello() {
   const [gotSettings, setGotSettings] = useState(false);
   const [discordApplicationId, setDiscordApplicationId] = useState('');
   const [discordToken, setDiscordToken] = useState('');
-  const [discordStatus, setDiscordStatus] = useState(DiscordStatus.NONE);
   const [startggApiKey, setStartggApiKey] = useState('');
+  const [appVersion, setAppVersion] = useState('');
+  const [latestAppVersion, setLatestAppVersion] = useState('');
+  // starting state
+  const [discordStatus, setDiscordStatus] = useState(DiscordStatus.NONE);
+  const [eventDescription, setEventDescription] = useState('');
+  const [linkedParticipants, setLinkedParticipants] = useState<
+    LinkedParticipant[]
+  >([]);
+  const [sets, setSets] = useState<Sets>({ pending: [], completed: [] });
   const [tournament, setTournament] = useState<StartggTournament>({
     name: '',
     slug: '',
     events: [],
   });
-  const [eventDescription, setEventDescription] = useState('');
-  const [sets, setSets] = useState<Sets>({ pending: [], completed: [] });
-  const [appVersion, setAppVersion] = useState('');
-  const [latestAppVersion, setLatestAppVersion] = useState('');
   useEffect(() => {
     const inner = async () => {
       const appVersionPromise = window.electron.getVersion();
@@ -93,6 +97,7 @@ function Hello() {
       if (tournamentName && eventName) {
         setEventDescription(`${tournamentName}, ${eventName}`);
       }
+      setLinkedParticipants((await startingStatePromise).linkedParticipants);
       setSets((await startingStatePromise).sets);
       setTournament((await startingStatePromise).tournament);
       setGotSettings(true);
@@ -137,7 +142,7 @@ function Hello() {
         const newEvent = newTournament.events[0];
         setGettingTournament(true);
         try {
-          await window.electron.setEvent(newEvent);
+          setLinkedParticipants(await window.electron.setEvent(newEvent));
           setEventDescription(`${newTournament.name}, ${newEvent.name}`);
           setTournamentDialogOpen(false);
         } catch (e: any) {
@@ -186,6 +191,7 @@ function Hello() {
     }
   }
 
+  const [linkedParticipantsOpen, setLinkedParticipantsOpen] = useState(false);
   const [searchSubstr, setSearchSubstr] = useState('');
   const [refreshingSets, setRefreshingSets] = useState(false);
   const [selectedSet, setSelectedSet] = useState<StartggSet>(EMPTY_STARTGG_SET);
@@ -335,7 +341,7 @@ function Hello() {
                 alignItems: 'center',
                 display: 'flex',
                 gap: '8px',
-                marginTop: '8px',
+                margin: '8px 0',
               }}
             >
               <TextField
@@ -369,7 +375,9 @@ function Hello() {
                   onClick={async () => {
                     try {
                       setGettingTournament(true);
-                      await window.electron.setEvent(event);
+                      setLinkedParticipants(
+                        await window.electron.setEvent(event),
+                      );
                       setEventDescription(`${tournament.name}, ${event.name}`);
                       setTournamentDialogOpen(false);
                     } catch (e: any) {
@@ -411,12 +419,7 @@ function Hello() {
           </Alert>
         )}
       </Stack>
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="end"
-        padding="8px 0"
-      >
+      <Stack direction="row" alignItems="center" justifyContent="end">
         <Settings
           discordApplicationId={discordApplicationId}
           setDiscordApplicationId={setDiscordApplicationId}
@@ -428,24 +431,14 @@ function Hello() {
           latestAppVersion={latestAppVersion}
           gotSettings={gotSettings}
         />
-        <TextField
-          label="Search"
-          onChange={(event) => {
-            setSearchSubstr(event.target.value);
-          }}
-          size="small"
-          value={searchSubstr}
-          InputProps={{
-            endAdornment: (
-              <InputAdornment position="end">
-                <Tooltip title="Clear search">
-                  <IconButton onClick={() => setSearchSubstr('')}>
-                    <Clear />
-                  </IconButton>
-                </Tooltip>
-              </InputAdornment>
-            ),
-          }}
+        <ParticipantLinks
+          open={linkedParticipantsOpen}
+          setOpen={setLinkedParticipantsOpen}
+          linkedParticipants={linkedParticipants}
+        />
+        <SearchBar
+          searchSubstr={searchSubstr}
+          setSearchSubstr={setSearchSubstr}
         />
         {refreshingSets ? (
           <CircularProgress size="24px" style={{ margin: '9px' }} />

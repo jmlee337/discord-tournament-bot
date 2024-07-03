@@ -27,6 +27,7 @@ import Store from 'electron-store';
 import {
   DiscordConfig,
   DiscordStatus,
+  LinkedParticipant,
   Sets,
   StartggEvent,
   StartggSet,
@@ -401,6 +402,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       setGetEventSetsTimeout();
     }, 30000);
   };
+  const linkedParticipants: LinkedParticipant[] = [];
   ipcMain.removeHandler('setEvent');
   ipcMain.handle(
     'setEvent',
@@ -425,10 +427,22 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       // all clear to clear maps and update
       discordIdToEntrantId.clear();
       entrantIdToDiscordIds.clear();
+      linkedParticipants.length = 0;
       entrants.forEach((entrant) => {
-        entrantIdToDiscordIds.set(entrant.id, entrant.discordIds);
-        entrant.discordIds.forEach((discordId) => {
-          discordIdToEntrantId.set(discordId, entrant.id);
+        entrantIdToDiscordIds.set(
+          entrant.id,
+          entrant.participants
+            .filter((participant) => participant.discord)
+            .map((participant) => participant.discord!.id),
+        );
+        entrant.participants.forEach((participant) => {
+          linkedParticipants.push({
+            gamerTag: participant.gamerTag,
+            username: participant.discord?.username || '',
+          });
+          if (participant.discord) {
+            discordIdToEntrantId.set(participant.discord.id, entrant.id);
+          }
         });
       });
       updateEntrantIdToSet(newSets);
@@ -438,6 +452,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       if (client === null) {
         maybeStartDiscordClient();
       }
+      return linkedParticipants;
     },
   );
 
@@ -516,6 +531,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     (): StartingState => ({
       discordStatus,
       eventName: startggEvent.name,
+      linkedParticipants,
       sets,
       tournament,
     }),
