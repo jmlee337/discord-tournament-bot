@@ -109,6 +109,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
    * Needed for both Discord and start.gg
    */
   const discordIdToEntrantId = new Map<string, number>();
+  const discordIdToGamerTag = new Map<string, string>();
   const entrantIdToDiscordIds = new Map<number, string[]>();
   const entrantIdToSets = new Map<number, StartggSet[]>();
   let startggEvent: StartggEvent = {
@@ -220,10 +221,13 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           startggApiKey,
         );
         const inner = winnerId === set.entrant1Id ? '[W - L]' : '[L - W]';
-        const reporterName =
-          discordIdToEntrantId.get(confirmation.user.id)! === set.entrant1Id
-            ? set.entrant1Name
-            : set.entrant2Name;
+        const { displayName } = confirmation.user;
+        const gamerTag = discordIdToGamerTag.get(confirmation.user.id)!;
+        const suffix = displayName
+          .toLowerCase()
+          .includes(gamerTag.toLowerCase())
+          ? ''
+          : ` (${gamerTag})`;
         confirmation.editReply({
           components: [],
           embeds: [
@@ -231,7 +235,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
               .setColor('#22b24c')
               .setTitle(`${set.entrant1Name}  ${inner}  ${set.entrant2Name}`)
               .setFooter({
-                text: `Reported by ${reporterName} (${confirmation.user.displayName})`,
+                text: `Reported by ${displayName}${suffix}`,
               }),
           ],
         });
@@ -445,6 +449,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
 
       // all clear to clear maps and update
       discordIdToEntrantId.clear();
+      discordIdToGamerTag.clear();
       entrantIdToDiscordIds.clear();
       linkedParticipants.length = 0;
       entrants.forEach((entrant) => {
@@ -461,6 +466,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           });
           if (participant.discord) {
             discordIdToEntrantId.set(participant.discord.id, entrant.id);
+            discordIdToGamerTag.set(
+              participant.discord.id,
+              participant.gamerTag,
+            );
           }
         });
       });
