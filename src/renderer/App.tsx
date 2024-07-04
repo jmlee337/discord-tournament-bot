@@ -4,7 +4,7 @@ import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
-import { FormEvent, useEffect, useState } from 'react';
+import { FormEvent, JSX, useEffect, useState } from 'react';
 import { EventAvailable, Refresh, TaskAlt } from '@mui/icons-material';
 import {
   Alert,
@@ -205,7 +205,8 @@ function Hello() {
 
   const mapStartggPhasePredicate = (phase: StartggPhase, pending: boolean) => {
     const prefix = pending ? 'pending' : 'completed';
-    return phase.phaseGroups.map((phaseGroup) => {
+    const phaseGroups: JSX.Element[] = [];
+    phase.phaseGroups.forEach((phaseGroup) => {
       const groupSets: SetWithHighlight[] = [];
       phaseGroup.sets.forEach((set) => {
         if (!searchSubstr) {
@@ -229,88 +230,99 @@ function Hello() {
           }
         }
       });
-      return (
-        <Box key={`${prefix}${phase.name}${phaseGroup.name}`}>
-          <Typography variant="h6">
-            {phase.name}, {phaseGroup.name}
-          </Typography>
-          <Stack direction="row" gap="8px" flexWrap="wrap">
-            {groupSets.map((setWithHighlight) => (
-              <ListItemButton
-                key={setWithHighlight.set.id}
-                style={{ flexGrow: 0 }}
-                onClick={() => {
-                  if (pending) {
-                    setSelectedSet(setWithHighlight.set);
-                    setReportingDialogOpen(true);
-                  } else {
-                    setResetSelectedSet(setWithHighlight.set);
-                    setResetDialogOpen(true);
-                  }
-                }}
-              >
-                <Stack>
-                  <Typography variant="caption">
-                    {setWithHighlight.set.fullRoundText}
-                  </Typography>
-                  {setWithHighlight.highlights[0] ? (
-                    <Typography variant="body2">
-                      <span>
-                        {setWithHighlight.set.entrant1Name.substring(
-                          0,
-                          setWithHighlight.highlights[0].start,
-                        )}
-                      </span>
-                      <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
-                        {setWithHighlight.set.entrant1Name.substring(
-                          setWithHighlight.highlights[0].start,
-                          setWithHighlight.highlights[0].end,
-                        )}
-                      </span>
-                      <span>
-                        {setWithHighlight.set.entrant1Name.substring(
-                          setWithHighlight.highlights[0].end,
-                        )}
-                      </span>
+      if (groupSets.length > 0) {
+        phaseGroups.push(
+          <Box key={`${prefix}${phase.name}${phaseGroup.name}`}>
+            <Typography variant="h6">
+              {phase.name}, {phaseGroup.name}
+            </Typography>
+            <Stack direction="row" gap="8px" flexWrap="wrap">
+              {groupSets.map((setWithHighlight) => (
+                <ListItemButton
+                  key={setWithHighlight.set.id}
+                  style={{ flexGrow: 0 }}
+                  onClick={() => {
+                    if (pending) {
+                      setSelectedSet(setWithHighlight.set);
+                      setReportingDialogOpen(true);
+                    } else {
+                      setResetSelectedSet(setWithHighlight.set);
+                      setResetDialogOpen(true);
+                    }
+                  }}
+                >
+                  <Stack>
+                    <Typography variant="caption">
+                      {setWithHighlight.set.fullRoundText}
                     </Typography>
-                  ) : (
-                    <Typography variant="body2">
-                      {setWithHighlight.set.entrant1Name}
-                    </Typography>
-                  )}
-                  {setWithHighlight.highlights[1] ? (
-                    <Typography variant="body2">
-                      <span>
-                        {setWithHighlight.set.entrant2Name.substring(
-                          0,
-                          setWithHighlight.highlights[1].start,
-                        )}
-                      </span>
-                      <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
-                        {setWithHighlight.set.entrant2Name.substring(
-                          setWithHighlight.highlights[1].start,
-                          setWithHighlight.highlights[1].end,
-                        )}
-                      </span>
-                      <span>
-                        {setWithHighlight.set.entrant2Name.substring(
-                          setWithHighlight.highlights[1].end,
-                        )}
-                      </span>
-                    </Typography>
-                  ) : (
-                    <Typography variant="body2">
-                      {setWithHighlight.set.entrant2Name}
-                    </Typography>
-                  )}
-                </Stack>
-              </ListItemButton>
-            ))}
-          </Stack>
-        </Box>
-      );
+                    {setWithHighlight.highlights[0] ? (
+                      <Typography variant="body2">
+                        <span>
+                          {setWithHighlight.set.entrant1Name.substring(
+                            0,
+                            setWithHighlight.highlights[0].start,
+                          )}
+                        </span>
+                        <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+                          {setWithHighlight.set.entrant1Name.substring(
+                            setWithHighlight.highlights[0].start,
+                            setWithHighlight.highlights[0].end,
+                          )}
+                        </span>
+                        <span>
+                          {setWithHighlight.set.entrant1Name.substring(
+                            setWithHighlight.highlights[0].end,
+                          )}
+                        </span>
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2">
+                        {setWithHighlight.set.entrant1Name}
+                      </Typography>
+                    )}
+                    {setWithHighlight.highlights[1] ? (
+                      <Typography variant="body2">
+                        <span>
+                          {setWithHighlight.set.entrant2Name.substring(
+                            0,
+                            setWithHighlight.highlights[1].start,
+                          )}
+                        </span>
+                        <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+                          {setWithHighlight.set.entrant2Name.substring(
+                            setWithHighlight.highlights[1].start,
+                            setWithHighlight.highlights[1].end,
+                          )}
+                        </span>
+                        <span>
+                          {setWithHighlight.set.entrant2Name.substring(
+                            setWithHighlight.highlights[1].end,
+                          )}
+                        </span>
+                      </Typography>
+                    ) : (
+                      <Typography variant="body2">
+                        {setWithHighlight.set.entrant2Name}
+                      </Typography>
+                    )}
+                  </Stack>
+                </ListItemButton>
+              ))}
+            </Stack>
+          </Box>,
+        );
+      }
     });
+    return phaseGroups;
   };
+  const pendingPhases: JSX.Element[] = [];
+  sets.pending.forEach((phase) => {
+    pendingPhases.push(...mapStartggPhasePredicate(phase, true));
+  });
+  const completedPhases: JSX.Element[] = [];
+  sets.completed.forEach((phase) => {
+    completedPhases.push(...mapStartggPhasePredicate(phase, false));
+  });
 
   return (
     <>
@@ -476,24 +488,16 @@ function Hello() {
         )}
       </Stack>
       <Stack>
-        {sets.pending.length > 0 && (
+        {pendingPhases.length > 0 && (
           <>
             <Typography variant="h5">Pending</Typography>
-            <Stack>
-              {sets.pending.map((phase) =>
-                mapStartggPhasePredicate(phase, true),
-              )}
-            </Stack>
+            <Stack>{pendingPhases}</Stack>
           </>
         )}
-        {sets.completed.length > 0 && (
+        {completedPhases.length > 0 && (
           <>
             <Typography variant="h5">Completed</Typography>
-            <Stack>
-              {sets.completed.map((phase) =>
-                mapStartggPhasePredicate(phase, false),
-              )}
-            </Stack>
+            <Stack>{completedPhases}</Stack>
           </>
         )}
         <Report
