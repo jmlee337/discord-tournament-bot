@@ -44,6 +44,7 @@ export type Sets = {
 };
 
 export type StartggParticipant = {
+  id: number;
   discord?: {
     id: string;
     username: string;
@@ -69,6 +70,7 @@ export type StartggTournament = {
 };
 
 export type LinkedParticipant = {
+  id: number;
   gamerTag: string;
   username: string;
 };

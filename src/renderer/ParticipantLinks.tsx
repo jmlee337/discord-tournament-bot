@@ -103,7 +103,7 @@ export default function ParticipantLinks({
             </TableHead>
             <TableBody>
               {linkedParticipantWithHighlights.map((lpwh) => (
-                <TableRow>
+                <TableRow key={lpwh.linkedParticipant.id}>
                   <TableCell>
                     {lpwh.highlights[0] ? (
                       <>

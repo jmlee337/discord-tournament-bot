@@ -239,7 +239,7 @@ function Hello() {
             <Stack direction="row" gap="8px" flexWrap="wrap">
               {groupSets.map((setWithHighlight) => (
                 <ListItemButton
-                  key={setWithHighlight.set.id}
+                  key={`${prefix}${setWithHighlight.set.id}`}
                   style={{ flexGrow: 0 }}
                   onClick={() => {
                     if (pending) {

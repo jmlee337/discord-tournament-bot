@@ -118,6 +118,7 @@ async function fetchGql(key: string, query: string, variables: any) {
 type ApiEntrant = {
   id: number;
   participants: {
+    id: number;
     gamerTag: string;
     requiredConnections: {
       type: string;
@@ -136,6 +137,7 @@ const EVENT_ENTRANTS_QUERY = `
         nodes {
           id
           participants {
+            id
             gamerTag
             requiredConnections {
               type
@@ -166,6 +168,7 @@ export async function getEventEntrants(id: number, key: string) {
         id: entrant.id,
         participants: entrant.participants.map((participant) => {
           const startggParticipant: StartggParticipant = {
+            id: participant.id,
             gamerTag: participant.gamerTag,
           };
           const discords = participant.requiredConnections

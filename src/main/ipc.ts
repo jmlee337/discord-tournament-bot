@@ -623,6 +623,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         );
         entrant.participants.forEach((participant) => {
           linkedParticipants.push({
+            id: participant.id,
             gamerTag: participant.gamerTag,
             username: participant.discord?.username || '',
           });
