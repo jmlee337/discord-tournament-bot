@@ -1,10 +1,12 @@
 import {
   Alert,
   Button,
+  Checkbox,
   Dialog,
   DialogContent,
   DialogContentText,
   DialogTitle,
+  FormControlLabel,
   IconButton,
   Stack,
   TextField,
@@ -12,11 +14,50 @@ import {
   Typography,
 } from '@mui/material';
 import { ContentCopy, Settings as SettingsIcon } from '@mui/icons-material';
-import { useMemo, useState } from 'react';
+import { ChangeEvent, useMemo, useState } from 'react';
+
+function LabeledCheckbox({
+  checked,
+  disabled,
+  label,
+  labelPlacement,
+  set,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  labelPlacement?: 'end' | 'start' | 'top' | 'bottom';
+  set: (checked: boolean) => void;
+}) {
+  return (
+    <FormControlLabel
+      control={
+        <Checkbox
+          checked={checked}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => {
+            set(event.target.checked);
+          }}
+        />
+      }
+      disabled={disabled}
+      disableTypography
+      label={label}
+      labelPlacement={labelPlacement}
+      sx={{ typography: 'caption' }}
+    />
+  );
+}
+
+LabeledCheckbox.defaultProps = {
+  disabled: false,
+  labelPlacement: 'end',
+};
 
 export default function Settings({
   discordApplicationId,
   setDiscordApplicationId,
+  discordCommandDq,
+  setDiscordCommandDq,
   discordToken,
   setDiscordToken,
   startggApiKey,
@@ -27,6 +68,8 @@ export default function Settings({
 }: {
   discordApplicationId: string;
   setDiscordApplicationId: (discordApplicationId: string) => void;
+  discordCommandDq: boolean;
+  setDiscordCommandDq: (discordCommandDq: boolean) => void;
   discordToken: string;
   setDiscordToken: (discordToken: string) => void;
   startggApiKey: string;
@@ -215,6 +258,14 @@ export default function Settings({
               {startggApiKeyCopied ? 'Copied!' : 'Copy'}
             </Button>
           </Stack>
+          <LabeledCheckbox
+            checked={discordCommandDq}
+            label="Enable /dq command"
+            set={async (checked) => {
+              await window.electron.setDiscordCommandDq(checked);
+              setDiscordCommandDq(checked);
+            }}
+          />
           {needUpdate && (
             <Alert severity="warning">
               Update available!{' '}

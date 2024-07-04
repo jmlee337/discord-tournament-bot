@@ -17,6 +17,10 @@ const electronHandler = {
     ipcRenderer.invoke('getDiscordConfig'),
   setDiscordConfig: (discordConfig: DiscordConfig): Promise<void> =>
     ipcRenderer.invoke('setDiscordConfig', discordConfig),
+  getDiscordCommandDq: (): Promise<boolean> =>
+    ipcRenderer.invoke('getDiscordCommandDq'),
+  setDiscordCommandDq: (discordCommandDq: boolean): Promise<void> =>
+    ipcRenderer.invoke('setDiscordCommandDq', discordCommandDq),
   getStartggApiKey: (): Promise<string> =>
     ipcRenderer.invoke('getStartggApiKey'),
   setStartggApiKey: (startggApiKey: string): Promise<void> =>

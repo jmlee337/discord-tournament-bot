@@ -134,6 +134,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let discordConfig = store.has('discordConfig')
     ? (store.get('discordConfig') as DiscordConfig)
     : { applicationId: '', token: '' };
+  let discordCommandDq = store.has('discordCommandDq')
+    ? (store.get('discordCommandDq') as boolean)
+    : true;
   let discordRegisteredVersion = store.has('discordRegisteredVersion')
     ? (store.get('discordRegisteredVersion') as string)
     : '';
@@ -326,6 +329,13 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           return;
         }
         if (interaction.commandName === 'dq') {
+          if (!discordCommandDq) {
+            interaction.reply({
+              content: 'This command is currently disabled',
+              ephemeral: true,
+            });
+            return;
+          }
           const { entrantId, entrantSets } = getEntrantIdAndSets(interaction);
           if (!entrantId) {
             return;
@@ -525,6 +535,18 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       if (changed) {
         maybeStartDiscordClient();
       }
+    },
+  );
+
+  ipcMain.removeHandler('getDiscordCommandDq');
+  ipcMain.handle('getDiscordCommandDq', () => discordCommandDq);
+
+  ipcMain.removeHandler('setDiscordCommandDq');
+  ipcMain.handle(
+    'setDiscordCommandDq',
+    (event: IpcMainInvokeEvent, newDiscordCommandDq: boolean) => {
+      store.set('discordCommandDq', newDiscordCommandDq);
+      discordCommandDq = newDiscordCommandDq;
     },
   );
 
