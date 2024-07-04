@@ -1,10 +1,12 @@
 import {
   ActionRowBuilder,
   ButtonBuilder,
+  ButtonInteraction,
   ButtonStyle,
   CacheType,
   ChatInputCommandInteraction,
   Client,
+  ComponentType,
   EmbedBuilder,
   Events,
   GatewayIntentBits,
@@ -28,6 +30,7 @@ import {
   DiscordConfig,
   DiscordStatus,
   LinkedParticipant,
+  ReportStartggSet,
   Sets,
   StartggEvent,
   StartggSet,
@@ -40,14 +43,20 @@ import {
   getTournament,
   initStartgg,
   reportSet,
+  reportSets,
   resetSet,
   swapWinner,
 } from './startgg';
 
 const CONFIRMATION_TIMEOUT_MS = 30000;
+const STARTGG_BLACK = '#031221';
+const STARTGG_BLUE = '#3870e0';
+const STARTGG_GREEN = '#22b24c';
+const STARTGG_GREY = '#68717a';
+const STARTGG_RED = '#e0225b';
 function setInitialEmbed(embed: EmbedBuilder, set: StartggSet) {
   return embed
-    .setColor('#3870e0')
+    .setColor(STARTGG_BLUE)
     .setTitle(`${set.entrant1Name} vs ${set.entrant2Name}`)
     .setDescription(set.fullRoundText)
     .setFooter({ text: 'Please click the set winner' });
@@ -76,8 +85,35 @@ function timeOutInteraction(
     components: [],
     embeds: [
       embed
-        .setColor('#031221')
+        .setColor(STARTGG_BLACK)
         .setFooter({ text: 'Timed out. You may try again' }),
+    ],
+  });
+}
+
+function startggPendingConfirmation(
+  embed: EmbedBuilder,
+  confirmation: ButtonInteraction,
+) {
+  confirmation.update({
+    components: [],
+    embeds: [
+      embed.setColor(STARTGG_GREY).setFooter({
+        text: 'Reporting to start.gg...',
+      }),
+    ],
+  });
+}
+
+function startggFailConfirmation(
+  embed: EmbedBuilder,
+  confirmation: ButtonInteraction,
+) {
+  confirmation.editReply({
+    embeds: [
+      embed.setColor(STARTGG_RED).setFooter({
+        text: 'Failed to report to start.gg. Please try again',
+      }),
     ],
   });
 }
@@ -186,6 +222,33 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       updateDiscordStatus(DiscordStatus.BAD_APPLICATION_ID);
     }
   };
+  const getEntrantIdAndSets = (
+    interaction: ChatInputCommandInteraction<CacheType>,
+  ): { entrantId?: number; entrantSets?: StartggSet[] } => {
+    const entrantId = discordIdToEntrantId.get(interaction.user.id);
+    if (!entrantId) {
+      interaction.reply({
+        content:
+          "Sorry, I can't figure out who you are on start.gg. Please make sure you're registered for\n" +
+          `\`${tournament.name}, ${startggEvent.name}\`\n` +
+          `and that your Discord account \`${interaction.user.tag}\`\n` +
+          'is connected here: https://www.start.gg/admin/profile/connected-accounts',
+        ephemeral: true,
+      });
+      return {};
+    }
+    return {
+      entrantId,
+      entrantSets: entrantIdToSets
+        .get(entrantId)
+        ?.filter((set) => !setIdToCompletedAt.has(set.id))
+        .sort((setA, setB) =>
+          getOpponentName(setA, entrantId).localeCompare(
+            getOpponentName(setB, entrantId),
+          ),
+        ),
+    };
+  };
   const awaitReportResponse = async (
     embed: EmbedBuilder,
     interaction:
@@ -201,18 +264,12 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     entrantIdToDiscordIds.get(set.entrant1Id)?.forEach(forEachPredicate);
     entrantIdToDiscordIds.get(set.entrant2Id)?.forEach(forEachPredicate);
     try {
-      const confirmation = await response.awaitMessageComponent({
-        time: CONFIRMATION_TIMEOUT_MS,
-        filter: (confI) => validDiscordIds.has(confI.user.id),
-      });
-      confirmation.update({
-        components: [],
-        embeds: [
-          embed.setColor('#68717a').setFooter({
-            text: 'Reporting to start.gg...',
-          }),
-        ],
-      });
+      const confirmation =
+        await response.awaitMessageComponent<ComponentType.Button>({
+          time: CONFIRMATION_TIMEOUT_MS,
+          filter: (confI) => validDiscordIds.has(confI.user.id),
+        });
+      startggPendingConfirmation(embed, confirmation);
       const winnerId = parseInt(confirmation.customId, 10);
       try {
         await reportSet(
@@ -232,7 +289,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           components: [],
           embeds: [
             embed
-              .setColor('#22b24c')
+              .setColor(STARTGG_GREEN)
               .setTitle(`${set.entrant1Name}  ${inner}  ${set.entrant2Name}`)
               .setFooter({
                 text: `Reported by ${displayName}${suffix}`,
@@ -240,14 +297,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           ],
         });
       } catch {
-        confirmation.editReply({
-          components: [],
-          embeds: [
-            embed.setColor('#e0225b').setFooter({
-              text: 'Failed to report to start.gg. Please try again',
-            }),
-          ],
-        });
+        startggFailConfirmation(embed, confirmation);
       }
     } catch {
       timeOutInteraction(embed, interaction);
@@ -275,27 +325,117 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         if (!interaction.isChatInputCommand()) {
           return;
         }
-        if (interaction.commandName === 'reportset') {
-          const entrantId = discordIdToEntrantId.get(interaction.user.id);
+        if (interaction.commandName === 'dq') {
+          const { entrantId, entrantSets } = getEntrantIdAndSets(interaction);
           if (!entrantId) {
-            interaction.reply({
-              content:
-                "Sorry, I can't figure out who you are on start.gg. Please make sure you're registered for\n" +
-                `\`${tournament.name}, ${startggEvent.name}\`\n` +
-                `and that your Discord account \`${interaction.user.tag}\`\n` +
-                'is connected here: https://www.start.gg/admin/profile/connected-accounts',
-              ephemeral: true,
-            });
             return;
           }
-          const entrantSets = entrantIdToSets
-            .get(entrantId)
-            ?.filter((set) => !setIdToCompletedAt.has(set.id))
-            .sort((setA, setB) =>
-              getOpponentName(setA, entrantId).localeCompare(
-                getOpponentName(setB, entrantId),
-              ),
+          if (!entrantSets || entrantSets.length === 0) {
+            interaction.reply({ content: 'No pending sets', ephemeral: true });
+            return;
+          }
+          const embed = new EmbedBuilder()
+            .setColor(STARTGG_RED)
+            .setTitle('Are you sure you want to DQ?')
+            .setFields(
+              entrantSets.slice(0, 25).map((entrantSet) => ({
+                name: entrantSet.fullRoundText,
+                value: `vs ${getOpponentName(entrantSet, entrantId)}`,
+                inline: true,
+              })),
             );
+          const numNotShown = entrantSets.length - 25;
+          if (numNotShown > 0) {
+            embed.setFooter({
+              text: `${numNotShown} sets not shown (${entrantSets.length} total)`,
+            });
+          }
+          const response = await interaction.reply({
+            embeds: [embed],
+            components: [
+              new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                  .setCustomId('cancel')
+                  .setLabel('Cancel')
+                  .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                  .setCustomId('confirm')
+                  .setLabel(
+                    entrantSets.length > 1 ? 'Confirm all DQs' : 'Confirm DQ',
+                  )
+                  .setStyle(ButtonStyle.Danger),
+              ),
+            ],
+          });
+          try {
+            const confirmation =
+              await response.awaitMessageComponent<ComponentType.Button>({
+                time: CONFIRMATION_TIMEOUT_MS,
+                filter: (confI) => confI.user.id === interaction.user.id,
+              });
+            if (confirmation.customId === 'cancel') {
+              confirmation.update({
+                components: [],
+                embeds: [
+                  new EmbedBuilder()
+                    .setColor(STARTGG_BLACK)
+                    .setTitle('DQ Cancelled'),
+                ],
+              });
+              return;
+            }
+            startggPendingConfirmation(embed, confirmation);
+            try {
+              await reportSets(
+                entrantSets.map(
+                  (entrantSet): ReportStartggSet => ({
+                    setId: entrantSet.id,
+                    winnerId:
+                      entrantId === entrantSet.entrant1Id
+                        ? entrantSet.entrant2Id
+                        : entrantSet.entrant1Id,
+                    isDQ: true,
+                  }),
+                ),
+                setIdToCompletedAt,
+                startggApiKey,
+              );
+              const entrantName =
+                entrantId === entrantSets[0].entrant1Id
+                  ? entrantSets[0].entrant1Name
+                  : entrantSets[0].entrant2Name;
+              const titleSuffix =
+                entrantSets.length > 1
+                  ? ` from ${entrantSets.length} sets`
+                  : '';
+              const { displayName } = confirmation.user;
+              const gamerTag = discordIdToGamerTag.get(confirmation.user.id)!;
+              const footerSuffix = displayName
+                .toLowerCase()
+                .includes(gamerTag.toLowerCase())
+                ? ''
+                : ` (${gamerTag})`;
+              confirmation.editReply({
+                embeds: [
+                  embed
+                    .setColor(STARTGG_GREEN)
+                    .setTitle(`${entrantName} DQed${titleSuffix}`)
+                    .setFooter({
+                      text: `Requested by ${displayName}${footerSuffix}`,
+                    }),
+                ],
+              });
+            } catch {
+              startggFailConfirmation(embed, confirmation);
+            }
+          } catch {
+            timeOutInteraction(embed, interaction);
+          }
+        } else if (interaction.commandName === 'reportset') {
+          const { entrantId, entrantSets } = getEntrantIdAndSets(interaction);
+          if (!entrantId) {
+            return;
+          }
           if (!entrantSets || entrantSets.length === 0) {
             interaction.reply({ content: 'No set to report', ephemeral: true });
             return;
@@ -310,7 +450,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             await awaitReportResponse(embed, interaction, response, set);
           } else {
             const embed = new EmbedBuilder()
-              .setColor('#3870e0')
+              .setColor(STARTGG_BLUE)
               .setTitle(
                 `${interaction.user.displayName} selecting set to report...`,
               );

@@ -442,3 +442,37 @@ export async function swapWinner(
     setIdToCompletedAt.set(reportedSet.id, reportedSet.completedAt);
   }
 }
+
+export async function reportSets(
+  sets: ReportStartggSet[],
+  setIdToCompletedAt: Map<number, number>,
+  key: string,
+) {
+  const outer: string[] = [];
+  const inner: string[] = [];
+  const variables: any = {};
+  sets.forEach((set, i) => {
+    outer.push(`$setId${i}: ID!, $winnerId${i}: ID, $isDQ${i}: Boolean`);
+    inner.push(`
+  set${i}: reportBracketSet(setId: $setId${i}, winnerId: $winnerId${i}, isDQ: $isDQ${i}) {
+    id
+    completedAt
+  }`);
+    variables[`setId${i}`] = set.setId;
+    variables[`winnerId${i}`] = set.winnerId;
+    variables[`isDQ${i}`] = set.isDQ;
+  });
+  const query = `mutation ReportSetsMutation(${outer.join(
+    ', ',
+  )}) {${inner.join()}
+}`;
+  const data = await fetchGql(key, query, variables);
+  sets.forEach(({ setId }, i) => {
+    const reportedSet = (data[`set${i}`] as ReportedSet[]).find(
+      (set) => set.id === setId,
+    );
+    if (reportedSet) {
+      setIdToCompletedAt.set(reportedSet.id, reportedSet.completedAt);
+    }
+  });
+}
