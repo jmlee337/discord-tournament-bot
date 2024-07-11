@@ -59,6 +59,10 @@ const EMPTY_STARTGG_SET: StartggSet = {
 function Hello() {
   const [error, setError] = useState('');
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
+  const showErrorDialog = (message: string) => {
+    setError(message);
+    setErrorDialogOpen(true);
+  };
 
   // settings
   const [gotSettings, setGotSettings] = useState(false);
@@ -83,13 +87,15 @@ function Hello() {
   useEffect(() => {
     const inner = async () => {
       const appVersionPromise = window.electron.getVersion();
-      const latestAppVersionPromise = window.electron.getLatestVersion();
       const discordCommandDqPromise = window.electron.getDiscordCommandDq();
       const discordConfigPromise = window.electron.getDiscordConfig();
       const startggApiKeyPromise = window.electron.getStartggApiKey();
       const startingStatePromise = window.electron.getStartingState();
+
+      // req network
+      const latestAppVersionPromise = window.electron.getLatestVersion();
+
       setAppVersion(await appVersionPromise);
-      setLatestAppVersion(await latestAppVersionPromise);
       setDiscordApplicationId((await discordConfigPromise).applicationId);
       setDiscordCommandDq(await discordCommandDqPromise);
       setDiscordToken((await discordConfigPromise).token);
@@ -103,6 +109,16 @@ function Hello() {
       setLinkedParticipants((await startingStatePromise).linkedParticipants);
       setSets((await startingStatePromise).sets);
       setTournament((await startingStatePromise).tournament);
+
+      // req network
+      try {
+        setLatestAppVersion(await latestAppVersionPromise);
+      } catch {
+        showErrorDialog(
+          'Unable to check for updates. Are you connected to the internet?',
+        );
+      }
+
       setGotSettings(true);
     };
     inner();
@@ -136,8 +152,7 @@ function Hello() {
         setTournament(newTournament);
       } catch (e: any) {
         const message = e instanceof Error ? e.message : e;
-        setError(message);
-        setErrorDialogOpen(true);
+        showErrorDialog(message);
       } finally {
         setGettingTournament(false);
       }
@@ -150,8 +165,7 @@ function Hello() {
           setTournamentDialogOpen(false);
         } catch (e: any) {
           const message = e instanceof Error ? e.message : e;
-          setError(message);
-          setErrorDialogOpen(true);
+          showErrorDialog(message);
         } finally {
           setGettingTournament(false);
         }
@@ -398,8 +412,7 @@ function Hello() {
                       setTournamentDialogOpen(false);
                     } catch (e: any) {
                       const message = e instanceof Error ? e.message : e;
-                      setError(message);
-                      setErrorDialogOpen(true);
+                      showErrorDialog(message);
                     } finally {
                       setGettingTournament(false);
                     }
@@ -474,8 +487,7 @@ function Hello() {
                     await window.electron.refreshSets();
                   } catch (e: any) {
                     const message = e instanceof Error ? e.message : e;
-                    setError(message);
-                    setErrorDialogOpen(message);
+                    showErrorDialog(message);
                   } finally {
                     setRefreshingSets(false);
                   }
