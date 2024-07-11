@@ -648,6 +648,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       setGetEventSetsTimeout();
       if (client === null) {
         maybeStartDiscordClient();
+      } else if (discordIdToEntrantId.size === 0) {
+        await client.destroy();
+        client = null;
+        updateDiscordStatus(DiscordStatus.NONE);
       }
       return linkedParticipants.sort((lpA, lpB) =>
         lpA.gamerTag.localeCompare(lpB.gamerTag),

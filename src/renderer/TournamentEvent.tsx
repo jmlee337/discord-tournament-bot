@@ -164,23 +164,25 @@ export default function TournamentEvent({
                 justifyContent="space-between"
               >
                 <DialogContentText>{tournament.name}</DialogContentText>
-                <Tooltip title="Choose another tournament">
-                  <IconButton
-                    onClick={() => {
-                      setShouldRestore({
-                        shouldRestore: true,
-                        tournament: {
-                          name: tournament.name,
-                          slug: tournament.slug,
-                          events: tournament.events,
-                        },
-                      });
-                      setTournament({ name: '', slug: '', events: [] });
-                    }}
-                  >
-                    <Close />
-                  </IconButton>
-                </Tooltip>
+                {!gettingTournament && (
+                  <Tooltip title="Choose another tournament">
+                    <IconButton
+                      onClick={() => {
+                        setShouldRestore({
+                          shouldRestore: true,
+                          tournament: {
+                            name: tournament.name,
+                            slug: tournament.slug,
+                            events: tournament.events,
+                          },
+                        });
+                        setTournament({ name: '', slug: '', events: [] });
+                      }}
+                    >
+                      <Close />
+                    </IconButton>
+                  </Tooltip>
+                )}
               </Stack>
               {tournament.events.map((event) => (
                 <ListItemButton
