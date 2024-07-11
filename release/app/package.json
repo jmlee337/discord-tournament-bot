@@ -1,6 +1,6 @@
 {
   "name": "discord-tournament-bot",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A helper discord bot for running tournaments",
   "license": "MIT",
   "author": {
