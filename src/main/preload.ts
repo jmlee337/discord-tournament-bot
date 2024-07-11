@@ -2,6 +2,7 @@
 /* eslint no-unused-vars: off */
 import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import {
+  AdminedTournament,
   DiscordConfig,
   DiscordStatus,
   LinkedParticipant,
@@ -25,6 +26,8 @@ const electronHandler = {
     ipcRenderer.invoke('getStartggApiKey'),
   setStartggApiKey: (startggApiKey: string): Promise<void> =>
     ipcRenderer.invoke('setStartggApiKey', startggApiKey),
+  getTournaments: (): Promise<AdminedTournament[]> =>
+    ipcRenderer.invoke('getTournaments'),
   getTournament: (slug: string): Promise<StartggTournament> =>
     ipcRenderer.invoke('getTournament', slug),
   setEvent: (event: StartggEvent): Promise<LinkedParticipant[]> =>

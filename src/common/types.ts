@@ -69,6 +69,11 @@ export type StartggTournament = {
   events: StartggEvent[];
 };
 
+export type AdminedTournament = {
+  name: string;
+  slug: string;
+};
+
 export type LinkedParticipant = {
   id: number;
   gamerTag: string;

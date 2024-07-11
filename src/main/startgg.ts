@@ -1,5 +1,6 @@
 import Bottleneck from 'bottleneck';
 import {
+  AdminedTournament,
   ReportStartggSet,
   Sets,
   StartggEntrant,
@@ -48,37 +49,6 @@ async function wrappedFetch(
   return response;
 }
 
-type TournamentJSON = {
-  entities: {
-    event: {
-      id: number;
-      name: string;
-      slug: string;
-    }[];
-    tournament: {
-      name: string;
-      slug: string;
-    };
-  };
-};
-export async function getTournament(slug: string): Promise<StartggTournament> {
-  const response = await wrappedFetch(
-    `https://api.smash.gg/tournament/${slug}?expand[]=event`,
-  );
-  const json = (await response.json()) as TournamentJSON;
-  return {
-    name: json.entities.tournament.name,
-    slug: json.entities.tournament.slug.slice(11),
-    events: json.entities.event.map(
-      (event): StartggEvent => ({
-        id: event.id,
-        name: event.name,
-        slug: event.slug,
-      }),
-    ),
-  };
-}
-
 let limiter: Bottleneck;
 export function initStartgg() {
   if (limiter) {
@@ -115,16 +85,69 @@ async function fetchGql(key: string, query: string, variables: any) {
   return json.data;
 }
 
+const GET_TOURNAMENTS_QUERY = `
+  query TournamentsQuery {
+    currentUser {
+      tournaments(query: {perPage: 500, filter: {tournamentView: "admin"}}) {
+        nodes {
+          name
+          slug
+        }
+      }
+    }
+  }
+`;
+export async function getTournaments(key: string): Promise<AdminedTournament> {
+  const data = await fetchGql(key, GET_TOURNAMENTS_QUERY, {});
+  return data.currentUser.tournaments.nodes.map((tournament: any) => ({
+    slug: tournament.slug.slice(11),
+    name: tournament.name,
+  }));
+}
+
+type TournamentJSON = {
+  entities: {
+    event: {
+      id: number;
+      name: string;
+      slug: string;
+    }[];
+    tournament: {
+      name: string;
+      slug: string;
+    };
+  };
+};
+export async function getTournament(slug: string): Promise<StartggTournament> {
+  const response = await wrappedFetch(
+    `https://api.smash.gg/tournament/${slug}?expand[]=event`,
+  );
+  const json = (await response.json()) as TournamentJSON;
+  return {
+    name: json.entities.tournament.name,
+    slug: json.entities.tournament.slug.slice(11),
+    events: json.entities.event.map(
+      (event): StartggEvent => ({
+        id: event.id,
+        name: event.name,
+        slug: event.slug,
+      }),
+    ),
+  };
+}
+
 type ApiEntrant = {
   id: number;
   participants: {
     id: number;
     gamerTag: string;
-    requiredConnections: {
-      type: string;
-      externalId: string;
-      externalUsername: string;
-    }[];
+    requiredConnections:
+      | {
+          type: string;
+          externalId: string;
+          externalUsername: string;
+        }[]
+      | null;
   }[];
 };
 const EVENT_ENTRANTS_QUERY = `
@@ -171,14 +194,16 @@ export async function getEventEntrants(id: number, key: string) {
             id: participant.id,
             gamerTag: participant.gamerTag,
           };
-          const discords = participant.requiredConnections
-            .filter((rc) => rc.type === 'DISCORD')
-            .map((rc) => ({
-              id: rc.externalId,
-              username: rc.externalUsername,
-            }));
-          if (discords.length > 0) {
-            [startggParticipant.discord] = discords;
+          if (participant.requiredConnections) {
+            const discords = participant.requiredConnections
+              .filter((rc) => rc.type === 'DISCORD')
+              .map((rc) => ({
+                id: rc.externalId,
+                username: rc.externalUsername,
+              }));
+            if (discords.length > 0) {
+              [startggParticipant.discord] = discords;
+            }
           }
           return startggParticipant;
         }),

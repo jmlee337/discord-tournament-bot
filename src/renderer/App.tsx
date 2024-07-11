@@ -4,28 +4,25 @@ import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
-import { FormEvent, JSX, useEffect, useState } from 'react';
-import { EventAvailable, Refresh, TaskAlt } from '@mui/icons-material';
+import { JSX, useEffect, useState } from 'react';
+import { Refresh } from '@mui/icons-material';
 import {
   Alert,
   Box,
-  Button,
   CircularProgress,
   Dialog,
   DialogContent,
   DialogContentText,
   DialogTitle,
   IconButton,
-  InputBase,
   ListItemButton,
-  ListItemText,
   Stack,
-  TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
 import Settings from './Settings';
 import {
+  AdminedTournament,
   DiscordStatus,
   HIGHLIGHT_COLOR,
   Highlight,
@@ -39,6 +36,7 @@ import Report from './Report';
 import Reset from './Reset';
 import ParticipantLinks from './ParticipantLinks';
 import SearchBar from './SearchBar';
+import TournamentEvent from './TournamentEvent';
 
 type SetWithHighlight = {
   highlights: Highlight[];
@@ -57,10 +55,10 @@ const EMPTY_STARTGG_SET: StartggSet = {
 };
 
 function Hello() {
-  const [error, setError] = useState('');
+  const [errors, setErrors] = useState<string[]>([]);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
-  const showErrorDialog = (message: string) => {
-    setError(message);
+  const showErrorDialog = (messages: string[]) => {
+    setErrors(messages);
     setErrorDialogOpen(true);
   };
 
@@ -84,6 +82,7 @@ function Hello() {
     slug: '',
     events: [],
   });
+  const [tournaments, setTournaments] = useState<AdminedTournament[]>([]);
   useEffect(() => {
     const inner = async () => {
       const appVersionPromise = window.electron.getVersion();
@@ -94,6 +93,7 @@ function Hello() {
 
       // req network
       const latestAppVersionPromise = window.electron.getLatestVersion();
+      const tournamentsPromise = window.electron.getTournaments();
 
       setAppVersion(await appVersionPromise);
       setDiscordApplicationId((await discordConfigPromise).applicationId);
@@ -111,12 +111,20 @@ function Hello() {
       setTournament((await startingStatePromise).tournament);
 
       // req network
+      const messages: string[] = [];
       try {
         setLatestAppVersion(await latestAppVersionPromise);
       } catch {
-        showErrorDialog(
-          'Unable to check for updates. Are you connected to the internet?',
-        );
+        messages.push('Unable to check for updates.');
+      }
+      try {
+        setTournaments(await tournamentsPromise);
+      } catch {
+        messages.push('Unable to fetch admined tournaments.');
+      }
+      if (messages.length > 0) {
+        messages.push('Are you connected to the internet?');
+        showErrorDialog(messages);
       }
 
       setGotSettings(true);
@@ -132,46 +140,6 @@ function Hello() {
       setSets(newSets);
     });
   });
-
-  const [tournamentDialogOpen, setTournamentDialogOpen] = useState(false);
-  const [gettingTournament, setGettingTournament] = useState(false);
-  const getStartggTournamentOnSubmit = async (
-    event: FormEvent<HTMLFormElement>,
-  ) => {
-    const target = event.target as typeof event.target & {
-      slug: { value: string };
-    };
-    const newSlug = target.slug.value;
-    event.preventDefault();
-    event.stopPropagation();
-    if (newSlug) {
-      let newTournament;
-      setGettingTournament(true);
-      try {
-        newTournament = await window.electron.getTournament(newSlug);
-        setTournament(newTournament);
-      } catch (e: any) {
-        const message = e instanceof Error ? e.message : e;
-        showErrorDialog(message);
-      } finally {
-        setGettingTournament(false);
-      }
-      if (newTournament && newTournament.events.length === 1) {
-        const newEvent = newTournament.events[0];
-        setGettingTournament(true);
-        try {
-          setLinkedParticipants(await window.electron.setEvent(newEvent));
-          setEventDescription(`${newTournament.name}, ${newEvent.name}`);
-          setTournamentDialogOpen(false);
-        } catch (e: any) {
-          const message = e instanceof Error ? e.message : e;
-          showErrorDialog(message);
-        } finally {
-          setGettingTournament(false);
-        }
-      }
-    }
-  };
 
   let discordNotStartedExplanation;
   if (discordStatus === DiscordStatus.NONE) {
@@ -340,91 +308,15 @@ function Hello() {
 
   return (
     <>
-      <Stack direction="row" alignItems="center" paddingBottom="8px">
-        <InputBase
-          disabled
-          size="small"
-          value={eventDescription || 'Select start.gg event...'}
-          style={{ flexGrow: 1 }}
-        />
-        <Tooltip arrow title="Select start.gg event">
-          <IconButton
-            onClick={async () => {
-              setTournamentDialogOpen(true);
-            }}
-          >
-            <EventAvailable />
-          </IconButton>
-        </Tooltip>
-        <Dialog
-          open={tournamentDialogOpen}
-          onClose={() => {
-            setTournamentDialogOpen(false);
-          }}
-        >
-          <DialogTitle>Set start.gg tournament and event</DialogTitle>
-          <DialogContent>
-            <form
-              onSubmit={getStartggTournamentOnSubmit}
-              style={{
-                alignItems: 'center',
-                display: 'flex',
-                gap: '8px',
-                margin: '8px 0',
-              }}
-            >
-              <TextField
-                autoFocus
-                label="Tournament Slug"
-                name="slug"
-                placeholder={tournament.slug || 'super-smash-con-2023'}
-                size="small"
-                variant="outlined"
-              />
-              <Button
-                disabled={gettingTournament}
-                endIcon={
-                  gettingTournament ? (
-                    <CircularProgress size="24px" />
-                  ) : (
-                    <TaskAlt />
-                  )
-                }
-                type="submit"
-                variant="contained"
-              >
-                Set
-              </Button>
-            </form>
-            <Stack>
-              <DialogContentText>{tournament.name}</DialogContentText>
-              {tournament.events.map((event) => (
-                <ListItemButton
-                  disabled={gettingTournament}
-                  key={event.id}
-                  onClick={async () => {
-                    try {
-                      setGettingTournament(true);
-                      setLinkedParticipants(
-                        await window.electron.setEvent(event),
-                      );
-                      setEventDescription(`${tournament.name}, ${event.name}`);
-                      setTournamentDialogOpen(false);
-                    } catch (e: any) {
-                      const message = e instanceof Error ? e.message : e;
-                      showErrorDialog(message);
-                    } finally {
-                      setGettingTournament(false);
-                    }
-                  }}
-                >
-                  <ListItemText>{event.name}</ListItemText>
-                </ListItemButton>
-              ))}
-            </Stack>
-          </DialogContent>
-        </Dialog>
-      </Stack>
+      <TournamentEvent
+        tournaments={tournaments}
+        tournament={tournament}
+        setTournament={setTournament}
+        eventDescription={eventDescription}
+        setEventDescription={setEventDescription}
+        setLinkedParticipants={setLinkedParticipants}
+        showErrorDialog={showErrorDialog}
+      />
       <Stack direction="row" alignItems="center">
         {discordStatus === DiscordStatus.NONE && discordNotStartedExplanation}
         {discordStatus === DiscordStatus.BAD_TOKEN && (
@@ -487,7 +379,7 @@ function Hello() {
                     await window.electron.refreshSets();
                   } catch (e: any) {
                     const message = e instanceof Error ? e.message : e;
-                    showErrorDialog(message);
+                    showErrorDialog([message]);
                   } finally {
                     setRefreshingSets(false);
                   }
@@ -526,7 +418,7 @@ function Hello() {
       <Dialog
         open={errorDialogOpen}
         onClose={() => {
-          setError('');
+          setErrors([]);
           setErrorDialogOpen(false);
         }}
       >
@@ -535,7 +427,7 @@ function Hello() {
           <DialogContentText>
             You may want to copy or screenshot this error:
           </DialogContentText>
-          <Alert severity="error">{error}</Alert>
+          <Alert severity="error">{errors.join(' ')}</Alert>
         </DialogContent>
       </Dialog>
     </>

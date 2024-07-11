@@ -41,6 +41,7 @@ import {
   getEventEntrants,
   getEventSets,
   getTournament,
+  getTournaments,
   initStartgg,
   reportSet,
   reportSets,
@@ -567,6 +568,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       store.set('startggApiKey', newStartggApiKey);
       startggApiKey = newStartggApiKey;
     },
+  );
+
+  ipcMain.removeHandler('getTournaments');
+  ipcMain.handle('getTournaments', async () =>
+    startggApiKey ? getTournaments(startggApiKey) : [],
   );
 
   ipcMain.removeHandler('getTournament');
