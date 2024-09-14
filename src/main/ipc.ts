@@ -547,14 +547,27 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             return;
           }
 
-          const set = entrantIdToCompletedSets
+          const completedSet = entrantIdToCompletedSets
             .get(entrantId)
             ?.sort(
               (setA, setB) => (setB.completedAt ?? 0) - (setA.completedAt ?? 0),
             )[0];
+          const startedSet = entrantIdToPendingSets
+            .get(entrantId)
+            ?.filter((set) => set.startedAt)
+            .sort((setA, setB) => setB.startedAt! - setA.startedAt!)[0];
+          let set: StartggSet | undefined;
+          if (completedSet && startedSet) {
+            set =
+              completedSet.completedAt! > startedSet.startedAt!
+                ? completedSet
+                : startedSet;
+          } else {
+            set = completedSet || startedSet;
+          }
           if (!set) {
             interaction.reply({
-              content: 'You have not completed any sets.',
+              content: 'You have not started or completed any sets.',
               ephemeral: true,
             });
             return;

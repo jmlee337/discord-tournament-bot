@@ -245,6 +245,7 @@ type ApiSet = {
       name: string;
     } | null;
   }[];
+  startedAt: number | null;
   state: number;
   winnerId: number | null;
 };
@@ -258,6 +259,7 @@ function apiSetToStartggSet(set: ApiSet): StartggSet {
     entrant2Id: set.slots[1].entrant!.id,
     entrant2Name: set.slots[1].entrant!.name,
     fullRoundText: set.fullRoundText,
+    startedAt: set.startedAt,
     winnerId: set.winnerId,
   };
 }
@@ -294,6 +296,7 @@ const EVENT_SETS_QUERY = `
               name
             }
           }
+          startedAt
           state
           winnerId
         }

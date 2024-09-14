@@ -26,6 +26,7 @@ export type StartggSet = {
   entrant2Id: number;
   entrant2Name: string;
   fullRoundText: string;
+  startedAt: number | null;
   winnerId: number | null;
 };
 

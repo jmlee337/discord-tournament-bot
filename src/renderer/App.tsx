@@ -52,6 +52,7 @@ const EMPTY_STARTGG_SET: StartggSet = {
   entrant2Id: 0,
   entrant2Name: '',
   fullRoundText: '',
+  startedAt: 0,
   winnerId: null,
 };
 
