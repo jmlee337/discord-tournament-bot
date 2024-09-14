@@ -19,6 +19,7 @@ export type ReportStartggSet = {
 
 export type StartggSet = {
   id: number;
+  completedAt: number | null;
   isDQ: boolean;
   entrant1Id: number;
   entrant1Name: string;

@@ -45,6 +45,7 @@ type SetWithHighlight = {
 
 const EMPTY_STARTGG_SET: StartggSet = {
   id: 0,
+  completedAt: null,
   isDQ: false,
   entrant1Id: 0,
   entrant1Name: '',

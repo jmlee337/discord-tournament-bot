@@ -151,7 +151,8 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   const discordIdToEntrantId = new Map<string, number>();
   const discordIdToGamerTag = new Map<string, string>();
   const entrantIdToDiscordIds = new Map<number, string[]>();
-  const entrantIdToSets = new Map<number, StartggSet[]>();
+  const entrantIdToCompletedSets = new Map<number, StartggSet[]>();
+  const entrantIdToPendingSets = new Map<number, StartggSet[]>();
   let startggEvent: StartggEvent = {
     id: 0,
     name: '',
@@ -168,16 +169,34 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   };
   const setIdToCompletedAt = new Map<number, number>();
   const updateEntrantIdToSet = (newSets: Sets) => {
-    entrantIdToSets.clear();
+    entrantIdToCompletedSets.clear();
+    newSets.completed.forEach((completedPhase) => {
+      completedPhase.phaseGroups.forEach((completedPhaseGroup) => {
+        completedPhaseGroup.sets.forEach((completedSet) => {
+          const entrant1Sets =
+            entrantIdToCompletedSets.get(completedSet.entrant1Id) || [];
+          entrant1Sets.push(completedSet);
+          entrantIdToCompletedSets.set(completedSet.entrant1Id, entrant1Sets);
+          const entrant2Sets =
+            entrantIdToCompletedSets.get(completedSet.entrant2Id) || [];
+          entrant2Sets.push(completedSet);
+          entrantIdToCompletedSets.set(completedSet.entrant2Id, entrant2Sets);
+        });
+      });
+    });
+
+    entrantIdToPendingSets.clear();
     newSets.pending.forEach((pendingPhase) => {
       pendingPhase.phaseGroups.forEach((pendingPhaseGroup) => {
         pendingPhaseGroup.sets.forEach((pendingSet) => {
-          const entrant1Sets = entrantIdToSets.get(pendingSet.entrant1Id) || [];
+          const entrant1Sets =
+            entrantIdToPendingSets.get(pendingSet.entrant1Id) || [];
           entrant1Sets.push(pendingSet);
-          entrantIdToSets.set(pendingSet.entrant1Id, entrant1Sets);
-          const entrant2Sets = entrantIdToSets.get(pendingSet.entrant2Id) || [];
+          entrantIdToPendingSets.set(pendingSet.entrant1Id, entrant1Sets);
+          const entrant2Sets =
+            entrantIdToPendingSets.get(pendingSet.entrant2Id) || [];
           entrant2Sets.push(pendingSet);
-          entrantIdToSets.set(pendingSet.entrant2Id, entrant2Sets);
+          entrantIdToPendingSets.set(pendingSet.entrant2Id, entrant2Sets);
         });
       });
     });
@@ -211,6 +230,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         .setName('reportset')
         .setDescription('report the result of your set.')
         .toJSON(),
+      new SlashCommandBuilder()
+        .setName('resetset')
+        .setDescription('reset your last finished set.')
+        .toJSON(),
     ];
     try {
       await new REST()
@@ -226,9 +249,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       updateDiscordStatus(DiscordStatus.BAD_APPLICATION_ID);
     }
   };
-  const getEntrantIdAndSets = (
+  const getEntrantId = (
     interaction: ChatInputCommandInteraction<CacheType>,
-  ): { entrantId?: number; entrantSets?: StartggSet[] } => {
+  ): number | undefined => {
     const entrantId = discordIdToEntrantId.get(interaction.user.id);
     if (!entrantId) {
       interaction.reply({
@@ -239,11 +262,19 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           'is connected here: https://www.start.gg/admin/profile/connected-accounts',
         ephemeral: true,
       });
+    }
+    return entrantId;
+  };
+  const getEntrantIdAndSets = (
+    interaction: ChatInputCommandInteraction<CacheType>,
+  ): { entrantId?: number; entrantSets?: StartggSet[] } => {
+    const entrantId = getEntrantId(interaction);
+    if (!entrantId) {
       return {};
     }
     return {
       entrantId,
-      entrantSets: entrantIdToSets
+      entrantSets: entrantIdToPendingSets
         .get(entrantId)
         ?.filter((set) => !setIdToCompletedAt.has(set.id))
         .sort((setA, setB) =>
@@ -390,7 +421,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
                 embeds: [
                   new EmbedBuilder()
                     .setColor(STARTGG_BLACK)
-                    .setTitle('DQ Cancelled'),
+                    .setTitle('DQ cancelled'),
                 ],
               });
               return;
@@ -510,8 +541,140 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
               timeOutInteraction(embed, interaction);
             }
           }
+        } else if (interaction.commandName === 'resetset') {
+          const entrantId = getEntrantId(interaction);
+          if (!entrantId) {
+            return;
+          }
+
+          const set = entrantIdToCompletedSets
+            .get(entrantId)
+            ?.sort(
+              (setA, setB) => (setB.completedAt ?? 0) - (setA.completedAt ?? 0),
+            )[0];
+          if (!set) {
+            interaction.reply({
+              content: 'You have not completed any sets.',
+              ephemeral: true,
+            });
+            return;
+          }
+
+          const initialConfirmValidDiscordIds = new Set<string>();
+          entrantIdToDiscordIds.get(entrantId)?.forEach((discordId) => {
+            initialConfirmValidDiscordIds.add(discordId);
+          });
+
+          const embed = new EmbedBuilder()
+            .setColor(STARTGG_RED)
+            .setTitle(`${set.entrant1Name} vs ${set.entrant2Name}`)
+            .setDescription(set.fullRoundText)
+            .setFooter({ text: 'Are you sure you want to reset?' });
+          const response1 = await interaction.reply({
+            embeds: [embed],
+            components: [
+              new ActionRowBuilder<ButtonBuilder>().addComponents(
+                new ButtonBuilder()
+                  .setCustomId('cancel')
+                  .setLabel('Cancel')
+                  .setStyle(ButtonStyle.Primary),
+                new ButtonBuilder()
+                  .setCustomId('reset')
+                  .setLabel('Reset')
+                  .setStyle(ButtonStyle.Danger),
+              ),
+            ],
+          });
+
+          let confirmation: ButtonInteraction<CacheType>;
+          try {
+            confirmation =
+              await response1.awaitMessageComponent<ComponentType.Button>({
+                time: CONFIRMATION_TIMEOUT_MS,
+                filter: (confI) => confI.user.id === interaction.user.id,
+              });
+            if (confirmation.customId === 'cancel') {
+              confirmation.update({
+                components: [],
+                embeds: [
+                  new EmbedBuilder()
+                    .setColor(STARTGG_BLACK)
+                    .setTitle('Reset cancelled'),
+                ],
+              });
+              return;
+            }
+          } catch {
+            timeOutInteraction(embed, interaction);
+            return;
+          }
+
+          const bilateralConfirmDiscordIds = new Set<string>();
+          const oppEntrantId =
+            entrantId === set.entrant1Id ? set.entrant2Id : set.entrant1Id;
+          entrantIdToDiscordIds.get(oppEntrantId)?.forEach((discordId) => {
+            bilateralConfirmDiscordIds.add(discordId);
+          });
+          if (bilateralConfirmDiscordIds.size > 0) {
+            const oppTags = Array.from(bilateralConfirmDiscordIds.values())
+              .map((discordId) => `<@${discordId}>`)
+              .join(' or ');
+            const response2 = await confirmation.update({
+              content: `${oppTags}, please confirm within ${
+                CONFIRMATION_TIMEOUT_MS / 1000
+              } seconds`,
+            });
+
+            try {
+              confirmation =
+                await response2.awaitMessageComponent<ComponentType.Button>({
+                  time: CONFIRMATION_TIMEOUT_MS,
+                  filter: (confI) =>
+                    bilateralConfirmDiscordIds.has(confI.user.id),
+                });
+              if (confirmation.customId === 'cancel') {
+                confirmation.update({
+                  components: [],
+                  embeds: [
+                    new EmbedBuilder()
+                      .setColor(STARTGG_BLACK)
+                      .setTitle('Reset cancelled'),
+                  ],
+                });
+                return;
+              }
+            } catch {
+              timeOutInteraction(embed, interaction);
+              return;
+            }
+          }
+
+          confirmation.update({
+            content: '',
+            components: [],
+            embeds: [
+              embed.setColor(STARTGG_GREY).setFooter({
+                text: 'Reporting to start.gg...',
+              }),
+            ],
+          });
+          try {
+            await resetSet(set.id, startggApiKey);
+            confirmation.editReply({
+              embeds: [
+                embed.setColor(STARTGG_GREEN).setFooter({
+                  text: `Set reset`,
+                }),
+              ],
+            });
+          } catch {
+            startggFailConfirmation(embed, confirmation);
+          }
         } else {
-          interaction.reply(interaction.commandName);
+          interaction.reply({
+            content: interaction.commandName,
+            ephemeral: true,
+          });
         }
       });
       try {

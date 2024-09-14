@@ -251,6 +251,7 @@ type ApiSet = {
 function apiSetToStartggSet(set: ApiSet): StartggSet {
   return {
     id: set.id,
+    completedAt: set.completedAt,
     isDQ: set.displayScore === 'DQ',
     entrant1Id: set.slots[0].entrant!.id,
     entrant1Name: set.slots[0].entrant!.name,
