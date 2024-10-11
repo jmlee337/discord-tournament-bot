@@ -116,16 +116,21 @@ function Hello() {
       const messages: string[] = [];
       try {
         setLatestAppVersion(await latestAppVersionPromise);
-      } catch {
-        messages.push('Unable to check for updates.');
+      } catch (e: any) {
+        messages.push(
+          `Unable to check for updates: ${e instanceof Error ? e.message : e}`,
+        );
       }
       try {
         setTournaments(await tournamentsPromise);
-      } catch {
-        messages.push('Unable to fetch admined tournaments.');
+      } catch (e: any) {
+        messages.push(
+          `Unable to fetch admined tournaments: ${
+            e instanceof Error ? e.message : e
+          }`,
+        );
       }
       if (messages.length > 0) {
-        messages.push('Are you connected to the internet?');
         showErrorDialog(messages);
       }
 
