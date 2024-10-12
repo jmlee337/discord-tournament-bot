@@ -232,7 +232,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         .toJSON(),
       new SlashCommandBuilder()
         .setName('resetset')
-        .setDescription('reset your last finished set.')
+        .setDescription('reset your most recent set.')
         .toJSON(),
     ];
     try {
@@ -557,13 +557,15 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             ?.filter((set) => set.startedAt)
             .sort((setA, setB) => setB.startedAt! - setA.startedAt!)[0];
           let set: StartggSet | undefined;
-          if (completedSet && startedSet) {
-            set =
-              completedSet.completedAt! > startedSet.startedAt!
-                ? completedSet
-                : startedSet;
-          } else {
-            set = completedSet || startedSet;
+          // prioritize startedSet for RR. If one set was completed more
+          // recently than another pending set was started, it's likely the
+          // completed set was a DQ or something along those lines and the
+          // pending set is what the user wants. In other bracket types this
+          // scenario cannot occur.
+          if (startedSet) {
+            set = startedSet;
+          } else if (completedSet) {
+            set = completedSet;
           }
           if (!set) {
             interaction.reply({
