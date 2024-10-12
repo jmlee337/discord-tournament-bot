@@ -8,6 +8,8 @@
 <img width="498" alt="Screenshot 2024-07-02 at 9 23 37 AM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/deee7d8d-93b5-4bb5-a78d-4a3e691f6ec6">
 
 ## Setup
+Mac users, please see how to [open an app from an unidentified developer](https://support.apple.com/en-gb/guide/mac-help/mh40616/mac).
+
 This will only work for start.gg tournaments that `Require Discord connection to register`.
 This is required for the bot to know which Discord users are which start.gg players:  
 ![Screenshot 2024-06-30 222512](https://github.com/jmlee337/discord-tournament-bot/assets/3300257/907c850a-6fa5-48d6-8190-80e6d49f9be4)
