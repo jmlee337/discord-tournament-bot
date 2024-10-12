@@ -203,6 +203,29 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     mainWindow.webContents.send('sets', newSets);
     sets = newSets;
   };
+  const findResettableSet = (entrantId: number) => {
+    const completedSet = entrantIdToCompletedSets
+      .get(entrantId)
+      ?.sort(
+        (setA, setB) => (setB.completedAt ?? 0) - (setA.completedAt ?? 0),
+      )[0];
+    const startedSet = entrantIdToPendingSets
+      .get(entrantId)
+      ?.filter((set) => set.startedAt)
+      .sort((setA, setB) => setB.startedAt! - setA.startedAt!)[0];
+    // prioritize startedSet for RR. If one set was completed more
+    // recently than another pending set was started, it's likely the
+    // completed set was a DQ or something along those lines and the
+    // pending set is what the user wants. In other bracket types this
+    // scenario cannot occur.
+    if (startedSet) {
+      return startedSet;
+    }
+    if (completedSet) {
+      return completedSet;
+    }
+    return undefined;
+  };
 
   /**
    * Discord
@@ -547,29 +570,16 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             return;
           }
 
-          const completedSet = entrantIdToCompletedSets
-            .get(entrantId)
-            ?.sort(
-              (setA, setB) => (setB.completedAt ?? 0) - (setA.completedAt ?? 0),
-            )[0];
-          const startedSet = entrantIdToPendingSets
-            .get(entrantId)
-            ?.filter((set) => set.startedAt)
-            .sort((setA, setB) => setB.startedAt! - setA.startedAt!)[0];
-          let set: StartggSet | undefined;
-          // prioritize startedSet for RR. If one set was completed more
-          // recently than another pending set was started, it's likely the
-          // completed set was a DQ or something along those lines and the
-          // pending set is what the user wants. In other bracket types this
-          // scenario cannot occur.
-          if (startedSet) {
-            set = startedSet;
-          } else if (completedSet) {
-            set = completedSet;
+          const set = findResettableSet(entrantId);
+          let oppSet: StartggSet | undefined;
+          if (set) {
+            const oppEntrantId =
+              set.entrant1Id === entrantId ? set.entrant2Id : set.entrant1Id;
+            oppSet = findResettableSet(oppEntrantId);
           }
-          if (!set) {
+          if (!set || !oppSet || oppSet !== set) {
             interaction.reply({
-              content: 'You have not started or completed any sets.',
+              content: 'You do not have any resettable sets.',
               ephemeral: true,
             });
             return;
