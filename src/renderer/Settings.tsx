@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { ContentCopy, Settings as SettingsIcon } from '@mui/icons-material';
 import { ChangeEvent, useMemo, useState } from 'react';
+import { AdminedTournament } from '../common/types';
 
 function LabeledCheckbox({
   checked,
@@ -54,6 +55,7 @@ LabeledCheckbox.defaultProps = {
 };
 
 export default function Settings({
+  showErrorDialog,
   discordApplicationId,
   setDiscordApplicationId,
   discordCommandDq,
@@ -62,10 +64,12 @@ export default function Settings({
   setDiscordToken,
   startggApiKey,
   setStartggApiKey,
+  setTournaments,
   appVersion,
   latestAppVersion,
   gotSettings,
 }: {
+  showErrorDialog: (errors: string[]) => void;
   discordApplicationId: string;
   setDiscordApplicationId: (discordApplicationId: string) => void;
   discordCommandDq: boolean;
@@ -74,11 +78,13 @@ export default function Settings({
   setDiscordToken: (discordToken: string) => void;
   startggApiKey: string;
   setStartggApiKey: (startggApiKey: string) => void;
+  setTournaments: (tournaments: AdminedTournament[]) => void;
   appVersion: string;
   latestAppVersion: string;
   gotSettings: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const [shouldGetTournaments, setShouldGetTournaments] = useState(false);
   const [discordTokenCopied, setDiscordTokenCopied] = useState(false);
   const [startggApiKeyCopied, setStartggApiKeyCopied] = useState(false);
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
@@ -142,6 +148,16 @@ export default function Settings({
             }),
             window.electron.setStartggApiKey(startggApiKey),
           ]);
+          if (shouldGetTournaments) {
+            try {
+              setTournaments(await window.electron.getTournaments());
+            } catch (e: any) {
+              showErrorDialog([e instanceof Error ? e.message : e]);
+              return;
+            } finally {
+              setShouldGetTournaments(false);
+            }
+          }
           setOpen(false);
         }}
       >
@@ -239,6 +255,7 @@ export default function Settings({
               label="start.gg token (Keep it private!)"
               onChange={(event) => {
                 setStartggApiKey(event.target.value);
+                setShouldGetTournaments(true);
               }}
               size="small"
               type="password"

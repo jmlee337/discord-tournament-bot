@@ -349,6 +349,7 @@ function Hello() {
       </Stack>
       <Stack direction="row" alignItems="center" justifyContent="end">
         <Settings
+          showErrorDialog={showErrorDialog}
           discordApplicationId={discordApplicationId}
           setDiscordApplicationId={setDiscordApplicationId}
           discordCommandDq={discordCommandDq}
@@ -357,6 +358,7 @@ function Hello() {
           setDiscordToken={setDiscordToken}
           startggApiKey={startggApiKey}
           setStartggApiKey={setStartggApiKey}
+          setTournaments={setTournaments}
           appVersion={appVersion}
           latestAppVersion={latestAppVersion}
           gotSettings={gotSettings}

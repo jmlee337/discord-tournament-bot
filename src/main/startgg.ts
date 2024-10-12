@@ -39,10 +39,12 @@ async function wrappedFetch(
         }, 1000);
       });
     }
-    const keyErr =
-      response.status === 400 || response.status === 401
-        ? ' ***start.gg token invalid or expired!***'
-        : '';
+    let keyErr = '';
+    if (response.status === 400) {
+      keyErr = ' ***start.gg token invalid!***';
+    } else if (response.status === 401) {
+      keyErr = ' ***start.gg token expired!***';
+    }
     throw new Error(`${response.status} - ${response.statusText}.${keyErr}`);
   }
 
