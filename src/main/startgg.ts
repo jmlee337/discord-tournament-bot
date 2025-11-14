@@ -396,17 +396,23 @@ export async function getEventSets(
     pending: Array.from(pendingPhases.entries())
       .sort(([aId], [bId]) => aId - bId)
       .map(([, startggPhase]) => {
-        startggPhase.phaseGroups.sort((pgA, pgB) =>
-          pgA.name.localeCompare(pgB.name),
-        );
+        startggPhase.phaseGroups.sort((pgA, pgB) => {
+          if (pgA.name.length !== pgB.name.length) {
+            return pgA.name.length - pgB.name.length;
+          }
+          return pgA.name.localeCompare(pgB.name);
+        });
         return startggPhase;
       }),
     completed: Array.from(completedPhases.entries())
       .sort(([aId], [bId]) => aId - bId)
       .map(([, startggPhase]) => {
-        startggPhase.phaseGroups.sort((pgA, pgB) =>
-          pgA.name.localeCompare(pgB.name),
-        );
+        startggPhase.phaseGroups.sort((pgA, pgB) => {
+          if (pgA.name.length !== pgB.name.length) {
+            return pgA.name.length - pgB.name.length;
+          }
+          return pgA.name.localeCompare(pgB.name);
+        });
         return startggPhase;
       }),
   };
