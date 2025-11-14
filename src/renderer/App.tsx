@@ -26,17 +26,19 @@ import {
   DiscordStatus,
   HIGHLIGHT_COLOR,
   Highlight,
-  LinkedParticipant,
+  DiscordUsername,
   Sets,
   StartggPhase,
   StartggSet,
   StartggTournament,
+  ConnectCode,
 } from '../common/types';
 import Report from './Report';
 import Reset from './Reset';
-import ParticipantLinks from './ParticipantLinks';
+import DiscordUsernames from './DiscordUsernames';
 import SearchBar from './SearchBar';
 import TournamentEvent from './TournamentEvent';
+import ConnectCodes from './ConnectCodes';
 
 type SetWithHighlight = {
   highlights: Highlight[];
@@ -73,11 +75,12 @@ function Hello() {
   const [appVersion, setAppVersion] = useState('');
   const [latestAppVersion, setLatestAppVersion] = useState('');
   // starting state
+  const [connectCodes, setConnectCodes] = useState<ConnectCode[]>([]);
   const [discordStatus, setDiscordStatus] = useState(DiscordStatus.NONE);
   const [eventDescription, setEventDescription] = useState('');
-  const [linkedParticipants, setLinkedParticipants] = useState<
-    LinkedParticipant[]
-  >([]);
+  const [discordUsernames, setDiscordUsernames] = useState<DiscordUsername[]>(
+    [],
+  );
   const [sets, setSets] = useState<Sets>({ pending: [], completed: [] });
   const [tournament, setTournament] = useState<StartggTournament>({
     name: '',
@@ -108,7 +111,7 @@ function Hello() {
       if (tournamentName && eventName) {
         setEventDescription(`${tournamentName}, ${eventName}`);
       }
-      setLinkedParticipants((await startingStatePromise).linkedParticipants);
+      setDiscordUsernames((await startingStatePromise).discordUsernames);
       setSets((await startingStatePromise).sets);
       setTournament((await startingStatePromise).tournament);
 
@@ -183,7 +186,6 @@ function Hello() {
     }
   }
 
-  const [linkedParticipantsOpen, setLinkedParticipantsOpen] = useState(false);
   const [searchSubstr, setSearchSubstr] = useState('');
   const [refreshingSets, setRefreshingSets] = useState(false);
   const [selectedSet, setSelectedSet] = useState<StartggSet>(EMPTY_STARTGG_SET);
@@ -321,7 +323,8 @@ function Hello() {
         setTournament={setTournament}
         eventDescription={eventDescription}
         setEventDescription={setEventDescription}
-        setLinkedParticipants={setLinkedParticipants}
+        setConnectCodes={setConnectCodes}
+        setDiscordUsernames={setDiscordUsernames}
         showErrorDialog={showErrorDialog}
       />
       <Stack direction="row" alignItems="center">
@@ -363,11 +366,8 @@ function Hello() {
           latestAppVersion={latestAppVersion}
           gotSettings={gotSettings}
         />
-        <ParticipantLinks
-          open={linkedParticipantsOpen}
-          setOpen={setLinkedParticipantsOpen}
-          linkedParticipants={linkedParticipants}
-        />
+        <ConnectCodes connectCodes={connectCodes} />
+        <DiscordUsernames discordUsernames={discordUsernames} />
         <SearchBar
           searchSubstr={searchSubstr}
           setSearchSubstr={setSearchSubstr}

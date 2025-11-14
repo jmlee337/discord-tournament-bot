@@ -47,6 +47,7 @@ export type Sets = {
 
 export type StartggParticipant = {
   id: number;
+  connectCode?: string;
   discord?: {
     id: string;
     username: string;
@@ -76,16 +77,27 @@ export type AdminedTournament = {
   slug: string;
 };
 
-export type LinkedParticipant = {
+export type DiscordUsername = {
   id: number;
   gamerTag: string;
   username: string;
 };
 
+export type ConnectCode = {
+  connectCode: string;
+  gamerTag: string;
+};
+
+export type ParticipantConnections = {
+  connectCodes: ConnectCode[];
+  discordUsernames: DiscordUsername[];
+};
+
 export type StartingState = {
+  connectCodes: ConnectCode[];
   discordStatus: DiscordStatus;
   eventName: string;
-  linkedParticipants: LinkedParticipant[];
+  discordUsernames: DiscordUsername[];
   sets: Sets;
   tournament: StartggTournament;
 };

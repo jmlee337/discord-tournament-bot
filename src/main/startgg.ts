@@ -142,6 +142,7 @@ type ApiEntrant = {
   id: number;
   participants: {
     id: number;
+    connectedAccounts: { slippi?: { value?: string | null } | null } | null;
     gamerTag: string;
     requiredConnections:
       | {
@@ -163,6 +164,7 @@ const EVENT_ENTRANTS_QUERY = `
           id
           participants {
             id
+            connectedAccounts
             gamerTag
             requiredConnections {
               type
@@ -194,6 +196,8 @@ export async function getEventEntrants(id: number, key: string) {
         participants: entrant.participants.map((participant) => {
           const startggParticipant: StartggParticipant = {
             id: participant.id,
+            connectCode:
+              participant.connectedAccounts?.slippi?.value || undefined,
             gamerTag: participant.gamerTag,
           };
           if (participant.requiredConnections) {

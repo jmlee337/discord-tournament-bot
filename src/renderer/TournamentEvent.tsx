@@ -17,7 +17,8 @@ import {
 import { FormEvent, useState } from 'react';
 import {
   AdminedTournament,
-  LinkedParticipant,
+  ConnectCode,
+  DiscordUsername,
   StartggTournament,
 } from '../common/types';
 
@@ -36,7 +37,8 @@ export default function TournamentEvent({
   setTournament,
   eventDescription,
   setEventDescription,
-  setLinkedParticipants,
+  setConnectCodes,
+  setDiscordUsernames,
   showErrorDialog,
 }: {
   tournaments: AdminedTournament[];
@@ -44,7 +46,8 @@ export default function TournamentEvent({
   setTournament: (tournament: StartggTournament) => void;
   eventDescription: string;
   setEventDescription: (eventDescription: string) => void;
-  setLinkedParticipants: (linkedParticipants: LinkedParticipant[]) => void;
+  setConnectCodes: (connectCodes: ConnectCode[]) => void;
+  setDiscordUsernames: (discordUsernames: DiscordUsername[]) => void;
   showErrorDialog: (messages: string[]) => void;
 }) {
   const [tournamentDialogOpen, setTournamentDialogOpen] = useState(false);
@@ -68,7 +71,9 @@ export default function TournamentEvent({
       const newEvent = newTournament.events[0];
       setGettingTournament(true);
       try {
-        setLinkedParticipants(await window.electron.setEvent(newEvent));
+        const participantConnections = await window.electron.setEvent(newEvent);
+        setConnectCodes(participantConnections.connectCodes);
+        setDiscordUsernames(participantConnections.discordUsernames);
         setEventDescription(`${newTournament.name}, ${newEvent.name}`);
         setShouldRestore({ shouldRestore: false });
         setTournamentDialogOpen(false);
@@ -191,8 +196,11 @@ export default function TournamentEvent({
                   onClick={async () => {
                     try {
                       setGettingTournament(true);
-                      setLinkedParticipants(
-                        await window.electron.setEvent(event),
+                      const participantConnections =
+                        await window.electron.setEvent(event);
+                      setConnectCodes(participantConnections.connectCodes);
+                      setDiscordUsernames(
+                        participantConnections.discordUsernames,
                       );
                       setEventDescription(`${tournament.name}, ${event.name}`);
                       setShouldRestore({ shouldRestore: false });

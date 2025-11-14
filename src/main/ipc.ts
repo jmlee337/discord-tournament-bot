@@ -27,9 +27,11 @@ import {
 } from 'electron';
 import Store from 'electron-store';
 import {
+  ConnectCode,
   DiscordConfig,
   DiscordStatus,
-  LinkedParticipant,
+  DiscordUsername,
+  ParticipantConnections,
   ReportStartggSet,
   Sets,
   StartggEvent,
@@ -148,6 +150,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   /**
    * Needed for both Discord and start.gg
    */
+  const connectCodes: ConnectCode[] = [];
   const discordIdToEntrantId = new Map<string, number>();
   const discordIdToGamerTag = new Map<string, string>();
   const entrantIdToDiscordIds = new Map<number, string[]>();
@@ -781,11 +784,14 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       setGetEventSetsTimeout();
     }, 30000);
   };
-  const linkedParticipants: LinkedParticipant[] = [];
+  const discordUsernames: DiscordUsername[] = [];
   ipcMain.removeHandler('setEvent');
   ipcMain.handle(
     'setEvent',
-    async (event: IpcMainInvokeEvent, newEvent: StartggEvent) => {
+    async (
+      event: IpcMainInvokeEvent,
+      newEvent: StartggEvent,
+    ): Promise<ParticipantConnections> => {
       if (!startggApiKey) {
         throw new Error('Please set start.gg token');
       }
@@ -804,10 +810,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       const newSets = await setsPromise;
 
       // all clear to clear maps and update
+      connectCodes.length = 0;
       discordIdToEntrantId.clear();
       discordIdToGamerTag.clear();
       entrantIdToDiscordIds.clear();
-      linkedParticipants.length = 0;
+      discordUsernames.length = 0;
       entrants.forEach((entrant) => {
         entrantIdToDiscordIds.set(
           entrant.id,
@@ -816,11 +823,12 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             .map((participant) => participant.discord!.id),
         );
         entrant.participants.forEach((participant) => {
-          linkedParticipants.push({
-            id: participant.id,
-            gamerTag: participant.gamerTag,
-            username: participant.discord?.username || '',
-          });
+          if (participant.connectCode) {
+            connectCodes.push({
+              connectCode: participant.connectCode,
+              gamerTag: participant.gamerTag,
+            });
+          }
           if (participant.discord) {
             discordIdToEntrantId.set(participant.discord.id, entrant.id);
             discordIdToGamerTag.set(
@@ -828,6 +836,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
               participant.gamerTag,
             );
           }
+          discordUsernames.push({
+            id: participant.id,
+            gamerTag: participant.gamerTag,
+            username: participant.discord?.username || '',
+          });
         });
       });
       updateEntrantIdToSet(newSets);
@@ -841,9 +854,14 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         client = null;
         updateDiscordStatus(DiscordStatus.NONE);
       }
-      return linkedParticipants.sort((lpA, lpB) =>
-        lpA.gamerTag.localeCompare(lpB.gamerTag),
-      );
+      return {
+        connectCodes: connectCodes.sort((a, b) =>
+          a.gamerTag.localeCompare(b.gamerTag),
+        ),
+        discordUsernames: discordUsernames.sort((a, b) =>
+          a.gamerTag.localeCompare(b.gamerTag),
+        ),
+      };
     },
   );
 
@@ -920,9 +938,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   ipcMain.handle(
     'getStartingState',
     (): StartingState => ({
+      connectCodes,
       discordStatus,
       eventName: startggEvent.name,
-      linkedParticipants,
+      discordUsernames,
       sets,
       tournament,
     }),
