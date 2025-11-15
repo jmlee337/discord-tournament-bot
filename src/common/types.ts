@@ -26,7 +26,10 @@ export type StartggSet = {
   entrant2Id: number;
   entrant2Name: string;
   fullRoundText: string;
+  round: number;
   startedAt: number | null;
+  state: number;
+  updatedAt: number;
   winnerId: number | null;
 };
 
@@ -38,6 +41,7 @@ export type StartggPhaseGroup = {
 export type StartggPhase = {
   name: string;
   phaseGroups: StartggPhaseGroup[];
+  phaseOrder: number;
 };
 
 export type Sets = {

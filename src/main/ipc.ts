@@ -170,7 +170,6 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     slug: '',
     events: [],
   };
-  const setIdToCompletedAt = new Map<number, number>();
   const updateEntrantIdToSet = (newSets: Sets) => {
     entrantIdToCompletedSets.clear();
     newSets.completed.forEach((completedPhase) => {
@@ -302,8 +301,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       entrantId,
       entrantSets: entrantIdToPendingSets
         .get(entrantId)
-        ?.filter((set) => !setIdToCompletedAt.has(set.id))
-        .sort((setA, setB) =>
+        ?.sort((setA, setB) =>
           getOpponentName(setA, entrantId).localeCompare(
             getOpponentName(setB, entrantId),
           ),
@@ -335,9 +333,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       try {
         await reportSet(
           { setId: set.id, winnerId, isDQ: false },
-          setIdToCompletedAt,
           startggApiKey,
         );
+        updateEntrantIdToSet(await getEventSets(startggEvent));
+        resetGetEventSetsTimeout();
         const inner = winnerId === set.entrant1Id ? '[W - L]' : '[L - W]';
         const { displayName } = confirmation.user;
         const gamerTag = discordIdToGamerTag.get(confirmation.user.id)!;
@@ -465,9 +464,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
                     isDQ: true,
                   }),
                 ),
-                setIdToCompletedAt,
                 startggApiKey,
               );
+              updateEntrantIdToSet(await getEventSets(startggEvent));
+              resetGetEventSetsTimeout();
               const entrantName =
                 entrantId === entrantSets[0].entrant1Id
                   ? entrantSets[0].entrant1Name
@@ -688,6 +688,8 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           });
           try {
             await resetSet(set.id, startggApiKey);
+            updateEntrantIdToSet(await getEventSets(startggEvent));
+            resetGetEventSetsTimeout();
             confirmation.editReply({
               embeds: [
                 embed.setColor(STARTGG_GREEN).setFooter({
@@ -778,11 +780,13 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let timeoutId: NodeJS.Timeout | undefined;
   const setGetEventSetsTimeout = () => {
     timeoutId = setTimeout(async () => {
-      updateEntrantIdToSet(
-        await getEventSets(startggEvent, setIdToCompletedAt, startggApiKey),
-      );
+      updateEntrantIdToSet(await getEventSets(startggEvent));
       setGetEventSetsTimeout();
     }, 30000);
+  };
+  const resetGetEventSetsTimeout = () => {
+    clearTimeout(timeoutId);
+    setGetEventSetsTimeout();
   };
   const discordUsernames: DiscordUsername[] = [];
   ipcMain.removeHandler('setEvent');
@@ -799,11 +803,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         clearTimeout(timeoutId);
       }
       const entrantsPromise = getEventEntrants(newEvent.id, startggApiKey);
-      const setsPromise = getEventSets(
-        newEvent,
-        setIdToCompletedAt,
-        startggApiKey,
-      );
+      const setsPromise = getEventSets(newEvent);
 
       // await both, we don't want to proceed if either throws
       const entrants = await entrantsPromise;
@@ -846,7 +846,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       updateEntrantIdToSet(newSets);
 
       startggEvent = newEvent;
-      setGetEventSetsTimeout();
+      resetGetEventSetsTimeout();
       if (client === null) {
         maybeStartDiscordClient();
       } else if (discordIdToEntrantId.size === 0) {
@@ -874,10 +874,8 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
-    updateEntrantIdToSet(
-      await getEventSets(startggEvent, setIdToCompletedAt, startggApiKey),
-    );
-    setGetEventSetsTimeout();
+    updateEntrantIdToSet(await getEventSets(startggEvent));
+    resetGetEventSetsTimeout();
   });
 
   ipcMain.removeHandler('reportSet');
@@ -893,11 +891,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         throw new Error('Please set start.gg token');
       }
 
-      await reportSet(
-        { setId, winnerId, isDQ },
-        setIdToCompletedAt,
-        startggApiKey,
-      );
+      await reportSet({ setId, winnerId, isDQ }, startggApiKey);
+      updateEntrantIdToSet(await getEventSets(startggEvent));
+      resetGetEventSetsTimeout();
     },
   );
 
@@ -910,6 +906,8 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       }
 
       await resetSet(setId, startggApiKey);
+      updateEntrantIdToSet(await getEventSets(startggEvent));
+      resetGetEventSetsTimeout();
     },
   );
 
@@ -928,9 +926,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         set.id,
         set.winnerId === set.entrant1Id ? set.entrant2Id : set.entrant1Id,
         set.isDQ,
-        setIdToCompletedAt,
         startggApiKey,
       );
+      updateEntrantIdToSet(await getEventSets(startggEvent));
+      resetGetEventSetsTimeout();
     },
   );
 
