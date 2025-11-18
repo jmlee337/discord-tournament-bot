@@ -229,6 +229,18 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     return undefined;
   };
 
+  let timeoutId: NodeJS.Timeout | undefined;
+  const setGetEventSetsTimeout = () => {
+    timeoutId = setTimeout(async () => {
+      updateEntrantIdToSet(await getEventSets(startggEvent));
+      setGetEventSetsTimeout();
+    }, 30000);
+  };
+  const resetGetEventSetsTimeout = () => {
+    clearTimeout(timeoutId);
+    setGetEventSetsTimeout();
+  };
+
   /**
    * Discord
    */
@@ -777,17 +789,6 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
-  let timeoutId: NodeJS.Timeout | undefined;
-  const setGetEventSetsTimeout = () => {
-    timeoutId = setTimeout(async () => {
-      updateEntrantIdToSet(await getEventSets(startggEvent));
-      setGetEventSetsTimeout();
-    }, 30000);
-  };
-  const resetGetEventSetsTimeout = () => {
-    clearTimeout(timeoutId);
-    setGetEventSetsTimeout();
-  };
   const discordUsernames: DiscordUsername[] = [];
   ipcMain.removeHandler('setEvent');
   ipcMain.handle(

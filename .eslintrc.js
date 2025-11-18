@@ -13,7 +13,6 @@ module.exports = {
     '@typescript-eslint/no-shadow': 'error',
     'no-unused-vars': 'off',
     '@typescript-eslint/no-unused-vars': 'error',
-    'no-undef': 'off',
   },
   parserOptions: {
     ecmaVersion: 2022,
@@ -22,10 +21,7 @@ module.exports = {
   settings: {
     'import/resolver': {
       // See https://github.com/benmosher/eslint-plugin-import/issues/1396#issuecomment-575727774 for line below
-      node: {
-        extensions: ['.js', '.jsx', '.ts', '.tsx'],
-        moduleDirectory: ['node_modules', 'src/'],
-      },
+      node: {},
       webpack: {
         config: require.resolve('./.erb/configs/webpack.config.eslint.ts'),
       },
@@ -34,5 +30,10 @@ module.exports = {
     'import/parsers': {
       '@typescript-eslint/parser': ['.ts', '.tsx'],
     },
+  },
+  globals: {
+    RequestInfo: true,
+    RequestInit: true,
+    NodeJS: true,
   },
 };

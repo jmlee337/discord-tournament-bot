@@ -485,8 +485,8 @@ export async function reportSet(set: ReportStartggSet, key: string) {
   (data.reportBracketSet as GqlSet[])
     .filter(gqlSetFilterPred)
     .map(gqlSetToStartggSet)
-    .forEach((set) => {
-      idToSet.set(set.id, set);
+    .forEach((sggSet) => {
+      idToSet.set(sggSet.id, sggSet);
     });
 }
 

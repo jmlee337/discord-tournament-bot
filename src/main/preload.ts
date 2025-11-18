@@ -5,7 +5,6 @@ import {
   AdminedTournament,
   DiscordConfig,
   DiscordStatus,
-  DiscordUsername,
   ParticipantConnections,
   Sets,
   StartggEvent,
