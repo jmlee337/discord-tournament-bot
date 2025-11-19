@@ -102,7 +102,6 @@ export type StartingState = {
   discordStatus: DiscordStatus;
   eventName: string;
   discordUsernames: DiscordUsername[];
-  sets: Sets;
   tournament: StartggTournament;
 };
 

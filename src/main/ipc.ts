@@ -942,10 +942,12 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       discordStatus,
       eventName: startggEvent.name,
       discordUsernames,
-      sets,
       tournament,
     }),
   );
+
+  ipcMain.removeHandler('getStartingSets');
+  ipcMain.handle('getStartingSets', () => sets);
 
   ipcMain.removeHandler('getVersion');
   ipcMain.handle('getVersion', () => app.getVersion());

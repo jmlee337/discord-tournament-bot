@@ -41,6 +41,7 @@ const electronHandler = {
     ipcRenderer.invoke('swapWinner', set),
   getStartingState: (): Promise<StartingState> =>
     ipcRenderer.invoke('getStartingState'),
+  getStartingSets: (): Promise<Sets> => ipcRenderer.invoke('getStartingSets'),
   getVersion: (): Promise<string> => ipcRenderer.invoke('getVersion'),
   getLatestVersion: (): Promise<string> =>
     ipcRenderer.invoke('getLatestVersion'),
