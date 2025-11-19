@@ -98,7 +98,7 @@ export default function TournamentEvent({
   };
 
   return (
-    <Stack direction="row" alignItems="center" paddingBottom="8px">
+    <Stack direction="row" alignItems="center" padding="8px 0 8px 8px">
       <InputBase
         disabled
         size="small"

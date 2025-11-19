@@ -4,10 +4,11 @@ import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
-import { useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import { Refresh } from '@mui/icons-material';
 import {
   Alert,
+  AppBar,
   CircularProgress,
   Dialog,
   DialogContent,
@@ -15,6 +16,8 @@ import {
   DialogTitle,
   IconButton,
   Stack,
+  Tab,
+  Tabs,
   Tooltip,
 } from '@mui/material';
 import Settings from './Settings';
@@ -30,6 +33,32 @@ import SearchBar from './SearchBar';
 import TournamentEvent from './TournamentEvent';
 import ConnectCodes from './ConnectCodes';
 import Bracket from './Bracket';
+
+enum TabValue {
+  BRACKET = 'bracket',
+  BROADCASTS = 'broadcasts',
+}
+
+function TabPanel({
+  children,
+  value,
+  index,
+}: {
+  children: ReactNode;
+  index: TabValue;
+  value: TabValue;
+}) {
+  return (
+    <div
+      role="tabpanel"
+      hidden={value !== index}
+      id={`tabpanel-${index}`}
+      aria-labelledby={`tab-${index}`}
+    >
+      {value === index && children}
+    </div>
+  );
+}
 
 function Hello() {
   const [errors, setErrors] = useState<string[]>([]);
@@ -47,6 +76,7 @@ function Hello() {
   const [startggApiKey, setStartggApiKey] = useState('');
   const [appVersion, setAppVersion] = useState('');
   const [latestAppVersion, setLatestAppVersion] = useState('');
+
   // starting state
   const [connectCodes, setConnectCodes] = useState<ConnectCode[]>([]);
   const [discordStatus, setDiscordStatus] = useState(DiscordStatus.NONE);
@@ -60,6 +90,10 @@ function Hello() {
     events: [],
   });
   const [tournaments, setTournaments] = useState<AdminedTournament[]>([]);
+
+  // tabs
+  const [tabValue, setTabValue] = useState(TabValue.BRACKET);
+
   useEffect(() => {
     const inner = async () => {
       const appVersionPromise = window.electron.getVersion();
@@ -159,90 +193,117 @@ function Hello() {
 
   return (
     <>
-      <TournamentEvent
-        tournaments={tournaments}
-        tournament={tournament}
-        setTournament={setTournament}
-        eventDescription={eventDescription}
-        setEventDescription={setEventDescription}
-        setConnectCodes={setConnectCodes}
-        setDiscordUsernames={setDiscordUsernames}
-        showErrorDialog={showErrorDialog}
-      />
-      <Stack direction="row" alignItems="center">
-        {discordStatus === DiscordStatus.NONE && discordNotStartedExplanation}
-        {discordStatus === DiscordStatus.BAD_TOKEN && (
-          <Alert severity="error" style={{ flexGrow: 1 }}>
-            Discord Bot Token Error!
-          </Alert>
-        )}
-        {discordStatus === DiscordStatus.BAD_APPLICATION_ID && (
-          <Alert severity="error" style={{ flexGrow: 1 }}>
-            Discord Bot Application Id Error!
-          </Alert>
-        )}
-        {discordStatus === DiscordStatus.STARTING && (
-          <Alert severity="info" style={{ flexGrow: 1 }}>
-            Discord Bot Starting...
-          </Alert>
-        )}
-        {discordStatus === DiscordStatus.READY && (
-          <Alert severity="success" style={{ flexGrow: 1 }}>
-            Discord Bot Running
-          </Alert>
-        )}
-      </Stack>
-      <Stack direction="row" alignItems="center" justifyContent="end">
-        <Settings
+      <AppBar color="inherit" position="fixed">
+        <TournamentEvent
+          tournaments={tournaments}
+          tournament={tournament}
+          setTournament={setTournament}
+          eventDescription={eventDescription}
+          setEventDescription={setEventDescription}
+          setConnectCodes={setConnectCodes}
+          setDiscordUsernames={setDiscordUsernames}
           showErrorDialog={showErrorDialog}
-          discordApplicationId={discordApplicationId}
-          setDiscordApplicationId={setDiscordApplicationId}
-          discordCommandDq={discordCommandDq}
-          setDiscordCommandDq={setDiscordCommandDq}
-          discordToken={discordToken}
-          setDiscordToken={setDiscordToken}
-          startggApiKey={startggApiKey}
-          setStartggApiKey={setStartggApiKey}
-          setTournaments={setTournaments}
-          appVersion={appVersion}
-          latestAppVersion={latestAppVersion}
-          gotSettings={gotSettings}
         />
-        <ConnectCodes connectCodes={connectCodes} />
-        <DiscordUsernames discordUsernames={discordUsernames} />
-        <SearchBar
-          searchSubstr={searchSubstr}
-          setSearchSubstr={setSearchSubstr}
-        />
-        {refreshingSets ? (
-          <CircularProgress size="24px" style={{ margin: '9px' }} />
-        ) : (
-          <Tooltip
-            arrow
-            title={refreshingSets ? 'Refreshing sets...' : 'Refresh sets'}
-          >
-            <div>
-              <IconButton
-                disabled={!eventDescription}
-                onClick={async () => {
-                  try {
-                    setRefreshingSets(true);
-                    await window.electron.refreshSets();
-                  } catch (e: any) {
-                    const message = e instanceof Error ? e.message : e;
-                    showErrorDialog([message]);
-                  } finally {
-                    setRefreshingSets(false);
-                  }
-                }}
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          <Stack direction="row">
+            {discordStatus === DiscordStatus.NONE &&
+              discordNotStartedExplanation}
+            {discordStatus === DiscordStatus.BAD_TOKEN && (
+              <Alert severity="error" style={{ flexGrow: 1 }}>
+                Discord Bot Token Error!
+              </Alert>
+            )}
+            {discordStatus === DiscordStatus.BAD_APPLICATION_ID && (
+              <Alert severity="error" style={{ flexGrow: 1 }}>
+                Discord Bot Application Id Error!
+              </Alert>
+            )}
+            {discordStatus === DiscordStatus.STARTING && (
+              <Alert severity="info" style={{ flexGrow: 1 }}>
+                Discord Bot Starting...
+              </Alert>
+            )}
+            {discordStatus === DiscordStatus.READY && (
+              <Alert severity="success" style={{ flexGrow: 1 }}>
+                Discord Bot Running
+              </Alert>
+            )}
+          </Stack>
+          <Stack direction="row" alignItems="center" justifyContent="end">
+            <Settings
+              showErrorDialog={showErrorDialog}
+              discordApplicationId={discordApplicationId}
+              setDiscordApplicationId={setDiscordApplicationId}
+              discordCommandDq={discordCommandDq}
+              setDiscordCommandDq={setDiscordCommandDq}
+              discordToken={discordToken}
+              setDiscordToken={setDiscordToken}
+              startggApiKey={startggApiKey}
+              setStartggApiKey={setStartggApiKey}
+              setTournaments={setTournaments}
+              appVersion={appVersion}
+              latestAppVersion={latestAppVersion}
+              gotSettings={gotSettings}
+            />
+            <ConnectCodes connectCodes={connectCodes} />
+            <DiscordUsernames discordUsernames={discordUsernames} />
+            <SearchBar
+              searchSubstr={searchSubstr}
+              setSearchSubstr={setSearchSubstr}
+            />
+            {refreshingSets ? (
+              <CircularProgress size="24px" style={{ margin: '9px' }} />
+            ) : (
+              <Tooltip
+                arrow
+                title={refreshingSets ? 'Refreshing sets...' : 'Refresh sets'}
               >
-                <Refresh />
-              </IconButton>
-            </div>
-          </Tooltip>
-        )}
-      </Stack>
-      <Bracket searchSubstr={searchSubstr} />
+                <div>
+                  <IconButton
+                    disabled={!eventDescription}
+                    onClick={async () => {
+                      try {
+                        setRefreshingSets(true);
+                        await window.electron.refreshSets();
+                      } catch (e: any) {
+                        const message = e instanceof Error ? e.message : e;
+                        showErrorDialog([message]);
+                      } finally {
+                        setRefreshingSets(false);
+                      }
+                    }}
+                  >
+                    <Refresh />
+                  </IconButton>
+                </div>
+              </Tooltip>
+            )}
+          </Stack>
+        </Stack>
+        <Tabs
+          value={tabValue}
+          onChange={(ev, newTabValue) => {
+            setTabValue(newTabValue);
+          }}
+          aria-label="Tabs"
+          variant="fullWidth"
+        >
+          <Tab
+            label="Bracket"
+            id="tab-bracket"
+            aria-controls="tabpanel-bracket"
+            value={TabValue.BRACKET}
+          />
+        </Tabs>
+      </AppBar>
+      <div style={{ marginTop: '168px' }} />
+      <TabPanel value={tabValue} index={TabValue.BRACKET}>
+        <Bracket searchSubstr={searchSubstr} />
+      </TabPanel>
       <Dialog
         open={errorDialogOpen}
         onClose={() => {
