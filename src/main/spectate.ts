@@ -33,6 +33,8 @@ export function initSpectate(newMainWindow: BrowserWindow) {
   }
   broadcasts = [];
   dolphinIdToSpectating.clear();
+  connectCodeMisses.clear();
+  connectCodeToGamerTag.clear();
   mainWindow = newMainWindow;
 }
 
@@ -107,6 +109,13 @@ export function connect(port: number) {
     .on('error', (error) => {
       webSocketClient?.removeAllListeners();
       webSocketClient = null;
+
+      broadcasts.length = 0;
+      mainWindow?.webContents.send('broadcasts', broadcasts);
+
+      dolphinIdToSpectating.clear();
+      sendSpectating();
+
       remoteErr = error.message;
       remoteStatus = RemoteStatus.DISCONNECTED;
       sendState();
@@ -114,6 +123,13 @@ export function connect(port: number) {
     .on('close', () => {
       webSocketClient?.removeAllListeners();
       webSocketClient = null;
+
+      broadcasts.length = 0;
+      mainWindow?.webContents.send('broadcasts', broadcasts);
+
+      dolphinIdToSpectating.clear();
+      sendSpectating();
+
       remoteErr = '';
       remoteStatus = RemoteStatus.DISCONNECTED;
       sendState();
