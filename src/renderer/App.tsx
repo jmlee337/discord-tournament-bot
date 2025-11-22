@@ -118,6 +118,7 @@ function Hello() {
       setDiscordCommandDq(await discordCommandDqPromise);
       setDiscordToken((await discordConfigPromise).token);
       setStartggApiKey(await startggApiKeyPromise);
+      setConnectCodes((await startingStatePromise).connectCodes);
       setDiscordStatus((await startingStatePromise).discordStatus);
       setDiscordUsernames((await startingStatePromise).discordUsernames);
       const tournamentName = (await startingStatePromise).tournament.name;
@@ -331,7 +332,7 @@ function Hello() {
       </AppBar>
       <div style={{ marginTop: '168px' }} />
       <TabPanel value={tabValue} index={TabValue.BROADCASTS}>
-        <Remote remoteState={remoteState} />
+        <Remote remoteState={remoteState} searchSubstr={searchSubstr} />
       </TabPanel>
       <TabPanel value={tabValue} index={TabValue.BRACKET}>
         <Bracket searchSubstr={searchSubstr} />

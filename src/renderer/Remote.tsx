@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
@@ -10,10 +10,19 @@ import {
 } from '@mui/material';
 import {
   Broadcast,
+  Highlight,
+  HIGHLIGHT_COLOR,
   RemoteState,
   RemoteStatus,
   Spectating,
 } from '../common/types';
+
+type BroadcastWithHighlight = {
+  connectCodeHighlight?: Highlight;
+  gamerTagHighlight?: Highlight;
+  slippiNameHighlight?: Highlight;
+  broadcast: Broadcast;
+};
 
 function Status({ remoteState }: { remoteState: RemoteState }) {
   if (remoteState.err) {
@@ -31,7 +40,169 @@ function Status({ remoteState }: { remoteState: RemoteState }) {
   throw new Error('unreachable');
 }
 
-export default function Remote({ remoteState }: { remoteState: RemoteState }) {
+function getBroadcastsWithHighlights(
+  broadcasts: Broadcast[],
+  searchSubstr: string,
+) {
+  if (!searchSubstr) {
+    return broadcasts.map((broadcast) => ({ broadcast }));
+  }
+
+  const broadcastsWithHighlights: BroadcastWithHighlight[] = [];
+  broadcasts.forEach((broadcast) => {
+    let connectCodeHighlight: Highlight | undefined;
+    let gamerTagHighlight: Highlight | undefined;
+    let slippiNameHighlight: Highlight | undefined;
+    let include = false;
+    const includeStr = searchSubstr.toLowerCase();
+    const connectCodeStart = broadcast.connectCode
+      .toLowerCase()
+      .indexOf(includeStr);
+    if (connectCodeStart >= 0) {
+      include = true;
+      connectCodeHighlight = {
+        start: connectCodeStart,
+        end: connectCodeStart + includeStr.length,
+      };
+    }
+    if (broadcast.gamerTag) {
+      const gamerTagStart = broadcast.gamerTag
+        .toLowerCase()
+        .indexOf(includeStr);
+      if (gamerTagStart >= 0) {
+        include = true;
+        gamerTagHighlight = {
+          start: gamerTagStart,
+          end: gamerTagStart + includeStr.length,
+        };
+      }
+    }
+    const slippiNameStart = broadcast.slippiName
+      .toLowerCase()
+      .indexOf(includeStr);
+    if (slippiNameStart >= 0) {
+      include = true;
+      slippiNameHighlight = {
+        start: slippiNameStart,
+        end: slippiNameStart + includeStr.length,
+      };
+    }
+    if (include) {
+      broadcastsWithHighlights.push({
+        connectCodeHighlight,
+        gamerTagHighlight,
+        slippiNameHighlight,
+        broadcast,
+      });
+    }
+  });
+  return broadcastsWithHighlights;
+}
+
+function BroadcastWithHighlightListItem({
+  bwh,
+}: {
+  bwh: BroadcastWithHighlight;
+}) {
+  const connectCodeFrag = (
+    <ListItemText>
+      {bwh.connectCodeHighlight ? (
+        <>
+          <span>
+            {bwh.broadcast.connectCode.substring(
+              0,
+              bwh.connectCodeHighlight.start,
+            )}
+          </span>
+          <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+            {bwh.broadcast.connectCode.substring(
+              bwh.connectCodeHighlight.start,
+              bwh.connectCodeHighlight.end,
+            )}
+          </span>
+          <span>
+            {bwh.broadcast.connectCode.substring(bwh.connectCodeHighlight.end)}
+          </span>
+        </>
+      ) : (
+        bwh.broadcast.connectCode
+      )}
+    </ListItemText>
+  );
+  const slippiNameFrag = (
+    <ListItemText>
+      (
+      {bwh.slippiNameHighlight ? (
+        <>
+          <span>
+            {bwh.broadcast.slippiName.substring(
+              0,
+              bwh.slippiNameHighlight.start,
+            )}
+          </span>
+          <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+            {bwh.broadcast.slippiName.substring(
+              bwh.slippiNameHighlight.start,
+              bwh.slippiNameHighlight.end,
+            )}
+          </span>
+          <span>
+            {bwh.broadcast.slippiName.substring(bwh.slippiNameHighlight.end)}
+          </span>
+        </>
+      ) : (
+        bwh.broadcast.slippiName
+      )}
+      )
+    </ListItemText>
+  );
+  return (
+    <ListItem disableGutters sx={{ gap: '8px' }}>
+      {bwh.broadcast.gamerTag === undefined ? (
+        <>
+          {connectCodeFrag}
+          {slippiNameFrag}
+        </>
+      ) : (
+        <>
+          <ListItemText>
+            {bwh.gamerTagHighlight ? (
+              <>
+                <span>
+                  {bwh.broadcast.gamerTag.substring(
+                    0,
+                    bwh.gamerTagHighlight.start,
+                  )}
+                </span>
+                <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+                  {bwh.broadcast.gamerTag.substring(
+                    bwh.gamerTagHighlight.start,
+                    bwh.gamerTagHighlight.end,
+                  )}
+                </span>
+                <span>
+                  {bwh.broadcast.gamerTag.substring(bwh.gamerTagHighlight.end)}
+                </span>
+              </>
+            ) : (
+              bwh.broadcast.gamerTag
+            )}
+          </ListItemText>
+          {connectCodeFrag}
+          {slippiNameFrag}
+        </>
+      )}
+    </ListItem>
+  );
+}
+
+export default function Remote({
+  remoteState,
+  searchSubstr,
+}: {
+  remoteState: RemoteState;
+  searchSubstr: string;
+}) {
   const [port, setPort] = useState(0);
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [spectating, setSpectating] = useState<Spectating[]>([]);
@@ -55,6 +226,11 @@ export default function Remote({ remoteState }: { remoteState: RemoteState }) {
       setSpectating(newSpectating);
     });
   }, []);
+
+  const broadcastsWithHighlights = useMemo(
+    () => getBroadcastsWithHighlights(broadcasts, searchSubstr),
+    [broadcasts, searchSubstr],
+  );
 
   return (
     <Stack>
@@ -100,21 +276,11 @@ export default function Remote({ remoteState }: { remoteState: RemoteState }) {
       <Stack direction="row" alignItems="start" justifyContent="space-between">
         <Stack>
           <List>
-            {broadcasts.map((broadcast) => (
-              <ListItem key={broadcast.id} disableGutters sx={{ gap: '8px' }}>
-                {broadcast.gamerTag === undefined ? (
-                  <>
-                    <ListItemText>{broadcast.connectCode}</ListItemText>
-                    <ListItemText>({broadcast.slippiName})</ListItemText>
-                  </>
-                ) : (
-                  <>
-                    <ListItemText>{broadcast.gamerTag}</ListItemText>
-                    <ListItemText>{broadcast.connectCode}</ListItemText>
-                    <ListItemText>({broadcast.slippiName})</ListItemText>
-                  </>
-                )}
-              </ListItem>
+            {broadcastsWithHighlights.map((bwh) => (
+              <BroadcastWithHighlightListItem
+                key={bwh.broadcast.id}
+                bwh={bwh}
+              />
             ))}
           </List>
         </Stack>
