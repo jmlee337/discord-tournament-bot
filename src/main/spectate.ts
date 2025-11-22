@@ -2,6 +2,7 @@ import WebSocket from 'ws';
 import { BrowserWindow } from 'electron';
 import {
   Broadcast,
+  ConnectCode,
   RemoteState,
   RemoteStatus,
   Spectating,
@@ -22,6 +23,8 @@ let remoteErr = '';
 let remoteStatus = RemoteStatus.DISCONNECTED;
 let webSocketClient: WebSocket | null = null;
 let mainWindow: BrowserWindow | null = null;
+const connectCodeMisses = new Set<string>();
+const connectCodeToGamerTag = new Map<string, string>();
 
 export function initSpectate(newMainWindow: BrowserWindow) {
   if (webSocketClient) {
@@ -31,6 +34,13 @@ export function initSpectate(newMainWindow: BrowserWindow) {
   broadcasts = [];
   dolphinIdToSpectating.clear();
   mainWindow = newMainWindow;
+}
+
+export function setConnectCodes(connectCodes: ConnectCode[]) {
+  connectCodeMisses.clear();
+  connectCodes.forEach(({ connectCode, gamerTag }) => {
+    connectCodeToGamerTag.set(connectCode.toLowerCase(), gamerTag);
+  });
 }
 
 export function getRemoteState() {
@@ -64,6 +74,23 @@ function sendSpectating() {
 
 function sendState() {
   mainWindow?.webContents.send('remoteState', getRemoteState());
+}
+
+function matchConnectCode(connectCode: string) {
+  const parts = connectCode.split('#');
+  if (parts.length !== 2) {
+    throw new Error(`Unexepected connect code format: ${connectCode}`);
+  }
+  // eslint-disable-next-line no-restricted-syntax
+  for (const [candidateCC, gamerTag] of connectCodeToGamerTag.values()) {
+    const lcCC = candidateCC.toLowerCase();
+    if (parts.every((part) => lcCC.includes(part))) {
+      connectCodeToGamerTag.set(connectCode, gamerTag);
+      return gamerTag;
+    }
+  }
+  connectCodeMisses.add(connectCode);
+  return undefined;
 }
 
 export function connect(port: number) {
@@ -125,14 +152,25 @@ export function connect(port: number) {
             return;
           case 'list-broadcasts-response':
             broadcasts = (message.broadcasts as RemoteBroadcast[])
-              .map(
-                (broadcast): Broadcast => ({
+              .map((broadcast): Broadcast => {
+                const connectCode = broadcast.name;
+                const lcConnectCode = connectCode.toLowerCase();
+                let gamerTag = connectCodeToGamerTag.get(lcConnectCode);
+                if (!gamerTag && !connectCodeMisses.has(lcConnectCode)) {
+                  gamerTag = matchConnectCode(lcConnectCode);
+                }
+                return {
                   id: broadcast.id,
-                  name: broadcast.broadcaster.name,
-                  connectCode: broadcast.name,
-                }),
-              )
-              .sort((a, b) => a.name.localeCompare(b.name));
+                  connectCode,
+                  gamerTag,
+                  slippiName: broadcast.broadcaster.name,
+                };
+              })
+              .sort((a, b) =>
+                (a.gamerTag ?? a.slippiName).localeCompare(
+                  b.gamerTag ?? b.slippiName,
+                ),
+              );
             mainWindow?.webContents.send('broadcasts', broadcasts);
             return;
           case 'spectate-broadcast-response':

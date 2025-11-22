@@ -57,6 +57,7 @@ import {
   getSpectating,
   initSpectate,
   refreshBroadcasts,
+  setConnectCodes,
   startSpectating,
 } from './spectate';
 
@@ -906,10 +907,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         client = null;
         updateDiscordStatus(DiscordStatus.NONE);
       }
+      connectCodes.sort((a, b) => a.gamerTag.localeCompare(b.gamerTag));
+      setConnectCodes(connectCodes);
       return {
-        connectCodes: connectCodes.sort((a, b) =>
-          a.gamerTag.localeCompare(b.gamerTag),
-        ),
+        connectCodes,
         discordUsernames: discordUsernames.sort((a, b) =>
           a.gamerTag.localeCompare(b.gamerTag),
         ),

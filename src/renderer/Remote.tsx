@@ -101,8 +101,16 @@ export default function Remote({ remoteState }: { remoteState: RemoteState }) {
         <Stack>
           <List>
             {broadcasts.map((broadcast) => (
-              <ListItem key={broadcast.id}>
-                <ListItemText>{broadcast.name}</ListItemText>
+              <ListItem key={broadcast.id} disableGutters sx={{ gap: '8px' }}>
+                {broadcast.gamerTag === undefined ||
+                broadcast.gamerTag === broadcast.slippiName ? (
+                  <ListItemText>{broadcast.slippiName}</ListItemText>
+                ) : (
+                  <>
+                    <ListItemText>{broadcast.gamerTag}</ListItemText>
+                    <ListItemText>({broadcast.slippiName})</ListItemText>
+                  </>
+                )}
                 <ListItemText>{broadcast.connectCode}</ListItemText>
               </ListItem>
             ))}

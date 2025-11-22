@@ -111,7 +111,8 @@ export type RemoteState = {
 export type Broadcast = {
   id: string;
   connectCode: string;
-  name: string;
+  gamerTag?: string;
+  slippiName: string;
 };
 
 export type Spectating = {
