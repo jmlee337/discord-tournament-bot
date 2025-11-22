@@ -97,11 +97,34 @@ export type ParticipantConnections = {
   discordUsernames: DiscordUsername[];
 };
 
+export enum RemoteStatus {
+  DISCONNECTED,
+  CONNECTING,
+  CONNECTED,
+}
+
+export type RemoteState = {
+  err: string;
+  status: RemoteStatus;
+};
+
+export type Broadcast = {
+  id: string;
+  connectCode: string;
+  name: string;
+};
+
+export type Spectating = {
+  broadcastId: string;
+  dolphinId: string;
+};
+
 export type StartingState = {
   connectCodes: ConnectCode[];
   discordStatus: DiscordStatus;
-  eventName: string;
   discordUsernames: DiscordUsername[];
+  eventName: string;
+  remoteState: RemoteState;
   tournament: StartggTournament;
 };
 

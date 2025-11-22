@@ -27,12 +27,15 @@ import {
   DiscordUsername,
   StartggTournament,
   ConnectCode,
+  RemoteStatus,
+  RemoteState,
 } from '../common/types';
 import DiscordUsernames from './DiscordUsernames';
 import SearchBar from './SearchBar';
 import TournamentEvent from './TournamentEvent';
 import ConnectCodes from './ConnectCodes';
 import Bracket from './Bracket';
+import Remote from './Remote';
 
 enum TabValue {
   BRACKET = 'bracket',
@@ -90,9 +93,13 @@ function Hello() {
     events: [],
   });
   const [tournaments, setTournaments] = useState<AdminedTournament[]>([]);
+  const [remoteState, setRemoteState] = useState<RemoteState>({
+    err: '',
+    status: RemoteStatus.DISCONNECTED,
+  });
 
   // tabs
-  const [tabValue, setTabValue] = useState(TabValue.BRACKET);
+  const [tabValue, setTabValue] = useState(TabValue.BROADCASTS);
 
   useEffect(() => {
     const inner = async () => {
@@ -112,12 +119,13 @@ function Hello() {
       setDiscordToken((await discordConfigPromise).token);
       setStartggApiKey(await startggApiKeyPromise);
       setDiscordStatus((await startingStatePromise).discordStatus);
+      setDiscordUsernames((await startingStatePromise).discordUsernames);
       const tournamentName = (await startingStatePromise).tournament.name;
       const { eventName } = await startingStatePromise;
       if (tournamentName && eventName) {
         setEventDescription(`${tournamentName}, ${eventName}`);
       }
-      setDiscordUsernames((await startingStatePromise).discordUsernames);
+      setRemoteState((await startingStatePromise).remoteState);
       setTournament((await startingStatePromise).tournament);
 
       // req network
@@ -150,6 +158,9 @@ function Hello() {
   useEffect(() => {
     window.electron.onDiscordStatus((event, newDiscordStatus) => {
       setDiscordStatus(newDiscordStatus);
+    });
+    window.electron.onRemoteState((event, newRemoteState) => {
+      setRemoteState(newRemoteState);
     });
   });
 
@@ -189,7 +200,7 @@ function Hello() {
   }
 
   const [searchSubstr, setSearchSubstr] = useState('');
-  const [refreshingSets, setRefreshingSets] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
   return (
     <>
@@ -255,25 +266,37 @@ function Hello() {
               searchSubstr={searchSubstr}
               setSearchSubstr={setSearchSubstr}
             />
-            {refreshingSets ? (
+            {refreshing ? (
               <CircularProgress size="24px" style={{ margin: '9px' }} />
             ) : (
               <Tooltip
                 arrow
-                title={refreshingSets ? 'Refreshing sets...' : 'Refresh sets'}
+                title={
+                  tabValue === TabValue.BRACKET
+                    ? 'Refresh sets'
+                    : 'Refresh broadcasts'
+                }
               >
                 <div>
                   <IconButton
-                    disabled={!eventDescription}
+                    disabled={
+                      (tabValue === TabValue.BRACKET && !eventDescription) ||
+                      (tabValue === TabValue.BROADCASTS &&
+                        remoteState.status !== RemoteStatus.CONNECTED)
+                    }
                     onClick={async () => {
                       try {
-                        setRefreshingSets(true);
-                        await window.electron.refreshSets();
+                        setRefreshing(true);
+                        if (tabValue === TabValue.BRACKET) {
+                          await window.electron.refreshSets();
+                        } else if (tabValue === TabValue.BROADCASTS) {
+                          await window.electron.refreshBroadcasts();
+                        }
                       } catch (e: any) {
                         const message = e instanceof Error ? e.message : e;
                         showErrorDialog([message]);
                       } finally {
-                        setRefreshingSets(false);
+                        setRefreshing(false);
                       }
                     }}
                   >
@@ -293,6 +316,12 @@ function Hello() {
           variant="fullWidth"
         >
           <Tab
+            label="Broadcasts"
+            id="tab-broadcasts"
+            aria-controls="tabpanel-broadcasts"
+            value={TabValue.BROADCASTS}
+          />
+          <Tab
             label="Bracket"
             id="tab-bracket"
             aria-controls="tabpanel-bracket"
@@ -301,6 +330,9 @@ function Hello() {
         </Tabs>
       </AppBar>
       <div style={{ marginTop: '168px' }} />
+      <TabPanel value={tabValue} index={TabValue.BROADCASTS}>
+        <Remote remoteState={remoteState} />
+      </TabPanel>
       <TabPanel value={tabValue} index={TabValue.BRACKET}>
         <Bracket searchSubstr={searchSubstr} />
       </TabPanel>

@@ -50,6 +50,15 @@ import {
   resetSet,
   swapWinner,
 } from './startgg';
+import {
+  connect,
+  getBroadcasts,
+  getRemoteState,
+  getSpectating,
+  initSpectate,
+  refreshBroadcasts,
+  startSpectating,
+} from './spectate';
 
 const CONFIRMATION_TIMEOUT_MS = 30000;
 const STARTGG_BLACK = '#031221';
@@ -133,19 +142,22 @@ function getOpponentName(set: StartggSet, entrantId: number) {
 
 export default function setupIPCs(mainWindow: BrowserWindow) {
   initStartgg();
-  const store = new Store();
-  let discordConfig = store.has('discordConfig')
-    ? (store.get('discordConfig') as DiscordConfig)
-    : { applicationId: '', token: '' };
-  let discordCommandDq = store.has('discordCommandDq')
-    ? (store.get('discordCommandDq') as boolean)
-    : true;
-  let discordRegisteredVersion = store.has('discordRegisteredVersion')
-    ? (store.get('discordRegisteredVersion') as string)
-    : '';
-  let startggApiKey = store.has('startggApiKey')
-    ? (store.get('startggApiKey') as string)
-    : '';
+  initSpectate(mainWindow);
+  const store = new Store<{
+    discordConfig: DiscordConfig;
+    discordCommandDq: boolean;
+    discordRegisteredVersion: string;
+    remotePort: number;
+    startggApiKey: string;
+  }>();
+  let discordConfig = store.get('discordConfig', {
+    applicationId: '',
+    token: '',
+  });
+  let discordCommandDq = store.get('discordCommandDq', true);
+  let discordRegisteredVersion = store.get('discordRegisteredVersion', '');
+  let remotePort = store.get('remotePort', 49809);
+  let startggApiKey = store.get('startggApiKey', '');
 
   /**
    * Needed for both Discord and start.gg
@@ -761,6 +773,45 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   ipcMain.handle('registerSlashCommands', () => registerSlashCommands());
 
   /**
+   * remote
+   */
+  ipcMain.removeHandler('getRemotePort');
+  ipcMain.handle('getRemotePort', () => remotePort);
+
+  ipcMain.removeHandler('setRemotePort');
+  ipcMain.handle(
+    'setRemotePort',
+    (event: IpcMainInvokeEvent, newRemotePort: number) => {
+      store.set('remotePort', newRemotePort);
+      remotePort = newRemotePort;
+    },
+  );
+
+  ipcMain.removeHandler('getStartingRemote');
+  ipcMain.handle('getStartingRemote', () => ({
+    broadcasts: getBroadcasts(),
+    spectating: getSpectating(),
+  }));
+
+  ipcMain.removeHandler('connectRemote');
+  ipcMain.handle('connectRemote', () => {
+    connect(remotePort);
+  });
+
+  ipcMain.removeHandler('refreshBroadcasts');
+  ipcMain.handle('refreshBroadcasts', () => {
+    refreshBroadcasts();
+  });
+
+  ipcMain.removeHandler('startSpectating');
+  ipcMain.handle(
+    'startSpectating',
+    (event: IpcMainInvokeEvent, broadcastId: string, dolphinId: string) => {
+      startSpectating(broadcastId, dolphinId);
+    },
+  );
+
+  /**
    * start.gg
    */
   ipcMain.removeHandler('getStartggApiKey');
@@ -940,8 +991,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     (): StartingState => ({
       connectCodes,
       discordStatus,
-      eventName: startggEvent.name,
       discordUsernames,
+      eventName: startggEvent.name,
+      remoteState: getRemoteState(),
       tournament,
     }),
   );
