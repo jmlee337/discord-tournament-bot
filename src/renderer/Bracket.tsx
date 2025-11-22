@@ -11,7 +11,8 @@ import {
 } from '../common/types';
 
 type SetWithHighlight = {
-  highlights: Highlight[];
+  entrant1Highlight?: Highlight;
+  entrant2Highlight?: Highlight;
   set: StartggSet;
 };
 
@@ -58,23 +59,30 @@ export default function Bracket({ searchSubstr }: { searchSubstr: string }) {
       const groupSets: SetWithHighlight[] = [];
       phaseGroup.sets.forEach((set) => {
         if (!searchSubstr) {
-          groupSets.push({ highlights: [], set });
+          groupSets.push({ set });
         } else {
-          const highlights: Highlight[] = [];
+          let entrant1Highlight: Highlight | undefined;
+          let entrant2Highlight: Highlight | undefined;
           let include = false;
           const includeStr = searchSubstr.toLowerCase();
           const start1 = set.entrant1Name.toLowerCase().indexOf(includeStr);
           if (start1 >= 0) {
             include = true;
-            highlights[0] = { start: start1, end: start1 + includeStr.length };
+            entrant1Highlight = {
+              start: start1,
+              end: start1 + includeStr.length,
+            };
           }
           const start2 = set.entrant2Name.toLowerCase().indexOf(includeStr);
           if (start2 >= 0) {
             include = true;
-            highlights[1] = { start: start2, end: start2 + includeStr.length };
+            entrant2Highlight = {
+              start: start2,
+              end: start2 + includeStr.length,
+            };
           }
           if (include) {
-            groupSets.push({ highlights, set });
+            groupSets.push({ entrant1Highlight, entrant2Highlight, set });
           }
         }
       });
@@ -103,23 +111,23 @@ export default function Bracket({ searchSubstr }: { searchSubstr: string }) {
                     <Typography variant="caption">
                       {setWithHighlight.set.fullRoundText}
                     </Typography>
-                    {setWithHighlight.highlights[0] ? (
+                    {setWithHighlight.entrant1Highlight ? (
                       <Typography variant="body2">
                         <span>
                           {setWithHighlight.set.entrant1Name.substring(
                             0,
-                            setWithHighlight.highlights[0].start,
+                            setWithHighlight.entrant1Highlight.start,
                           )}
                         </span>
                         <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
                           {setWithHighlight.set.entrant1Name.substring(
-                            setWithHighlight.highlights[0].start,
-                            setWithHighlight.highlights[0].end,
+                            setWithHighlight.entrant1Highlight.start,
+                            setWithHighlight.entrant1Highlight.end,
                           )}
                         </span>
                         <span>
                           {setWithHighlight.set.entrant1Name.substring(
-                            setWithHighlight.highlights[0].end,
+                            setWithHighlight.entrant1Highlight.end,
                           )}
                         </span>
                       </Typography>
@@ -128,23 +136,23 @@ export default function Bracket({ searchSubstr }: { searchSubstr: string }) {
                         {setWithHighlight.set.entrant1Name}
                       </Typography>
                     )}
-                    {setWithHighlight.highlights[1] ? (
+                    {setWithHighlight.entrant2Highlight ? (
                       <Typography variant="body2">
                         <span>
                           {setWithHighlight.set.entrant2Name.substring(
                             0,
-                            setWithHighlight.highlights[1].start,
+                            setWithHighlight.entrant2Highlight.start,
                           )}
                         </span>
                         <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
                           {setWithHighlight.set.entrant2Name.substring(
-                            setWithHighlight.highlights[1].start,
-                            setWithHighlight.highlights[1].end,
+                            setWithHighlight.entrant2Highlight.start,
+                            setWithHighlight.entrant2Highlight.end,
                           )}
                         </span>
                         <span>
                           {setWithHighlight.set.entrant2Name.substring(
-                            setWithHighlight.highlights[1].end,
+                            setWithHighlight.entrant2Highlight.end,
                           )}
                         </span>
                       </Typography>
