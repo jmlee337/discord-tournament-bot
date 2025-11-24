@@ -17,8 +17,19 @@ type RemoteBroadcast = {
   };
 };
 
-let broadcasts: Broadcast[] = [];
-const dolphinIdToSpectating = new Map<string, Spectating>();
+type RemoteSpectate = {
+  broadcastId: string;
+  dolphinId: string;
+};
+
+type SpectatingInternal = {
+  dolphinId: string;
+  broadcastId: string;
+  spectating: boolean;
+};
+
+const idToBroadcast = new Map<string, Broadcast>();
+const dolphinIdToSpectating = new Map<string, SpectatingInternal>();
 let remoteErr = '';
 let remoteStatus = RemoteStatus.DISCONNECTED;
 let webSocketClient: WebSocket | null = null;
@@ -31,18 +42,11 @@ export function initSpectate(newMainWindow: BrowserWindow) {
     webSocketClient.close();
     webSocketClient = null;
   }
-  broadcasts = [];
+  idToBroadcast.clear();
   dolphinIdToSpectating.clear();
   connectCodeMisses.clear();
   connectCodeToGamerTag.clear();
   mainWindow = newMainWindow;
-}
-
-export function setConnectCodes(connectCodes: ConnectCode[]) {
-  connectCodeMisses.clear();
-  connectCodes.forEach(({ connectCode, gamerTag }) => {
-    connectCodeToGamerTag.set(connectCode.toLowerCase(), gamerTag);
-  });
 }
 
 export function getRemoteState() {
@@ -53,29 +57,42 @@ export function getRemoteState() {
   return remoteState;
 }
 
-export function getBroadcasts() {
-  return broadcasts;
+function sendState() {
+  mainWindow?.webContents.send('remoteState', getRemoteState());
 }
 
-export function getSpectating() {
+export function getSpectating(): Spectating[] {
   const arr = Array.from(dolphinIdToSpectating.values());
   let i = 0;
   while (arr.length < 4) {
     i += 1;
     const dolphinId = `spectate-${i}`;
     if (!dolphinIdToSpectating.has(dolphinId)) {
-      arr.push({ dolphinId, broadcastId: '' });
+      arr.push({ dolphinId, broadcastId: '', spectating: false });
     }
   }
-  return arr.sort((a, b) => a.dolphinId.localeCompare(b.dolphinId));
+  return arr
+    .sort((a, b) => a.dolphinId.localeCompare(b.dolphinId))
+    .map((spectating) => ({
+      dolphinId: spectating.dolphinId,
+      broadcast: idToBroadcast.get(spectating.broadcastId),
+      spectating: spectating.spectating,
+    }));
 }
 
 function sendSpectating() {
   mainWindow?.webContents.send('spectating', getSpectating());
 }
 
-function sendState() {
-  mainWindow?.webContents.send('remoteState', getRemoteState());
+export function getBroadcasts() {
+  return Array.from(idToBroadcast.values()).sort((a, b) =>
+    (a.gamerTag ?? a.slippiName).localeCompare(b.gamerTag ?? b.slippiName),
+  );
+}
+
+function sendBroadcasts() {
+  mainWindow?.webContents.send('broadcasts', getBroadcasts());
+  sendSpectating();
 }
 
 function matchConnectCode(connectCode: string) {
@@ -95,6 +112,27 @@ function matchConnectCode(connectCode: string) {
   return undefined;
 }
 
+export function setConnectCodes(connectCodes: ConnectCode[]) {
+  connectCodeMisses.clear();
+  connectCodes.forEach(({ connectCode, gamerTag }) => {
+    connectCodeToGamerTag.set(connectCode.toLowerCase(), gamerTag);
+  });
+  Array.from(idToBroadcast.entries()).forEach(([broadcastId, broadcast]) => {
+    const lcConnectCode = broadcast.connectCode.toLowerCase();
+    let gamerTag = connectCodeToGamerTag.get(lcConnectCode);
+    if (!gamerTag && !connectCodeMisses.has(lcConnectCode)) {
+      gamerTag = matchConnectCode(lcConnectCode);
+    }
+    if (gamerTag) {
+      idToBroadcast.set(broadcastId, {
+        ...broadcast,
+        gamerTag,
+      });
+    }
+  });
+  sendBroadcasts();
+}
+
 export function connect(port: number) {
   if (webSocketClient) {
     return;
@@ -110,8 +148,8 @@ export function connect(port: number) {
       webSocketClient?.removeAllListeners();
       webSocketClient = null;
 
-      broadcasts.length = 0;
-      mainWindow?.webContents.send('broadcasts', broadcasts);
+      idToBroadcast.clear();
+      sendBroadcasts();
 
       dolphinIdToSpectating.clear();
       sendSpectating();
@@ -124,8 +162,8 @@ export function connect(port: number) {
       webSocketClient?.removeAllListeners();
       webSocketClient = null;
 
-      broadcasts.length = 0;
-      mainWindow?.webContents.send('broadcasts', broadcasts);
+      idToBroadcast.clear();
+      sendBroadcasts();
 
       dolphinIdToSpectating.clear();
       sendSpectating();
@@ -145,9 +183,13 @@ export function connect(port: number) {
         }
         switch (message.op) {
           case 'spectating-broadcasts-event':
-            (message.spectatingBroadcasts as Spectating[]).forEach(
-              (spectating) => {
-                dolphinIdToSpectating.set(spectating.dolphinId, spectating);
+            (message.spectatingBroadcasts as RemoteSpectate[]).forEach(
+              (spectate) => {
+                dolphinIdToSpectating.set(spectate.dolphinId, {
+                  dolphinId: spectate.dolphinId,
+                  broadcastId: spectate.broadcastId,
+                  spectating: true,
+                });
               },
             );
             sendSpectating();
@@ -160,39 +202,36 @@ export function connect(port: number) {
           case 'new-file-event':
             if (!dolphinIdToSpectating.has(message.dolphinId)) {
               dolphinIdToSpectating.set(message.dolphinId, {
-                broadcastId: message.broadcastId,
                 dolphinId: message.dolphinId,
+                broadcastId: message.broadcastId,
+                spectating: true,
               });
               sendSpectating();
             }
             return;
           case 'list-broadcasts-response':
-            broadcasts = (message.broadcasts as RemoteBroadcast[])
-              .map((broadcast): Broadcast => {
-                const connectCode = broadcast.name;
-                const lcConnectCode = connectCode.toLowerCase();
-                let gamerTag = connectCodeToGamerTag.get(lcConnectCode);
-                if (!gamerTag && !connectCodeMisses.has(lcConnectCode)) {
-                  gamerTag = matchConnectCode(lcConnectCode);
-                }
-                return {
-                  id: broadcast.id,
-                  connectCode,
-                  gamerTag,
-                  slippiName: broadcast.broadcaster.name,
-                };
-              })
-              .sort((a, b) =>
-                (a.gamerTag ?? a.slippiName).localeCompare(
-                  b.gamerTag ?? b.slippiName,
-                ),
-              );
-            mainWindow?.webContents.send('broadcasts', broadcasts);
+            idToBroadcast.clear();
+            (message.broadcasts as RemoteBroadcast[]).forEach((broadcast) => {
+              const connectCode = broadcast.name;
+              const lcConnectCode = connectCode.toLowerCase();
+              let gamerTag = connectCodeToGamerTag.get(lcConnectCode);
+              if (!gamerTag && !connectCodeMisses.has(lcConnectCode)) {
+                gamerTag = matchConnectCode(lcConnectCode);
+              }
+              idToBroadcast.set(broadcast.id, {
+                id: broadcast.id,
+                connectCode,
+                gamerTag,
+                slippiName: broadcast.broadcaster.name,
+              });
+            });
+            sendBroadcasts();
             return;
           case 'spectate-broadcast-response':
             dolphinIdToSpectating.set(message.dolphinId, {
-              broadcastId: message.broadcastId,
               dolphinId: message.dolphinId,
+              broadcastId: message.broadcastId,
+              spectating: true,
             });
             sendSpectating();
             break;

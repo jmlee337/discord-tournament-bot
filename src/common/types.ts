@@ -116,8 +116,9 @@ export type Broadcast = {
 };
 
 export type Spectating = {
-  broadcastId: string;
   dolphinId: string;
+  broadcast?: Broadcast;
+  spectating: boolean;
 };
 
 export type StartingState = {

@@ -1,3 +1,4 @@
+/* eslint-disable no-nested-ternary */
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
@@ -5,6 +6,7 @@ import {
   Card,
   CardActions,
   CardContent,
+  CardHeader,
   List,
   ListItem,
   ListItemText,
@@ -325,15 +327,27 @@ export default function Remote({
         <Stack spacing="8px" style={{ marginTop: '8px' }}>
           {spectating.map((spectate) => (
             <Card key={spectate.dolphinId} style={{ width: '193px' }}>
-              <CardContent>
-                <Typography variant="h6">{spectate.dolphinId}</Typography>
-                <Typography variant="caption">
-                  {spectate.broadcastId}
-                </Typography>
-              </CardContent>
+              <CardHeader title={spectate.dolphinId} />
+              {spectate.spectating && (
+                <CardContent>
+                  {spectate.broadcast ? (
+                    spectate.broadcast.gamerTag ? (
+                      <Typography variant="body2">
+                        {spectate.broadcast.gamerTag}
+                      </Typography>
+                    ) : (
+                      <Typography variant="caption">
+                        {spectate.broadcast.connectCode} (
+                        {spectate.broadcast.slippiName})
+                      </Typography>
+                    )
+                  ) : (
+                    <Typography variant="caption">unknown broadcast</Typography>
+                  )}
+                </CardContent>
+              )}
               <CardActions>
                 <DroppableChip
-                  dolphinId={spectate.dolphinId}
                   selectedChipData={selectedChipData}
                   onClickOrDrop={async (chipData) => {
                     await window.electron.startSpectating(

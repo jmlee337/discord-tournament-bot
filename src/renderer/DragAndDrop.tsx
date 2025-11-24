@@ -1,6 +1,6 @@
 import { Chip, createTheme, ThemeProvider, Tooltip } from '@mui/material';
 import { DragEvent, useCallback, useMemo } from 'react';
-import { LiveTv } from '@mui/icons-material';
+import { LiveTv, PlayArrow } from '@mui/icons-material';
 import { Broadcast, ChipData } from '../common/types';
 
 function dragStart(event: DragEvent<HTMLDivElement>) {
@@ -67,7 +67,7 @@ export function DraggableChip({
         data-gamer-tag={broadcast.gamerTag}
         data-slippi-name={broadcast.slippiName}
         draggable
-        icon={<LiveTv />}
+        icon={<PlayArrow />}
         onClick={() => {
           if (isSelected) {
             setSelectedChipData({
@@ -87,11 +87,9 @@ export function DraggableChip({
 }
 
 export function DroppableChip({
-  dolphinId,
   selectedChipData,
   onClickOrDrop,
 }: {
-  dolphinId: string;
   selectedChipData: ChipData;
   onClickOrDrop: (chipData: ChipData) => void;
 }) {
@@ -141,11 +139,7 @@ export function DroppableChip({
     >
       <Tooltip
         arrow
-        title={
-          hasSelectedChip
-            ? `Click to spectate on ${dolphinId}`
-            : `Drop here to spectate on ${dolphinId}`
-        }
+        title={hasSelectedChip ? `Click to spectate` : `Drop here to spectate`}
       >
         <Chip
           color={hasSelectedChip ? 'secondary' : undefined}
