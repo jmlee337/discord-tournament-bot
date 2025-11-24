@@ -135,3 +135,5 @@ export type Highlight = {
   start: number;
   end: number;
 };
+
+export type ChipData = Broadcast;

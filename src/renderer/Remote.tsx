@@ -2,20 +2,26 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Button,
+  Card,
+  CardActions,
+  CardContent,
   List,
   ListItem,
   ListItemText,
   Stack,
   TextField,
+  Typography,
 } from '@mui/material';
 import {
   Broadcast,
+  ChipData,
   Highlight,
   HIGHLIGHT_COLOR,
   RemoteState,
   RemoteStatus,
   Spectating,
 } from '../common/types';
+import { DraggableChip, DroppableChip } from './DragAndDrop';
 
 type BroadcastWithHighlight = {
   connectCodeHighlight?: Highlight;
@@ -101,8 +107,12 @@ function getBroadcastsWithHighlights(
 
 function BroadcastWithHighlightListItem({
   bwh,
+  selectedChipData,
+  setSelectedChipData,
 }: {
   bwh: BroadcastWithHighlight;
+  selectedChipData: ChipData;
+  setSelectedChipData: (chipData: ChipData) => void;
 }) {
   const connectCodeFrag = (
     <ListItemText>
@@ -157,41 +167,63 @@ function BroadcastWithHighlightListItem({
     </ListItemText>
   );
   return (
-    <ListItem disableGutters sx={{ gap: '8px' }}>
-      {bwh.broadcast.gamerTag === undefined ? (
-        <>
-          {connectCodeFrag}
-          {slippiNameFrag}
-        </>
-      ) : (
-        <>
-          <ListItemText>
-            {bwh.gamerTagHighlight ? (
-              <>
-                <span>
-                  {bwh.broadcast.gamerTag.substring(
-                    0,
-                    bwh.gamerTagHighlight.start,
-                  )}
-                </span>
-                <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
-                  {bwh.broadcast.gamerTag.substring(
-                    bwh.gamerTagHighlight.start,
-                    bwh.gamerTagHighlight.end,
-                  )}
-                </span>
-                <span>
-                  {bwh.broadcast.gamerTag.substring(bwh.gamerTagHighlight.end)}
-                </span>
-              </>
-            ) : (
-              bwh.broadcast.gamerTag
-            )}
-          </ListItemText>
-          {connectCodeFrag}
-          {slippiNameFrag}
-        </>
-      )}
+    <ListItem
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        borderWidth: '1px',
+        borderStyle: 'solid',
+      }}
+      sx={{
+        borderColor: (theme) => theme.palette.grey[400],
+        borderRadius: (theme) => theme.shape.borderRadius,
+      }}
+    >
+      <Stack direction="row" alignItems="center" spacing="8px">
+        {bwh.broadcast.gamerTag === undefined ? (
+          <>
+            {connectCodeFrag}
+            {slippiNameFrag}
+          </>
+        ) : (
+          <>
+            <ListItemText>
+              {bwh.gamerTagHighlight ? (
+                <>
+                  <span>
+                    {bwh.broadcast.gamerTag.substring(
+                      0,
+                      bwh.gamerTagHighlight.start,
+                    )}
+                  </span>
+                  <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+                    {bwh.broadcast.gamerTag.substring(
+                      bwh.gamerTagHighlight.start,
+                      bwh.gamerTagHighlight.end,
+                    )}
+                  </span>
+                  <span>
+                    {bwh.broadcast.gamerTag.substring(
+                      bwh.gamerTagHighlight.end,
+                    )}
+                  </span>
+                </>
+              ) : (
+                bwh.broadcast.gamerTag
+              )}
+            </ListItemText>
+            {connectCodeFrag}
+            {slippiNameFrag}
+          </>
+        )}
+      </Stack>
+      <DraggableChip
+        broadcast={bwh.broadcast}
+        selectedChipData={selectedChipData}
+        setSelectedChipData={setSelectedChipData}
+      />
     </ListItem>
   );
 }
@@ -206,6 +238,11 @@ export default function Remote({
   const [port, setPort] = useState(0);
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [spectating, setSpectating] = useState<Spectating[]>([]);
+  const [selectedChipData, setSelectedChipData] = useState<ChipData>({
+    id: '',
+    connectCode: '',
+    slippiName: '',
+  });
 
   useEffect(() => {
     (async () => {
@@ -267,32 +304,52 @@ export default function Remote({
               await window.electron.setRemotePort(port);
               window.electron.connectRemote();
             }}
+            style={{ width: '99px' }}
             variant="contained"
           >
             Connect
           </Button>
         </Stack>
       </Stack>
-      <Stack direction="row" alignItems="start" justifyContent="space-between">
-        <Stack>
-          <List>
-            {broadcastsWithHighlights.map((bwh) => (
-              <BroadcastWithHighlightListItem
-                key={bwh.broadcast.id}
-                bwh={bwh}
-              />
-            ))}
-          </List>
-        </Stack>
-        <Stack>
-          <List>
-            {spectating.map((spectate) => (
-              <ListItem key={spectate.dolphinId}>
-                <ListItemText>{spectate.dolphinId}</ListItemText>
-                <ListItemText>{spectate.broadcastId}</ListItemText>
-              </ListItem>
-            ))}
-          </List>
+      <Stack direction="row" alignItems="start" spacing="8px">
+        <List style={{ flexGrow: 1 }}>
+          {broadcastsWithHighlights.map((bwh) => (
+            <BroadcastWithHighlightListItem
+              key={bwh.broadcast.id}
+              bwh={bwh}
+              selectedChipData={selectedChipData}
+              setSelectedChipData={setSelectedChipData}
+            />
+          ))}
+        </List>
+        <Stack spacing="8px" style={{ marginTop: '8px' }}>
+          {spectating.map((spectate) => (
+            <Card key={spectate.dolphinId} style={{ width: '193px' }}>
+              <CardContent>
+                <Typography variant="h6">{spectate.dolphinId}</Typography>
+                <Typography variant="caption">
+                  {spectate.broadcastId}
+                </Typography>
+              </CardContent>
+              <CardActions>
+                <DroppableChip
+                  dolphinId={spectate.dolphinId}
+                  selectedChipData={selectedChipData}
+                  onClickOrDrop={async (chipData) => {
+                    await window.electron.startSpectating(
+                      chipData.id,
+                      spectate.dolphinId,
+                    );
+                    setSelectedChipData({
+                      id: '',
+                      connectCode: '',
+                      slippiName: '',
+                    });
+                  }}
+                />
+              </CardActions>
+            </Card>
+          ))}
         </Stack>
       </Stack>
     </Stack>
