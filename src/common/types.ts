@@ -23,6 +23,8 @@ export type StartggSet = {
   isDQ: boolean;
   entrant1Id: number;
   entrant1Name: string;
+  entrant1Score: number;
+  entrant2Score: number;
   entrant2Id: number;
   entrant2Name: string;
   fullRoundText: string;
@@ -89,6 +91,7 @@ export type DiscordUsername = {
 
 export type ConnectCode = {
   connectCode: string;
+  entrantId: number;
   gamerTag: string;
 };
 
@@ -112,6 +115,11 @@ export type Broadcast = {
   id: string;
   connectCode: string;
   gamerTag?: string;
+  set?: {
+    id: number;
+    names: string;
+    score: string;
+  };
   slippiName: string;
 };
 

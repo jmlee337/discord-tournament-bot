@@ -28,6 +28,7 @@ import { DraggableChip, DroppableChip } from './DragAndDrop';
 type BroadcastWithHighlight = {
   connectCodeHighlight?: Highlight;
   gamerTagHighlight?: Highlight;
+  setNamesHighlight?: Highlight;
   slippiNameHighlight?: Highlight;
   broadcast: Broadcast;
 };
@@ -60,6 +61,7 @@ function getBroadcastsWithHighlights(
   broadcasts.forEach((broadcast) => {
     let connectCodeHighlight: Highlight | undefined;
     let gamerTagHighlight: Highlight | undefined;
+    let setNamesHighlight: Highlight | undefined;
     let slippiNameHighlight: Highlight | undefined;
     let include = false;
     const includeStr = searchSubstr.toLowerCase();
@@ -85,6 +87,18 @@ function getBroadcastsWithHighlights(
         };
       }
     }
+    if (broadcast.set) {
+      const setNamesStart = broadcast.set.names
+        .toLowerCase()
+        .indexOf(includeStr);
+      if (setNamesStart >= 0) {
+        include = true;
+        setNamesHighlight = {
+          start: setNamesStart,
+          end: setNamesStart + includeStr.length,
+        };
+      }
+    }
     const slippiNameStart = broadcast.slippiName
       .toLowerCase()
       .indexOf(includeStr);
@@ -99,6 +113,7 @@ function getBroadcastsWithHighlights(
       broadcastsWithHighlights.push({
         connectCodeHighlight,
         gamerTagHighlight,
+        setNamesHighlight,
         slippiNameHighlight,
         broadcast,
       });
@@ -116,7 +131,7 @@ function BroadcastWithHighlightListItem({
   selectedChipData: ChipData;
   setSelectedChipData: (chipData: ChipData) => void;
 }) {
-  const connectCodeFrag = (
+  const connectCodeSlippiNameFrag = (
     <ListItemText>
       {bwh.connectCodeHighlight ? (
         <>
@@ -138,11 +153,7 @@ function BroadcastWithHighlightListItem({
         </>
       ) : (
         bwh.broadcast.connectCode
-      )}
-    </ListItemText>
-  );
-  const slippiNameFrag = (
-    <ListItemText>
+      )}{' '}
       (
       {bwh.slippiNameHighlight ? (
         <>
@@ -185,39 +196,65 @@ function BroadcastWithHighlightListItem({
     >
       <Stack direction="row" alignItems="center" spacing="8px">
         {bwh.broadcast.gamerTag === undefined ? (
-          <>
-            {connectCodeFrag}
-            {slippiNameFrag}
-          </>
+          connectCodeSlippiNameFrag
         ) : (
           <>
-            <ListItemText>
-              {bwh.gamerTagHighlight ? (
-                <>
-                  <span>
-                    {bwh.broadcast.gamerTag.substring(
-                      0,
-                      bwh.gamerTagHighlight.start,
-                    )}
-                  </span>
-                  <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
-                    {bwh.broadcast.gamerTag.substring(
-                      bwh.gamerTagHighlight.start,
-                      bwh.gamerTagHighlight.end,
-                    )}
-                  </span>
-                  <span>
-                    {bwh.broadcast.gamerTag.substring(
-                      bwh.gamerTagHighlight.end,
-                    )}
-                  </span>
-                </>
-              ) : (
-                bwh.broadcast.gamerTag
-              )}
+            <ListItemText
+              style={{ paddingRight: '8px' }}
+              sx={{
+                borderRight: (theme) => `1px solid ${theme.palette.grey[400]}`,
+              }}
+            >
+              {bwh.broadcast.set &&
+                (bwh.setNamesHighlight ? (
+                  <>
+                    <span>
+                      {bwh.broadcast.set.names.substring(
+                        0,
+                        bwh.setNamesHighlight.start,
+                      )}
+                    </span>
+                    <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+                      {bwh.broadcast.set.names.substring(
+                        bwh.setNamesHighlight.start,
+                        bwh.setNamesHighlight.end,
+                      )}
+                    </span>
+                    <span>
+                      {bwh.broadcast.set.names.substring(
+                        bwh.setNamesHighlight.end,
+                      )}
+                    </span>
+                  </>
+                ) : (
+                  bwh.broadcast.set.names
+                ))}
+              {bwh.broadcast.set === undefined &&
+                (bwh.gamerTagHighlight ? (
+                  <>
+                    <span>
+                      {bwh.broadcast.gamerTag.substring(
+                        0,
+                        bwh.gamerTagHighlight.start,
+                      )}
+                    </span>
+                    <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+                      {bwh.broadcast.gamerTag.substring(
+                        bwh.gamerTagHighlight.start,
+                        bwh.gamerTagHighlight.end,
+                      )}
+                    </span>
+                    <span>
+                      {bwh.broadcast.gamerTag.substring(
+                        bwh.gamerTagHighlight.end,
+                      )}
+                    </span>
+                  </>
+                ) : (
+                  bwh.broadcast.gamerTag
+                ))}
             </ListItemText>
-            {connectCodeFrag}
-            {slippiNameFrag}
+            {connectCodeSlippiNameFrag}
           </>
         )}
       </Stack>
@@ -350,14 +387,23 @@ export default function Remote({
               <CardHeader title={spectate.dolphinId} />
               {spectate.spectating && (
                 <CardContent style={{ paddingTop: 0, paddingBottom: 0 }}>
-                  {spectate.broadcast ? (
-                    <Typography variant="caption">
-                      {spectate.broadcast.gamerTag
-                        ? spectate.broadcast.gamerTag
-                        : `${spectate.broadcast.connectCode} (${spectate.broadcast.slippiName})`}
-                    </Typography>
-                  ) : (
+                  {spectate.broadcast === undefined && (
                     <Typography variant="caption">unknown broadcast</Typography>
+                  )}
+                  {spectate.broadcast && (
+                    <Typography variant="caption">
+                      {spectate.broadcast.set && (
+                        <>
+                          {spectate.broadcast.set.names}
+                          <br />
+                          {spectate.broadcast.set.score}
+                        </>
+                      )}
+                      {spectate.broadcast.set === undefined &&
+                        (spectate.broadcast.gamerTag
+                          ? spectate.broadcast.gamerTag
+                          : `${spectate.broadcast.connectCode} (${spectate.broadcast.slippiName})`)}
+                    </Typography>
                   )}
                 </CardContent>
               )}

@@ -6,6 +6,7 @@ import {
   RemoteState,
   RemoteStatus,
   Spectating,
+  StartggSet,
 } from '../common/types';
 
 type RemoteBroadcast = {
@@ -35,7 +36,11 @@ let remoteStatus = RemoteStatus.DISCONNECTED;
 let webSocketClient: WebSocket | null = null;
 let mainWindow: BrowserWindow | null = null;
 const connectCodeMisses = new Set<string>();
-const connectCodeToGamerTag = new Map<string, string>();
+const connectCodeToEntrant = new Map<
+  string,
+  { id: number; gamerTag: string }
+>();
+let entrantIdToPendingSets = new Map<number, StartggSet[]>();
 
 export function initSpectate(newMainWindow: BrowserWindow) {
   if (webSocketClient) {
@@ -45,7 +50,7 @@ export function initSpectate(newMainWindow: BrowserWindow) {
   idToBroadcast.clear();
   dolphinIdToSpectating.clear();
   connectCodeMisses.clear();
-  connectCodeToGamerTag.clear();
+  connectCodeToEntrant.clear();
   mainWindow = newMainWindow;
 }
 
@@ -101,36 +106,59 @@ function matchConnectCode(connectCode: string) {
     throw new Error(`Unexepected connect code format: ${connectCode}`);
   }
   // eslint-disable-next-line no-restricted-syntax
-  for (const [candidateCC, gamerTag] of connectCodeToGamerTag.values()) {
+  for (const [candidateCC, entrant] of connectCodeToEntrant.entries()) {
     const lcCC = candidateCC.toLowerCase();
     if (parts.every((part) => lcCC.includes(part))) {
-      connectCodeToGamerTag.set(connectCode, gamerTag);
-      return gamerTag;
+      connectCodeToEntrant.set(connectCode, entrant);
+      return entrant;
     }
   }
   connectCodeMisses.add(connectCode);
   return undefined;
 }
 
-export function setConnectCodes(connectCodes: ConnectCode[]) {
-  connectCodeMisses.clear();
-  connectCodes.forEach(({ connectCode, gamerTag }) => {
-    connectCodeToGamerTag.set(connectCode.toLowerCase(), gamerTag);
-  });
+function recalculateAndSendBroadcasts() {
   Array.from(idToBroadcast.entries()).forEach(([broadcastId, broadcast]) => {
     const lcConnectCode = broadcast.connectCode.toLowerCase();
-    let gamerTag = connectCodeToGamerTag.get(lcConnectCode);
-    if (!gamerTag && !connectCodeMisses.has(lcConnectCode)) {
-      gamerTag = matchConnectCode(lcConnectCode);
+    let entrant = connectCodeToEntrant.get(lcConnectCode);
+    if (!entrant && !connectCodeMisses.has(lcConnectCode)) {
+      entrant = matchConnectCode(lcConnectCode);
     }
-    if (gamerTag) {
+    if (entrant) {
+      const pendingSets = entrantIdToPendingSets.get(entrant.id);
       idToBroadcast.set(broadcastId, {
         ...broadcast,
-        gamerTag,
+        gamerTag: entrant.gamerTag,
+        set:
+          pendingSets && pendingSets.length === 1
+            ? {
+                id: pendingSets[0].id,
+                names: `${pendingSets[0].entrant1Name} vs ${pendingSets[0].entrant2Name}`,
+                score: `${pendingSets[0].entrant1Score} - ${pendingSets[0].entrant2Score}`,
+              }
+            : undefined,
       });
     }
   });
   sendBroadcasts();
+}
+
+export function setConnectCodes(connectCodes: ConnectCode[]) {
+  connectCodeMisses.clear();
+  connectCodes.forEach(({ connectCode, entrantId, gamerTag }) => {
+    connectCodeToEntrant.set(connectCode.toLowerCase(), {
+      id: entrantId,
+      gamerTag,
+    });
+  });
+  recalculateAndSendBroadcasts();
+}
+
+export function setEntrantIdToPendingSets(
+  newEntrantIdToPendingSets: Map<number, StartggSet[]>,
+) {
+  entrantIdToPendingSets = newEntrantIdToPendingSets;
+  recalculateAndSendBroadcasts();
 }
 
 export function connect(port: number) {
@@ -214,14 +242,25 @@ export function connect(port: number) {
             (message.broadcasts as RemoteBroadcast[]).forEach((broadcast) => {
               const connectCode = broadcast.name;
               const lcConnectCode = connectCode.toLowerCase();
-              let gamerTag = connectCodeToGamerTag.get(lcConnectCode);
-              if (!gamerTag && !connectCodeMisses.has(lcConnectCode)) {
-                gamerTag = matchConnectCode(lcConnectCode);
+              let entrant = connectCodeToEntrant.get(lcConnectCode);
+              if (!entrant && !connectCodeMisses.has(lcConnectCode)) {
+                entrant = matchConnectCode(lcConnectCode);
               }
+              const pendingSets = entrant
+                ? entrantIdToPendingSets.get(entrant.id)
+                : undefined;
               idToBroadcast.set(broadcast.id, {
                 id: broadcast.id,
                 connectCode,
-                gamerTag,
+                gamerTag: entrant?.gamerTag,
+                set:
+                  pendingSets && pendingSets.length === 1
+                    ? {
+                        id: pendingSets[0].id,
+                        names: `${pendingSets[0].entrant1Name} vs ${pendingSets[0].entrant2Name}`,
+                        score: `${pendingSets[0].entrant1Score} - ${pendingSets[0].entrant2Score}`,
+                      }
+                    : undefined,
                 slippiName: broadcast.broadcaster.name,
               });
             });

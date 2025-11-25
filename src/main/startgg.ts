@@ -344,8 +344,10 @@ export async function getEventSets(event: StartggEvent): Promise<Sets> {
                 isDQ: set.entrant1Score === -1 || set.entrant2Score === -1,
                 entrant1Id: set.entrant1Id!,
                 entrant1Name: entrantIdToName.get(set.entrant1Id!)!,
+                entrant1Score: set.entrant1Score || 0,
                 entrant2Id: set.entrant2Id!,
                 entrant2Name: entrantIdToName.get(set.entrant2Id!)!,
+                entrant2Score: set.entrant2Score || 0,
                 fullRoundText: set.fullRoundText,
                 round: set.round,
                 startedAt: set.startedAt,
@@ -425,6 +427,13 @@ const GQL_SET_INNER = `
         gamerTag
       }
     }
+    standing {
+      stats {
+        score {
+          value
+        }
+      }
+    }
   }
   state
   startedAt
@@ -443,6 +452,13 @@ type GqlSet = {
       participants: {
         gamerTag: string;
       }[];
+    } | null;
+    standing: {
+      stats: {
+        score: {
+          value: number;
+        };
+      };
     } | null;
   }[];
   state: number;
@@ -463,10 +479,12 @@ function gqlSetToStartggSet(set: GqlSet): StartggSet {
     entrant1Name: set.slots[0]
       .entrant!.participants.map((participant) => participant.gamerTag)
       .join(' / '),
+    entrant1Score: set.slots[0].standing?.stats.score.value || 0,
     entrant2Id: set.slots[1].entrant!.id,
     entrant2Name: set.slots[1]
       .entrant!.participants.map((participant) => participant.gamerTag)
       .join(' / '),
+    entrant2Score: set.slots[1].standing?.stats.score.value || 0,
     fullRoundText: set.fullRoundText,
     round: set.round,
     startedAt: set.startedAt,

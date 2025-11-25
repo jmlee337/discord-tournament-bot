@@ -58,6 +58,7 @@ import {
   initSpectate,
   refreshBroadcasts,
   setConnectCodes,
+  setEntrantIdToPendingSets,
   startSpectating,
 } from './spectate';
 
@@ -215,6 +216,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         });
       });
     });
+    setEntrantIdToPendingSets(entrantIdToPendingSets);
     mainWindow.webContents.send('sets', newSets);
     sets = newSets;
   };
@@ -879,6 +881,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           if (participant.connectCode) {
             connectCodes.push({
               connectCode: participant.connectCode,
+              entrantId: entrant.id,
               gamerTag: participant.gamerTag,
             });
           }
