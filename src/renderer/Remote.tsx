@@ -1,7 +1,7 @@
-/* eslint-disable no-nested-ternary */
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
+  Box,
   Button,
   Card,
   CardActions,
@@ -273,6 +273,15 @@ export default function Remote({
 
   return (
     <Stack>
+      <style>
+        {`
+          @keyframes border-pulse {
+            0% { border-color: rgba(238, 0, 0, 1); }
+            50% { border-color: rgba(238, 0, 0, 0); }
+            100% {border-color: rgba(238, 0, 0, 1); }
+          }
+        `}
+      </style>
       <Stack
         direction="row"
         alignItems="center"
@@ -326,34 +335,42 @@ export default function Remote({
         </List>
         <Stack spacing="8px" style={{ marginTop: '8px' }}>
           {spectating.map((spectate) => (
-            <Card key={spectate.dolphinId} style={{ width: '193px' }}>
+            <Card
+              key={spectate.dolphinId}
+              style={{ width: '193px' }}
+              sx={
+                spectate.spectating
+                  ? undefined
+                  : {
+                      backgroundColor: (theme) =>
+                        theme.palette.action.disabledBackground,
+                    }
+              }
+            >
               <CardHeader title={spectate.dolphinId} />
               {spectate.spectating && (
-                <CardContent>
+                <CardContent style={{ paddingTop: 0, paddingBottom: 0 }}>
                   {spectate.broadcast ? (
-                    spectate.broadcast.gamerTag ? (
-                      <Typography variant="body2">
-                        {spectate.broadcast.gamerTag}
-                      </Typography>
-                    ) : (
-                      <Typography variant="caption">
-                        {spectate.broadcast.connectCode} (
-                        {spectate.broadcast.slippiName})
-                      </Typography>
-                    )
+                    <Typography variant="caption">
+                      {spectate.broadcast.gamerTag
+                        ? spectate.broadcast.gamerTag
+                        : `${spectate.broadcast.connectCode} (${spectate.broadcast.slippiName})`}
+                    </Typography>
                   ) : (
                     <Typography variant="caption">unknown broadcast</Typography>
                   )}
                 </CardContent>
               )}
-              <CardActions>
+              <CardActions disableSpacing style={{ position: 'relative' }}>
                 <DroppableChip
                   selectedChipData={selectedChipData}
                   onClickOrDrop={async (chipData) => {
-                    await window.electron.startSpectating(
-                      chipData.id,
-                      spectate.dolphinId,
-                    );
+                    if (chipData.id !== spectate.broadcast?.id) {
+                      await window.electron.startSpectating(
+                        chipData.id,
+                        spectate.dolphinId,
+                      );
+                    }
                     setSelectedChipData({
                       id: '',
                       connectCode: '',
@@ -361,6 +378,23 @@ export default function Remote({
                     });
                   }}
                 />
+                {spectate.spectating && (
+                  <Box
+                    height="40px"
+                    width="40px"
+                    sx={{
+                      animation:
+                        'border-pulse 1.5s cubic-bezier(.75, 0, .25, 1) infinite',
+                      borderRadius: '20px',
+                      borderStyle: 'solid',
+                      borderWidth: '4px',
+                      boxSizing: 'border-box',
+                      position: 'absolute',
+                      left: '4px',
+                      zIndex: 1,
+                    }}
+                  />
+                )}
               </CardActions>
             </Card>
           ))}

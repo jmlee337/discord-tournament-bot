@@ -39,7 +39,8 @@ export function DraggableChip({
           MuiChip: {
             styleOverrides: {
               icon: {
-                marginRight: '4px',
+                marginLeft: '3px',
+                marginRight: '3px',
               },
               label: {
                 padding: 0,
@@ -119,7 +120,8 @@ export function DroppableChip({
           MuiChip: {
             styleOverrides: {
               icon: {
-                marginRight: '4px',
+                marginLeft: '3px',
+                marginRight: '3px',
               },
               label: {
                 padding: 0,
@@ -155,6 +157,10 @@ export function DroppableChip({
           onDrop={drop}
           onDragEnter={dragEnterOver}
           onDragOver={dragEnterOver}
+          sx={{
+            backgroundColor: (theme) => theme.palette.background.default,
+            zIndex: 2,
+          }}
           variant="outlined"
         />
       </Tooltip>
