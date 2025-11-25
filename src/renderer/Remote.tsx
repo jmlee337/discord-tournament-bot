@@ -186,6 +186,7 @@ function BroadcastWithHighlightListItem({
         alignItems: 'center',
         flexDirection: 'row',
         justifyContent: 'space-between',
+        marginBottom: '8px',
         borderWidth: '1px',
         borderStyle: 'solid',
       }}

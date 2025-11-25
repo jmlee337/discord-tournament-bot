@@ -239,6 +239,60 @@ export function connect(port: number) {
             return;
           case 'list-broadcasts-response':
             idToBroadcast.clear();
+            // some mock broadcasts for demo
+            /*
+            idToBroadcast.set('abc', {
+              id: 'abc',
+              connectCode: 'ANCO#203',
+              slippiName: 'Anconoid',
+            });
+            idToBroadcast.set('bcd', {
+              id: 'bcd',
+              connectCode: 'LEFT#925',
+              slippiName: 'dandrew',
+            });
+            idToBroadcast.set('cde', {
+              id: 'cde',
+              connectCode: 'BTW#894',
+              slippiName: "I'm Michael BTW",
+            });
+            idToBroadcast.set('def', {
+              id: 'def',
+              connectCode: 'KING#870',
+              slippiName: 'Kingpoyothefirst',
+            });
+            idToBroadcast.set('efg', {
+              id: 'efg',
+              connectCode: 'LOWH#158',
+              slippiName: 'Lowercase hero',
+            });
+            idToBroadcast.set('fgh', {
+              id: 'fgh',
+              connectCode: 'PREG#16',
+              slippiName: 'Pregnando',
+            });
+            idToBroadcast.set('ghi', {
+              id: 'ghi',
+              connectCode: 'RACK#181',
+              slippiName: 'Rainey',
+            });
+            idToBroadcast.set('hij', {
+              id: 'hij',
+              connectCode: 'SLIM#667',
+              slippiName: 'Slimy',
+            });
+            idToBroadcast.set('ijk', {
+              id: 'ijk',
+              connectCode: 'NICO#215',
+              slippiName: 'Nico',
+            });
+            idToBroadcast.set('jkl', {
+              id: 'jkl',
+              connectCode: 'STNC#139',
+              slippiName: 'st. nicolas',
+            });
+            */
+
             (message.broadcasts as RemoteBroadcast[]).forEach((broadcast) => {
               const connectCode = broadcast.name;
               const lcConnectCode = connectCode.toLowerCase();
