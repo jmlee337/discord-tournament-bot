@@ -14,7 +14,7 @@ import {
   Typography,
 } from '@mui/material';
 import { ContentCopy, Settings as SettingsIcon } from '@mui/icons-material';
-import { ChangeEvent, useMemo, useState } from 'react';
+import { ChangeEvent, useEffect, useMemo, useState } from 'react';
 import { AdminedTournament } from '../common/types';
 
 function LabeledCheckbox({
@@ -58,37 +58,52 @@ export default function Settings({
   showErrorDialog,
   discordApplicationId,
   setDiscordApplicationId,
-  discordCommandDq,
-  setDiscordCommandDq,
   discordToken,
   setDiscordToken,
-  startggApiKey,
-  setStartggApiKey,
   setTournaments,
-  appVersion,
   latestAppVersion,
   gotSettings,
 }: {
   showErrorDialog: (errors: string[]) => void;
   discordApplicationId: string;
   setDiscordApplicationId: (discordApplicationId: string) => void;
-  discordCommandDq: boolean;
-  setDiscordCommandDq: (discordCommandDq: boolean) => void;
   discordToken: string;
   setDiscordToken: (discordToken: string) => void;
-  startggApiKey: string;
-  setStartggApiKey: (startggApiKey: string) => void;
   setTournaments: (tournaments: AdminedTournament[]) => void;
-  appVersion: string;
   latestAppVersion: string;
   gotSettings: boolean;
 }) {
+  const [discordCommandDq, setDiscordCommandDq] = useState(false);
+  const [discordCommandReport, setDiscordCommandReport] = useState(false);
+  const [discordCommandReset, setDiscordCommandReset] = useState(false);
+  const [startggApiKey, setStartggApiKey] = useState('');
+  const [appVersion, setAppVersion] = useState('');
+  const [gotSettingsInternal, setGotSettingsInternal] = useState(false);
+
   const [open, setOpen] = useState(false);
   const [shouldGetTournaments, setShouldGetTournaments] = useState(false);
   const [discordTokenCopied, setDiscordTokenCopied] = useState(false);
   const [startggApiKeyCopied, setStartggApiKeyCopied] = useState(false);
   const [hasAutoOpened, setHasAutoOpened] = useState(false);
 
+  useEffect(() => {
+    (async () => {
+      const discordCommandDqPromise = window.electron.getDiscordCommandDq();
+      const discordCommandReportPromise =
+        window.electron.getDiscordCommandReport();
+      const discordCommandResetPromise =
+        window.electron.getDiscordCommandReset();
+      const startggApiKeyPromise = window.electron.getStartggApiKey();
+      const appVersionPromise = window.electron.getVersion();
+
+      setDiscordCommandDq(await discordCommandDqPromise);
+      setDiscordCommandReport(await discordCommandReportPromise);
+      setDiscordCommandReset(await discordCommandResetPromise);
+      setStartggApiKey(await startggApiKeyPromise);
+      setAppVersion(await appVersionPromise);
+      setGotSettingsInternal(true);
+    })();
+  }, []);
   const needUpdate = useMemo(() => {
     if (!appVersion || !latestAppVersion) {
       return false;
@@ -121,14 +136,24 @@ export default function Settings({
     return false;
   }, [appVersion, latestAppVersion]);
 
-  if (
-    gotSettings &&
-    !hasAutoOpened &&
-    (!discordToken || !startggApiKey || needUpdate)
-  ) {
-    setOpen(true);
-    setHasAutoOpened(true);
-  }
+  useEffect(() => {
+    if (
+      gotSettings &&
+      gotSettingsInternal &&
+      !hasAutoOpened &&
+      (!discordToken || !startggApiKey || needUpdate)
+    ) {
+      setOpen(true);
+      setHasAutoOpened(true);
+    }
+  }, [
+    gotSettings,
+    gotSettingsInternal,
+    hasAutoOpened,
+    discordToken,
+    startggApiKey,
+    needUpdate,
+  ]);
 
   return (
     <>
@@ -275,14 +300,32 @@ export default function Settings({
               {startggApiKeyCopied ? 'Copied!' : 'Copy'}
             </Button>
           </Stack>
-          <LabeledCheckbox
-            checked={discordCommandDq}
-            label="Enable /dq command"
-            set={async (checked) => {
-              await window.electron.setDiscordCommandDq(checked);
-              setDiscordCommandDq(checked);
-            }}
-          />
+          <Stack>
+            <LabeledCheckbox
+              checked={discordCommandDq}
+              label="Enable /dq command"
+              set={async (checked) => {
+                await window.electron.setDiscordCommandDq(checked);
+                setDiscordCommandDq(checked);
+              }}
+            />
+            <LabeledCheckbox
+              checked={discordCommandReport}
+              label="Enable /reportset command"
+              set={async (checked) => {
+                await window.electron.setDiscordCommandReport(checked);
+                setDiscordCommandReport(checked);
+              }}
+            />
+            <LabeledCheckbox
+              checked={discordCommandReset}
+              label="Enable /resetset command"
+              set={async (checked) => {
+                await window.electron.setDiscordCommandReset(checked);
+                setDiscordCommandReset(checked);
+              }}
+            />
+          </Stack>
           {needUpdate && (
             <Alert severity="warning">
               Update available!{' '}

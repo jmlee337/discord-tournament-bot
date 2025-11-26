@@ -74,10 +74,7 @@ function Hello() {
   // settings
   const [gotSettings, setGotSettings] = useState(false);
   const [discordApplicationId, setDiscordApplicationId] = useState('');
-  const [discordCommandDq, setDiscordCommandDq] = useState(true);
   const [discordToken, setDiscordToken] = useState('');
-  const [startggApiKey, setStartggApiKey] = useState('');
-  const [appVersion, setAppVersion] = useState('');
   const [latestAppVersion, setLatestAppVersion] = useState('');
 
   // starting state
@@ -103,21 +100,15 @@ function Hello() {
 
   useEffect(() => {
     const inner = async () => {
-      const appVersionPromise = window.electron.getVersion();
-      const discordCommandDqPromise = window.electron.getDiscordCommandDq();
       const discordConfigPromise = window.electron.getDiscordConfig();
-      const startggApiKeyPromise = window.electron.getStartggApiKey();
       const startingStatePromise = window.electron.getStartingState();
 
       // req network
       const latestAppVersionPromise = window.electron.getLatestVersion();
       const tournamentsPromise = window.electron.getTournaments();
 
-      setAppVersion(await appVersionPromise);
       setDiscordApplicationId((await discordConfigPromise).applicationId);
-      setDiscordCommandDq(await discordCommandDqPromise);
       setDiscordToken((await discordConfigPromise).token);
-      setStartggApiKey(await startggApiKeyPromise);
       setConnectCodes((await startingStatePromise).connectCodes);
       setDiscordStatus((await startingStatePromise).discordStatus);
       setDiscordUsernames((await startingStatePromise).discordUsernames);
@@ -250,14 +241,9 @@ function Hello() {
               showErrorDialog={showErrorDialog}
               discordApplicationId={discordApplicationId}
               setDiscordApplicationId={setDiscordApplicationId}
-              discordCommandDq={discordCommandDq}
-              setDiscordCommandDq={setDiscordCommandDq}
               discordToken={discordToken}
               setDiscordToken={setDiscordToken}
-              startggApiKey={startggApiKey}
-              setStartggApiKey={setStartggApiKey}
               setTournaments={setTournaments}
-              appVersion={appVersion}
               latestAppVersion={latestAppVersion}
               gotSettings={gotSettings}
             />

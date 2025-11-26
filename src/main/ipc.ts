@@ -152,6 +152,8 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   const store = new Store<{
     discordConfig: DiscordConfig;
     discordCommandDq: boolean;
+    discordCommandReport: boolean;
+    discordCommandReset: boolean;
     discordRegisteredVersion: string;
     remotePort: number;
     startggApiKey: string;
@@ -161,6 +163,8 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     token: '',
   });
   let discordCommandDq = store.get('discordCommandDq', true);
+  let discordCommandReport = store.get('discordCommandReport', true);
+  let discordCommandReset = store.get('discordCommandReset', true);
   let discordRegisteredVersion = store.get('discordRegisteredVersion', '');
   let remotePort = store.get('remotePort', 49809);
   let startggApiKey = store.get('startggApiKey', '');
@@ -532,6 +536,13 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             timeOutInteraction(embed, interaction);
           }
         } else if (interaction.commandName === 'reportset') {
+          if (!discordCommandReport) {
+            interaction.reply({
+              content: 'This command is currently disabled',
+              ephemeral: true,
+            });
+            return;
+          }
           const { entrantId, entrantSets } = getEntrantIdAndSets(interaction);
           if (!entrantId) {
             return;
@@ -600,6 +611,13 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             }
           }
         } else if (interaction.commandName === 'resetset') {
+          if (!discordCommandReset) {
+            interaction.reply({
+              content: 'This command is currently disabled',
+              ephemeral: true,
+            });
+            return;
+          }
           const entrantId = getEntrantId(interaction);
           if (!entrantId) {
             return;
@@ -773,6 +791,30 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     (event: IpcMainInvokeEvent, newDiscordCommandDq: boolean) => {
       store.set('discordCommandDq', newDiscordCommandDq);
       discordCommandDq = newDiscordCommandDq;
+    },
+  );
+
+  ipcMain.removeHandler('getDiscordCommandReport');
+  ipcMain.handle('getDiscordCommandReport', () => discordCommandReport);
+
+  ipcMain.removeHandler('setDiscordCommandReport');
+  ipcMain.handle(
+    'setDiscordCommandReport',
+    (event: IpcMainInvokeEvent, newDiscordCommandReport: boolean) => {
+      store.set('discordCommandReport', newDiscordCommandReport);
+      discordCommandReport = newDiscordCommandReport;
+    },
+  );
+
+  ipcMain.removeHandler('getDiscordCommandReset');
+  ipcMain.handle('getDiscordCommandReset', () => discordCommandReset);
+
+  ipcMain.removeHandler('setDiscordCommandReset');
+  ipcMain.handle(
+    'setDiscordCommandReset',
+    (event: IpcMainInvokeEvent, newDiscordCommandReset: boolean) => {
+      store.set('discordCommandReset', newDiscordCommandReset);
+      discordCommandReset = newDiscordCommandReset;
     },
   );
 

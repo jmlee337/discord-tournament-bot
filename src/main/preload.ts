@@ -27,6 +27,14 @@ const electronHandler = {
     ipcRenderer.invoke('getDiscordCommandDq'),
   setDiscordCommandDq: (discordCommandDq: boolean): Promise<void> =>
     ipcRenderer.invoke('setDiscordCommandDq', discordCommandDq),
+  getDiscordCommandReport: (): Promise<boolean> =>
+    ipcRenderer.invoke('getDiscordCommandReport'),
+  setDiscordCommandReport: (discordCommandReport: boolean): Promise<void> =>
+    ipcRenderer.invoke('setDiscordCommandReport', discordCommandReport),
+  getDiscordCommandReset: (): Promise<boolean> =>
+    ipcRenderer.invoke('getDiscordCommandReset'),
+  setDiscordCommandReset: (discordCommandReset: boolean): Promise<void> =>
+    ipcRenderer.invoke('setDiscordCommandReset', discordCommandReset),
   getRemotePort: (): Promise<number> => ipcRenderer.invoke('getRemotePort'),
   setRemotePort: (remotePort: number): Promise<void> =>
     ipcRenderer.invoke('setRemotePort', remotePort),
