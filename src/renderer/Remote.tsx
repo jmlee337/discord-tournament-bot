@@ -396,8 +396,10 @@ export default function Remote({
                       {spectate.broadcast.set && (
                         <>
                           {spectate.broadcast.set.names}
+                          {/*
                           <br />
                           {spectate.broadcast.set.score}
+                          */}
                         </>
                       )}
                       {spectate.broadcast.set === undefined &&
