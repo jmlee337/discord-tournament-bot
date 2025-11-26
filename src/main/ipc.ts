@@ -4,6 +4,7 @@ import {
   ButtonInteraction,
   ButtonStyle,
   CacheType,
+  ChannelType,
   ChatInputCommandInteraction,
   Client,
   ComponentType,
@@ -28,6 +29,8 @@ import {
 import Store from 'electron-store';
 import {
   ConnectCode,
+  Discord,
+  DiscordChannel,
   DiscordConfig,
   DiscordStatus,
   DiscordUsername,
@@ -42,6 +45,7 @@ import {
 import {
   getEventEntrants,
   getEventSets,
+  getNotCheckedInParticipantIds,
   getTournament,
   getTournaments,
   initStartgg,
@@ -170,6 +174,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   const entrantIdToDiscordIds = new Map<number, string[]>();
   const entrantIdToCompletedSets = new Map<number, StartggSet[]>();
   const entrantIdToPendingSets = new Map<number, StartggSet[]>();
+  const participantIdToDiscord = new Map<number, Discord>();
   let startggEvent: StartggEvent = {
     id: 0,
     name: '',
@@ -869,6 +874,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       discordIdToEntrantId.clear();
       discordIdToGamerTag.clear();
       entrantIdToDiscordIds.clear();
+      participantIdToDiscord.clear();
       discordUsernames.length = 0;
       entrants.forEach((entrant) => {
         entrantIdToDiscordIds.set(
@@ -891,6 +897,12 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
               participant.discord.id,
               participant.gamerTag,
             );
+            participantIdToDiscord.set(participant.id, {
+              id: participant.id,
+              discordId: participant.discord.id,
+              gamerTag: participant.gamerTag,
+              username: participant.discord.username,
+            });
           }
           discordUsernames.push({
             id: participant.id,
@@ -986,6 +998,87 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       );
       updateEntrantIdToSet(await getEventSets(startggEvent));
       resetGetEventSetsTimeout();
+    },
+  );
+
+  ipcMain.removeHandler('getDiscordCheckinPings');
+  ipcMain.handle('getDiscordCheckinPings', async () => {
+    if (!client) {
+      throw new Error('Discord bot not running');
+    }
+
+    const channels: DiscordChannel[] = client.channels
+      .valueOf()
+      .filter(
+        (channel) =>
+          channel.type === ChannelType.GuildText && channel.isSendable(),
+      )
+      .map((channel) => ({
+        id: channel.id,
+        name: channel.name,
+      }));
+
+    updateEntrantIdToSet(await getEventSets(startggEvent));
+    const pendingSets: StartggSet[] = [];
+    sets.pending.forEach((phase) => {
+      phase.phaseGroups.forEach((group) => {
+        pendingSets.push(
+          ...group.sets.filter((set) => set.state === 1 || set.state === 6),
+        );
+      });
+    });
+    const participantIds = new Set<number>();
+    await Promise.all(
+      pendingSets.map(async (set) => {
+        (await getNotCheckedInParticipantIds(set.id)).forEach(
+          (participantId) => {
+            participantIds.add(participantId);
+          },
+        );
+      }),
+    );
+    const discords: Discord[] = [];
+    Array.from(participantIds).forEach((participantId) => {
+      const discord = participantIdToDiscord.get(participantId);
+      if (discord) {
+        discords.push(discord);
+      }
+    });
+    return {
+      channels,
+      discords: discords.sort((a, b) => a.gamerTag.localeCompare(b.gamerTag)),
+    };
+  });
+
+  ipcMain.removeHandler('pingDiscords');
+  ipcMain.handle(
+    'pingDiscords',
+    async (
+      event: IpcMainInvokeEvent,
+      channelId: string,
+      discordIds: string[],
+    ) => {
+      if (!client) {
+        throw new Error('Discord bot not running');
+      }
+      if (discordIds.length === 0) {
+        throw new Error('No discordIds provided');
+      }
+
+      const channel = await client.channels.fetch(channelId);
+      if (!channel) {
+        throw new Error(`No channel found for id: ${channelId}`);
+      }
+      if (channel.type !== ChannelType.GuildText || !channel.isSendable()) {
+        throw new Error(
+          `Cannot send text messages in channel with id: ${channelId}`,
+        );
+      }
+
+      const tags = discordIds.map((discordId) => `<@${discordId}>`).join(' ');
+      const msg =
+        discordIds.length === 1 ? 'your set is up!' : 'your sets are up!';
+      channel.send(`${tags} ${msg}`);
     },
   );
 

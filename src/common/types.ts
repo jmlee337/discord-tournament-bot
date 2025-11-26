@@ -146,3 +146,12 @@ export type Highlight = {
 };
 
 export type ChipData = Broadcast;
+
+export type Discord = DiscordUsername & {
+  discordId: string;
+};
+
+export type DiscordChannel = {
+  id: string;
+  name: string;
+};

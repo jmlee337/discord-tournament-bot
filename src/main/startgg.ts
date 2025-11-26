@@ -414,6 +414,33 @@ export async function getEventSets(event: StartggEvent): Promise<Sets> {
   };
 }
 
+export async function getNotCheckedInParticipantIds(setId: number) {
+  const setResponse = await wrappedFetch(
+    `https://api.start.gg/set/${setId}?expand[]=setTask`,
+  );
+
+  const participantIds: number[] = [];
+  const setJson = await setResponse.json();
+  const setTasks = setJson.entities?.setTask;
+  if (Array.isArray(setTasks)) {
+    setTasks
+      .filter(
+        (setTask) =>
+          setTask.type === 1 && setTask.active && !setTask.isCompleted,
+      )
+      .forEach((checkinTask) => {
+        Object.entries(checkinTask.metadata.checkins).forEach(
+          ([participantId, checkedIn]) => {
+            if (checkedIn === false) {
+              participantIds.push(Number.parseInt(participantId, 10));
+            }
+          },
+        );
+      });
+  }
+  return participantIds;
+}
+
 const GQL_SET_INNER = `
   id
   completedAt

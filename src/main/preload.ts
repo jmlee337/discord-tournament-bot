@@ -4,6 +4,8 @@ import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import {
   AdminedTournament,
   Broadcast,
+  Discord,
+  DiscordChannel,
   DiscordConfig,
   DiscordStatus,
   ParticipantConnections,
@@ -50,6 +52,12 @@ const electronHandler = {
     ipcRenderer.invoke('resetSet', setId),
   swapWinner: (set: StartggSet): Promise<void> =>
     ipcRenderer.invoke('swapWinner', set),
+  getDiscordCheckinPings: (): Promise<{
+    channels: DiscordChannel[];
+    discords: Discord[];
+  }> => ipcRenderer.invoke('getDiscordCheckinPings'),
+  pingDiscords: (channelId: string, discordIds: string[]): Promise<void> =>
+    ipcRenderer.invoke('pingDiscords', channelId, discordIds),
   getStartingState: (): Promise<StartingState> =>
     ipcRenderer.invoke('getStartingState'),
   getStartingSets: (): Promise<Sets> => ipcRenderer.invoke('getStartingSets'),

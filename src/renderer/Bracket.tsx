@@ -1,4 +1,25 @@
-import { Box, ListItemButton, Stack, Typography } from '@mui/material';
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  FormControl,
+  InputLabel,
+  ListItemButton,
+  MenuItem,
+  Select,
+  Stack,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableRow,
+  Typography,
+} from '@mui/material';
 import { JSX, useEffect, useMemo, useState } from 'react';
 import Report from './Report';
 import Reset from './Reset';
@@ -8,7 +29,11 @@ import {
   StartggPhase,
   StartggSet,
   Sets,
+  DiscordChannel,
+  Discord,
+  DiscordStatus,
 } from '../common/types';
+import DiscordIcon from './DiscordIcon';
 
 type SetWithHighlight = {
   entrant1Highlight?: Highlight;
@@ -22,8 +47,10 @@ const EMPTY_STARTGG_SET: StartggSet = {
   isDQ: false,
   entrant1Id: 0,
   entrant1Name: '',
+  entrant1Score: 0,
   entrant2Id: 0,
   entrant2Name: '',
+  entrant2Score: 0,
   fullRoundText: '',
   round: 1,
   startedAt: null,
@@ -210,13 +237,29 @@ function getCompletedPhases(
   return completedPhases;
 }
 
-export default function Bracket({ searchSubstr }: { searchSubstr: string }) {
+export default function Bracket({
+  discordStatus,
+  searchSubstr,
+}: {
+  discordStatus: DiscordStatus;
+  searchSubstr: string;
+}) {
   const [sets, setSets] = useState<Sets>({ pending: [], completed: [] });
   const [selectedSet, setSelectedSet] = useState<StartggSet>(EMPTY_STARTGG_SET);
   const [reportingDialogOpen, setReportingDialogOpen] = useState(false);
   const [resetSelectedSet, setResetSelectedSet] =
     useState<StartggSet>(EMPTY_STARTGG_SET);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
+
+  const [gettingDiscordCheckinPings, setGettingDiscordCheckinPings] =
+    useState(false);
+  const [discordCheckinPings, setDiscordCheckinPings] = useState<{
+    channels: DiscordChannel[];
+    discords: Discord[];
+  }>({ channels: [], discords: [] });
+  const [discordChannelId, setDiscordChannelId] = useState('');
+  const [discordCheckinPingsDialogOpen, setDiscordCheckinPingsDialogOpen] =
+    useState(false);
 
   useEffect(() => {
     (async () => {
@@ -255,11 +298,135 @@ export default function Bracket({ searchSubstr }: { searchSubstr: string }) {
     [sets, searchSubstr],
   );
 
+  const pingDisabled = useMemo(
+    () =>
+      discordCheckinPings.channels.length === 0 ||
+      discordCheckinPings.discords.length === 0 ||
+      !discordCheckinPings.channels.some(
+        (channel) => channel.id === discordChannelId,
+      ),
+    [discordChannelId, discordCheckinPings],
+  );
+
   return (
     <Stack>
       {pendingPhases.length > 0 && (
         <>
-          <Typography variant="h5">Pending</Typography>
+          <Stack direction="row" alignItems="center" spacing="8px">
+            <Typography variant="h5">Pending</Typography>
+            <Button
+              color="warning"
+              disabled={
+                discordStatus !== DiscordStatus.READY ||
+                gettingDiscordCheckinPings
+              }
+              endIcon={
+                gettingDiscordCheckinPings ? (
+                  <CircularProgress size="24px" />
+                ) : (
+                  <DiscordIcon />
+                )
+              }
+              variant="contained"
+              onClick={async () => {
+                try {
+                  setGettingDiscordCheckinPings(true);
+                  const newDiscordCheckinPings =
+                    await window.electron.getDiscordCheckinPings();
+                  setDiscordCheckinPings(newDiscordCheckinPings);
+                  setDiscordCheckinPingsDialogOpen(true);
+                } finally {
+                  setGettingDiscordCheckinPings(false);
+                }
+              }}
+            >
+              Ping For Checkins
+            </Button>
+            <Dialog
+              open={discordCheckinPingsDialogOpen}
+              onClose={() => {
+                setDiscordCheckinPingsDialogOpen(false);
+              }}
+            >
+              <DialogTitle>Ping players who have not checked in?</DialogTitle>
+              <DialogContent>
+                {discordCheckinPings.channels.length === 0 ? (
+                  <Alert severity="error">
+                    No channels in which we can ping
+                  </Alert>
+                ) : (
+                  <FormControl fullWidth style={{ marginTop: '8px' }}>
+                    <InputLabel id="discord-channel-select-label">
+                      Channel
+                    </InputLabel>
+                    <Select
+                      labelId="discord-channel-select-label"
+                      id="discord-channel-select"
+                      value={discordChannelId}
+                      label="Channel"
+                      onChange={(event) => {
+                        setDiscordChannelId(event.target.value);
+                      }}
+                    >
+                      {discordCheckinPings.channels.map((channel) => (
+                        <MenuItem key={channel.id} value={channel.id}>
+                          #{channel.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                )}
+                {discordCheckinPings.discords.length === 0 ? (
+                  <Alert severity="error" style={{ marginTop: '8px' }}>
+                    No pingable players
+                  </Alert>
+                ) : (
+                  <Table stickyHeader size="small">
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>start.gg</TableCell>
+                        <TableCell>Discord</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {discordCheckinPings.discords.map((discordUsername) => (
+                        <TableRow key={discordUsername.id}>
+                          <TableCell>{discordUsername.gamerTag}</TableCell>
+                          <TableCell>{discordUsername.username}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </DialogContent>
+              <DialogActions>
+                <Button
+                  variant="contained"
+                  onClick={() => {
+                    setDiscordCheckinPingsDialogOpen(false);
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  color="warning"
+                  variant="contained"
+                  disabled={pingDisabled}
+                  onClick={async () => {
+                    await window.electron.pingDiscords(
+                      discordChannelId,
+                      discordCheckinPings.discords.map(
+                        (discord) => discord.discordId,
+                      ),
+                    );
+                    setDiscordCheckinPingsDialogOpen(false);
+                  }}
+                >
+                  Ping!
+                </Button>
+              </DialogActions>
+            </Dialog>
+          </Stack>
           <Stack>{pendingPhases}</Stack>
         </>
       )}

@@ -335,7 +335,7 @@ function Hello() {
         <Remote remoteState={remoteState} searchSubstr={searchSubstr} />
       </TabPanel>
       <TabPanel value={tabValue} index={TabValue.BRACKET}>
-        <Bracket searchSubstr={searchSubstr} />
+        <Bracket discordStatus={discordStatus} searchSubstr={searchSubstr} />
       </TabPanel>
       <Dialog
         open={errorDialogOpen}
