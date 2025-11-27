@@ -13,6 +13,7 @@ import {
   Stack,
   TextField,
   Tooltip,
+  Typography,
 } from '@mui/material';
 import { FormEvent, useState } from 'react';
 import {
@@ -142,7 +143,7 @@ export default function TournamentEvent({
               autoFocus
               label="Tournament Slug"
               name="slug"
-              placeholder={tournament.slug || 'super-smash-con-2023'}
+              placeholder={tournament.slug || 'only-noobs-200'}
               size="small"
               variant="outlined"
             />
@@ -227,7 +228,14 @@ export default function TournamentEvent({
                     getTournament(adminedTournament.slug);
                   }}
                 >
-                  <ListItemText>{adminedTournament.name}</ListItemText>
+                  <ListItemText
+                    style={{ overflowX: 'hidden', whiteSpace: 'nowrap' }}
+                  >
+                    {adminedTournament.name}{' '}
+                    <Typography variant="caption">
+                      ({adminedTournament.slug})
+                    </Typography>
+                  </ListItemText>
                 </ListItemButton>
               ))}
             </>
