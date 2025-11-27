@@ -37,6 +37,7 @@ import {
   ParticipantConnections,
   ReportStartggSet,
   Sets,
+  StartggEntrant,
   StartggEvent,
   StartggSet,
   StartggTournament,
@@ -891,6 +892,51 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   );
 
   const discordUsernames: DiscordUsername[] = [];
+  const updateEntrants = (entrants: StartggEntrant[]) => {
+    // all clear to clear maps and update
+    connectCodes.length = 0;
+    discordIdToEntrantId.clear();
+    discordIdToGamerTag.clear();
+    entrantIdToDiscordIds.clear();
+    participantIdToDiscord.clear();
+    discordUsernames.length = 0;
+    entrants.forEach((entrant) => {
+      entrantIdToDiscordIds.set(
+        entrant.id,
+        entrant.participants
+          .filter((participant) => participant.discord)
+          .map((participant) => participant.discord!.id),
+      );
+      entrant.participants.forEach((participant) => {
+        if (participant.connectCode) {
+          connectCodes.push({
+            connectCode: participant.connectCode,
+            entrantId: entrant.id,
+            gamerTag: participant.gamerTag,
+          });
+        }
+        if (participant.discord) {
+          discordIdToEntrantId.set(participant.discord.id, entrant.id);
+          discordIdToGamerTag.set(participant.discord.id, participant.gamerTag);
+          participantIdToDiscord.set(participant.id, {
+            id: participant.id,
+            discordId: participant.discord.id,
+            gamerTag: participant.gamerTag,
+            username: participant.discord.username,
+          });
+        }
+        discordUsernames.push({
+          id: participant.id,
+          gamerTag: participant.gamerTag,
+          username: participant.discord?.username || '',
+        });
+      });
+    });
+    connectCodes.sort((a, b) => a.gamerTag.localeCompare(b.gamerTag));
+    setConnectCodes(connectCodes);
+    discordUsernames.sort((a, b) => a.gamerTag.localeCompare(b.gamerTag));
+  };
+
   ipcMain.removeHandler('setEvent');
   ipcMain.handle(
     'setEvent',
@@ -911,48 +957,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       const entrants = await entrantsPromise;
       const newSets = await setsPromise;
 
-      // all clear to clear maps and update
-      connectCodes.length = 0;
-      discordIdToEntrantId.clear();
-      discordIdToGamerTag.clear();
-      entrantIdToDiscordIds.clear();
-      participantIdToDiscord.clear();
-      discordUsernames.length = 0;
-      entrants.forEach((entrant) => {
-        entrantIdToDiscordIds.set(
-          entrant.id,
-          entrant.participants
-            .filter((participant) => participant.discord)
-            .map((participant) => participant.discord!.id),
-        );
-        entrant.participants.forEach((participant) => {
-          if (participant.connectCode) {
-            connectCodes.push({
-              connectCode: participant.connectCode,
-              entrantId: entrant.id,
-              gamerTag: participant.gamerTag,
-            });
-          }
-          if (participant.discord) {
-            discordIdToEntrantId.set(participant.discord.id, entrant.id);
-            discordIdToGamerTag.set(
-              participant.discord.id,
-              participant.gamerTag,
-            );
-            participantIdToDiscord.set(participant.id, {
-              id: participant.id,
-              discordId: participant.discord.id,
-              gamerTag: participant.gamerTag,
-              username: participant.discord.username,
-            });
-          }
-          discordUsernames.push({
-            id: participant.id,
-            gamerTag: participant.gamerTag,
-            username: participant.discord?.username || '',
-          });
-        });
-      });
+      updateEntrants(entrants);
       updateEntrantIdToSet(newSets);
 
       startggEvent = newEvent;
@@ -964,13 +969,23 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         client = null;
         updateDiscordStatus(DiscordStatus.NONE);
       }
-      connectCodes.sort((a, b) => a.gamerTag.localeCompare(b.gamerTag));
-      setConnectCodes(connectCodes);
+
       return {
         connectCodes,
-        discordUsernames: discordUsernames.sort((a, b) =>
-          a.gamerTag.localeCompare(b.gamerTag),
-        ),
+        discordUsernames,
+      };
+    },
+  );
+
+  ipcMain.removeHandler('refreshEntrants');
+  ipcMain.handle(
+    'refreshEntrants',
+    async (): Promise<ParticipantConnections> => {
+      updateEntrants(await getEventEntrants(startggEvent.id, startggApiKey));
+      updateEntrantIdToSet(await getEventSets(startggEvent));
+      return {
+        connectCodes,
+        discordUsernames,
       };
     },
   );

@@ -247,14 +247,24 @@ function Hello() {
               latestAppVersion={latestAppVersion}
               gotSettings={gotSettings}
             />
-            <ConnectCodes connectCodes={connectCodes} />
-            <DiscordUsernames discordUsernames={discordUsernames} />
+            <ConnectCodes
+              connectCodes={connectCodes}
+              setConnectCodes={setConnectCodes}
+              setDiscordUsernames={setDiscordUsernames}
+              showErrorDialog={showErrorDialog}
+            />
+            <DiscordUsernames
+              discordUsernames={discordUsernames}
+              setConnectCodes={setConnectCodes}
+              setDiscordUsernames={setDiscordUsernames}
+              showErrorDialog={showErrorDialog}
+            />
             <SearchBar
               searchSubstr={searchSubstr}
               setSearchSubstr={setSearchSubstr}
             />
             {refreshing ? (
-              <CircularProgress size="24px" style={{ margin: '9px' }} />
+              <CircularProgress size="24px" style={{ margin: '8px' }} />
             ) : (
               <Tooltip
                 arrow

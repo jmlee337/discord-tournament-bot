@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import {
+  CircularProgress,
   Dialog,
   DialogContent,
   DialogTitle,
   IconButton,
+  Stack,
   SvgIcon,
   Table,
   TableBody,
@@ -12,7 +14,13 @@ import {
   TableRow,
   Tooltip,
 } from '@mui/material';
-import { ConnectCode, Highlight, HIGHLIGHT_COLOR } from '../common/types';
+import { Refresh } from '@mui/icons-material';
+import {
+  ConnectCode,
+  DiscordUsername,
+  Highlight,
+  HIGHLIGHT_COLOR,
+} from '../common/types';
 import SearchBar from './SearchBar';
 
 type ConnectCodeWithHighlight = {
@@ -22,11 +30,19 @@ type ConnectCodeWithHighlight = {
 
 export default function ConnectCodes({
   connectCodes,
+  setConnectCodes,
+  setDiscordUsernames,
+  showErrorDialog,
 }: {
   connectCodes: ConnectCode[];
+  setConnectCodes: (connectCodes: ConnectCode[]) => void;
+  setDiscordUsernames: (discordUsernames: DiscordUsername[]) => void;
+  showErrorDialog: (messages: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [searchSubstr, setSearchSubstr] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+
   const connectCodesWithHighlights: ConnectCodeWithHighlight[] = [];
   connectCodes.forEach((connectCode) => {
     if (!searchSubstr) {
@@ -114,10 +130,41 @@ export default function ConnectCodes({
       >
         <DialogTitle>Connect Codes</DialogTitle>
         <DialogContent>
-          <SearchBar
-            searchSubstr={searchSubstr}
-            setSearchSubstr={setSearchSubstr}
-          />
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+          >
+            <SearchBar
+              searchSubstr={searchSubstr}
+              setSearchSubstr={setSearchSubstr}
+            />
+            <Tooltip arrow title={refreshing ? 'Refreshing' : 'Refresh'}>
+              <span>
+                <IconButton
+                  disabled={refreshing}
+                  onClick={async () => {
+                    try {
+                      setRefreshing(true);
+                      const participantConnections =
+                        await window.electron.refreshEntrants();
+                      setConnectCodes(participantConnections.connectCodes);
+                      setDiscordUsernames(
+                        participantConnections.discordUsernames,
+                      );
+                    } catch (e: any) {
+                      const message = e instanceof Error ? e.message : e;
+                      showErrorDialog([message]);
+                    } finally {
+                      setRefreshing(false);
+                    }
+                  }}
+                >
+                  {refreshing ? <CircularProgress size="24px" /> : <Refresh />}
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Stack>
           <Table stickyHeader size="small">
             <TableHead>
               <TableRow>

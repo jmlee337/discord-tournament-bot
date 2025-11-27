@@ -53,6 +53,8 @@ const electronHandler = {
     ipcRenderer.invoke('getTournament', slug),
   setEvent: (event: StartggEvent): Promise<ParticipantConnections> =>
     ipcRenderer.invoke('setEvent', event),
+  refreshEntrants: (): Promise<ParticipantConnections> =>
+    ipcRenderer.invoke('refreshEntrants'),
   refreshSets: (): Promise<void> => ipcRenderer.invoke('refreshSets'),
   reportSet: (setId: number, winnerId: number, isDQ: boolean): Promise<void> =>
     ipcRenderer.invoke('reportSet', setId, winnerId, isDQ),
