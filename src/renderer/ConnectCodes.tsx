@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   CircularProgress,
   Dialog,
@@ -22,6 +22,11 @@ import {
   HIGHLIGHT_COLOR,
 } from '../common/types';
 import SearchBar from './SearchBar';
+import {
+  popWindowEventListener,
+  pushWindowEventListener,
+  WindowEvent,
+} from './windowEvent';
 
 type ConnectCodeWithHighlight = {
   highlights: Highlight[];
@@ -40,6 +45,7 @@ export default function ConnectCodes({
   showErrorDialog: (messages: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>();
   const [searchSubstr, setSearchSubstr] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -91,6 +97,9 @@ export default function ConnectCodes({
           <IconButton
             disabled={connectCodes.length === 0}
             onClick={() => {
+              pushWindowEventListener(WindowEvent.CTRLF, () => {
+                searchInputRef.current?.select();
+              });
               setOpen(true);
             }}
           >
@@ -125,6 +134,7 @@ export default function ConnectCodes({
       <Dialog
         open={open}
         onClose={() => {
+          popWindowEventListener(WindowEvent.CTRLF);
           setOpen(false);
         }}
       >
@@ -136,6 +146,7 @@ export default function ConnectCodes({
             justifyContent="space-between"
           >
             <SearchBar
+              inputRef={searchInputRef}
               searchSubstr={searchSubstr}
               setSearchSubstr={setSearchSubstr}
             />

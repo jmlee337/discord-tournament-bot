@@ -108,6 +108,7 @@ const electronHandler = {
     ipcRenderer.removeAllListeners('spectating');
     ipcRenderer.on('spectating', callback);
   },
+  isMac: process.platform === 'darwin',
   // exposed for dev only
   registerSlashCommands: (): Promise<void> =>
     ipcRenderer.invoke('registerSlashCommands'),

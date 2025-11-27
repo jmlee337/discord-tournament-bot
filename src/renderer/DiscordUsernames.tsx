@@ -12,7 +12,7 @@ import {
   TableRow,
   Tooltip,
 } from '@mui/material';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Refresh } from '@mui/icons-material';
 import {
   HIGHLIGHT_COLOR,
@@ -22,6 +22,11 @@ import {
 } from '../common/types';
 import SearchBar from './SearchBar';
 import DiscordIcon from './DiscordIcon';
+import {
+  popWindowEventListener,
+  pushWindowEventListener,
+  WindowEvent,
+} from './windowEvent';
 
 type DiscordUsernameWithHighlight = {
   highlights: Highlight[];
@@ -40,6 +45,7 @@ export default function DiscordUsernames({
   showErrorDialog: (messages: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>();
   const [searchSubstr, setSearchSubstr] = useState('');
   const [refreshing, setRefreshing] = useState(false);
 
@@ -91,6 +97,9 @@ export default function DiscordUsernames({
           <IconButton
             disabled={discordUsernames.length === 0}
             onClick={() => {
+              pushWindowEventListener(WindowEvent.CTRLF, () => {
+                searchInputRef.current?.select();
+              });
               setOpen(true);
             }}
           >
@@ -101,6 +110,7 @@ export default function DiscordUsernames({
       <Dialog
         open={open}
         onClose={() => {
+          popWindowEventListener(WindowEvent.CTRLF);
           setOpen(false);
         }}
       >
@@ -112,6 +122,7 @@ export default function DiscordUsernames({
             justifyContent="space-between"
           >
             <SearchBar
+              inputRef={searchInputRef}
               searchSubstr={searchSubstr}
               setSearchSubstr={setSearchSubstr}
             />

@@ -4,7 +4,7 @@ import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
 import { Refresh } from '@mui/icons-material';
 import {
   Alert,
@@ -20,6 +20,7 @@ import {
   Tabs,
   Tooltip,
 } from '@mui/material';
+import { GlobalHotKeys } from 'react-hotkeys';
 import Settings from './Settings';
 import {
   AdminedTournament,
@@ -36,6 +37,7 @@ import TournamentEvent from './TournamentEvent';
 import ConnectCodes from './ConnectCodes';
 import Bracket from './Bracket';
 import Remote from './Remote';
+import { pushWindowEventListener, WindowEvent } from './windowEvent';
 
 enum TabValue {
   BRACKET = 'bracket',
@@ -191,7 +193,17 @@ function Hello() {
     }
   }
 
+  const searchInputRef = useRef<HTMLInputElement>();
   const [searchSubstr, setSearchSubstr] = useState('');
+  useEffect(() => {
+    pushWindowEventListener(WindowEvent.CTRLF, () => {
+      searchInputRef.current?.select();
+    });
+    pushWindowEventListener(WindowEvent.ESCAPE, () => {
+      setSearchSubstr('');
+    });
+  }, []);
+
   const [refreshing, setRefreshing] = useState(false);
 
   return (
@@ -260,6 +272,7 @@ function Hello() {
               showErrorDialog={showErrorDialog}
             />
             <SearchBar
+              inputRef={searchInputRef}
               searchSubstr={searchSubstr}
               setSearchSubstr={setSearchSubstr}
             />
@@ -348,6 +361,22 @@ function Hello() {
           <Alert severity="error">{errors.join(' ')}</Alert>
         </DialogContent>
       </Dialog>
+      <GlobalHotKeys
+        keyMap={{
+          CTRLF: window.electron.isMac
+            ? ['command+f', 'command+F']
+            : ['ctrl+f', 'ctrl+F'],
+          ESC: 'escape',
+        }}
+        handlers={{
+          CTRLF: () => {
+            window.dispatchEvent(new Event(WindowEvent.CTRLF));
+          },
+          ESC: () => {
+            window.dispatchEvent(new Event(WindowEvent.ESCAPE));
+          },
+        }}
+      />
     </>
   );
 }
