@@ -155,3 +155,10 @@ export type DiscordChannel = {
   id: string;
   name: string;
 };
+
+export type GameStartInfo = {
+  playerType: number;
+  characterId: number;
+  costumeIndex: number;
+  connectCode?: string;
+};

@@ -66,6 +66,13 @@ import {
   setEntrantIdToPendingSets,
   startSpectating,
 } from './spectate';
+import getGameStartInfo from './replay';
+import {
+  characterIdToMST,
+  MSTCharacter,
+  MSTPortColor,
+  MSTSkinColor,
+} from '../common/mst';
 
 const CONFIRMATION_TIMEOUT_MS = 30000;
 const STARTGG_BLACK = '#031221';
@@ -1172,6 +1179,65 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     'copyToClipboard',
     (event: IpcMainInvokeEvent, text: string) => {
       clipboard.writeText(text);
+    },
+  );
+
+  ipcMain.removeHandler('processReplay');
+  ipcMain.handle(
+    'processReplay',
+    async (event: IpcMainInvokeEvent, filePath: string) => {
+      const gameStartInfos = await getGameStartInfo(filePath);
+      return gameStartInfos.map(
+        (
+          gameStartInfo,
+          i,
+        ): {
+          portColor: MSTPortColor;
+          character: MSTCharacter;
+          skinColor: MSTSkinColor;
+          connectCode?: string;
+        } => {
+          let portColor: MSTPortColor = 'CPU';
+          if (gameStartInfo.playerType === 0) {
+            switch (i) {
+              case 0:
+                portColor = 'Red';
+                break;
+              case 1:
+                portColor = 'Blue';
+                break;
+              case 2:
+                portColor = 'Yellow';
+                break;
+              case 3:
+                portColor = 'Green';
+                break;
+              default:
+                throw new Error('unreachable');
+            }
+          }
+          const mst = characterIdToMST.get(gameStartInfo.characterId);
+          if (!mst) {
+            return {
+              portColor,
+              character: MSTCharacter.RANDOM,
+              skinColor: 'Default',
+              connectCode: gameStartInfo.connectCode,
+            };
+          }
+
+          let skinColor = mst.skinColors[gameStartInfo.costumeIndex];
+          if (!skinColor) {
+            skinColor = 'Default';
+          }
+          return {
+            portColor,
+            character: mst.character,
+            skinColor,
+            connectCode: gameStartInfo.connectCode,
+          };
+        },
+      );
     },
   );
 }

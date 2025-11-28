@@ -8,6 +8,7 @@ import {
   DiscordChannel,
   DiscordConfig,
   DiscordStatus,
+  GameStartInfo,
   ParticipantConnections,
   RemoteState,
   Sets,
@@ -112,6 +113,8 @@ const electronHandler = {
   // exposed for dev only
   registerSlashCommands: (): Promise<void> =>
     ipcRenderer.invoke('registerSlashCommands'),
+  processReplay: (filePath: string): Promise<GameStartInfo[]> =>
+    ipcRenderer.invoke('processReplay', filePath),
 };
 
 contextBridge.exposeInMainWorld('electron', electronHandler);
