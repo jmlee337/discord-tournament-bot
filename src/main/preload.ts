@@ -8,7 +8,6 @@ import {
   DiscordChannel,
   DiscordConfig,
   DiscordStatus,
-  GameStartInfo,
   ParticipantConnections,
   RemoteState,
   Sets,
@@ -18,6 +17,7 @@ import {
   StartggTournament,
   StartingState,
 } from '../common/types';
+import { MSTScoreboardInfo } from '../common/mst';
 
 const electronHandler = {
   getDiscordConfig: (): Promise<DiscordConfig> =>
@@ -113,7 +113,7 @@ const electronHandler = {
   // exposed for dev only
   registerSlashCommands: (): Promise<void> =>
     ipcRenderer.invoke('registerSlashCommands'),
-  processReplay: (filePath: string): Promise<GameStartInfo[]> =>
+  processReplay: (filePath: string): Promise<MSTScoreboardInfo | null> =>
     ipcRenderer.invoke('processReplay', filePath),
 };
 

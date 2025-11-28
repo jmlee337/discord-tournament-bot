@@ -8,6 +8,14 @@ import {
   Spectating,
   StartggSet,
 } from '../common/types';
+import getGameStartInfo from './replay';
+import {
+  characterIdToMST,
+  MSTCharacter,
+  MSTPortColor,
+  MSTScoreboardInfo,
+  MSTSkinColor,
+} from '../common/mst';
 
 type RemoteBroadcast = {
   id: string;
@@ -40,6 +48,7 @@ const connectCodeToEntrant = new Map<
   string,
   { id: number; gamerTag: string }
 >();
+let tournamentName = '';
 let entrantIdToPendingSets = new Map<number, StartggSet[]>();
 
 export function initSpectate(newMainWindow: BrowserWindow) {
@@ -51,6 +60,7 @@ export function initSpectate(newMainWindow: BrowserWindow) {
   dolphinIdToSpectating.clear();
   connectCodeMisses.clear();
   connectCodeToEntrant.clear();
+  tournamentName = '';
   mainWindow = newMainWindow;
 }
 
@@ -117,13 +127,19 @@ function matchConnectCode(connectCode: string) {
   return undefined;
 }
 
+function getEntrant(connectCode: string) {
+  const lcConnectCode = connectCode.toLowerCase();
+  let entrant = connectCodeToEntrant.get(lcConnectCode);
+  if (!entrant && !connectCodeMisses.has(lcConnectCode)) {
+    entrant = matchConnectCode(lcConnectCode);
+  }
+
+  return entrant;
+}
+
 function recalculateAndSendBroadcasts() {
   Array.from(idToBroadcast.entries()).forEach(([broadcastId, broadcast]) => {
-    const lcConnectCode = broadcast.connectCode.toLowerCase();
-    let entrant = connectCodeToEntrant.get(lcConnectCode);
-    if (!entrant && !connectCodeMisses.has(lcConnectCode)) {
-      entrant = matchConnectCode(lcConnectCode);
-    }
+    const entrant = getEntrant(broadcast.connectCode);
     if (entrant) {
       const pendingSets = entrantIdToPendingSets.get(entrant.id);
       idToBroadcast.set(broadcastId, {
@@ -143,6 +159,10 @@ function recalculateAndSendBroadcasts() {
   sendBroadcasts();
 }
 
+export function setTournamentName(newTournamentName: string) {
+  tournamentName = newTournamentName;
+}
+
 export function setConnectCodes(connectCodes: ConnectCode[]) {
   connectCodeMisses.clear();
   connectCodes.forEach(({ connectCode, entrantId, gamerTag }) => {
@@ -159,6 +179,98 @@ export function setEntrantIdToPendingSets(
 ) {
   entrantIdToPendingSets = newEntrantIdToPendingSets;
   recalculateAndSendBroadcasts();
+}
+
+export async function processReplay(filePath: string) {
+  const gameStartInfos = await getGameStartInfo(filePath);
+  const infosWithPlayers = gameStartInfos.filter(
+    (gameStartInfo) => gameStartInfo.playerType === 0,
+  );
+  if (infosWithPlayers.length !== 2) {
+    return null;
+  }
+
+  const mstInfos = infosWithPlayers.map(
+    (
+      gameStartInfo,
+      i,
+    ): {
+      portColor: MSTPortColor;
+      character: MSTCharacter;
+      skinColor: MSTSkinColor;
+      entrant?: { id: number; gamerTag: string };
+    } => {
+      let portColor: MSTPortColor = 'CPU';
+      switch (i) {
+        case 0:
+          portColor = 'Red';
+          break;
+        case 1:
+          portColor = 'Blue';
+          break;
+        case 2:
+          portColor = 'Yellow';
+          break;
+        case 3:
+          portColor = 'Green';
+          break;
+        default:
+          throw new Error('unreachable');
+      }
+      const mst = characterIdToMST.get(gameStartInfo.characterId);
+      if (!mst) {
+        return {
+          portColor,
+          character: MSTCharacter.RANDOM,
+          skinColor: 'Default',
+          entrant: gameStartInfo.connectCode
+            ? getEntrant(gameStartInfo.connectCode)
+            : undefined,
+        };
+      }
+
+      let skinColor = mst.skinColors[gameStartInfo.costumeIndex];
+      if (!skinColor) {
+        skinColor = 'Default';
+      }
+      return {
+        portColor,
+        character: mst.character,
+        skinColor,
+        entrant: gameStartInfo.connectCode
+          ? getEntrant(gameStartInfo.connectCode)
+          : undefined,
+      };
+    },
+  );
+
+  const scoreboardInfo: MSTScoreboardInfo = {
+    p1Name: mstInfos[0].entrant?.gamerTag ?? '',
+    p1Team: '',
+    p1Character: mstInfos[0].character,
+    p1Skin: mstInfos[0].skinColor,
+    p1Color: mstInfos[0].portColor,
+    p1Score: 0, // TODO
+    p1WL: 'Nada', // TODO
+    p2Name: mstInfos[1].entrant?.gamerTag ?? '',
+    p2Team: '',
+    p2Character: mstInfos[1].character,
+    p2Skin: mstInfos[1].skinColor,
+    p2Color: mstInfos[1].portColor,
+    p2Score: 0, // TODO
+    p2WL: 'Nada', // TODO
+    bestOf: 'Bo3', // TODO
+    round: '', // TODO
+    tournamentName,
+    caster1Name: '', // TODO
+    caster1Twitter: '', // TODO
+    caster1Twitch: '', // TODO
+    caster2Name: '', // TODO
+    caster2Twitter: '', // TODO
+    caster2Twitch: '', // TODO
+    allowIntro: false,
+  };
+  return scoreboardInfo;
 }
 
 export function connect(port: number) {
@@ -295,11 +407,7 @@ export function connect(port: number) {
 
             (message.broadcasts as RemoteBroadcast[]).forEach((broadcast) => {
               const connectCode = broadcast.name;
-              const lcConnectCode = connectCode.toLowerCase();
-              let entrant = connectCodeToEntrant.get(lcConnectCode);
-              if (!entrant && !connectCodeMisses.has(lcConnectCode)) {
-                entrant = matchConnectCode(lcConnectCode);
-              }
+              const entrant = getEntrant(connectCode);
               const pendingSets = entrant
                 ? entrantIdToPendingSets.get(entrant.id)
                 : undefined;
