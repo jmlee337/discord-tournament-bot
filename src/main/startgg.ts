@@ -248,6 +248,7 @@ type PhaseJSON = {
 };
 type SetJSON = {
   id: number;
+  bestOf: number;
   completedAt: number | null;
   entrant1Id: number | null;
   entrant1Score: number | null;
@@ -343,6 +344,7 @@ export async function getEventSets(event: StartggEvent): Promise<Sets> {
 
               const newSet: StartggSet = {
                 id: set.id,
+                bestOf: set.bestOf,
                 completedAt: set.completedAt,
                 isDQ: set.entrant1Score === -1 || set.entrant2Score === -1,
                 entrant1Id: set.entrant1Id!,
@@ -503,6 +505,7 @@ function gqlSetFilterPred(set: GqlSet) {
 function gqlSetToStartggSet(set: GqlSet): StartggSet {
   return {
     id: set.id,
+    bestOf: idToSet.get(set.id)!.bestOf,
     completedAt: set.completedAt,
     isDQ: set.displayScore === 'DQ',
     entrant1Id: set.slots[0].entrant!.id,

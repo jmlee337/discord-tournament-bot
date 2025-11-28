@@ -49,6 +49,25 @@ export type MSTSkinColor =
   | 'Sheik Red';
 
 export type MSTWL = 'Nada' | 'W' | 'L';
+export type MSTBestOf = 'Bo3' | 'Bo5';
+
+export type MSTNewFileScoreboardInfo = {
+  p1Name?: string;
+  p1Character: MSTCharacter;
+  p1Skin: MSTSkinColor;
+  p1Color: MSTPortColor;
+  p1Score?: number;
+  p1WL?: MSTWL;
+  p2Name?: string;
+  p2Character: MSTCharacter;
+  p2Skin: MSTSkinColor;
+  p2Color: MSTPortColor;
+  p2Score?: number;
+  p2WL?: MSTWL;
+  bestOf?: MSTBestOf;
+  round?: string;
+  tournamentName?: string;
+};
 
 export type MSTScoreboardInfo = {
   p1Name: string;
@@ -65,7 +84,7 @@ export type MSTScoreboardInfo = {
   p2Color: MSTPortColor;
   p2Score: number;
   p2WL: MSTWL;
-  bestOf: 'Bo3' | 'Bo5';
+  bestOf: MSTBestOf;
   round: string;
   tournamentName: string;
   caster1Name: string;

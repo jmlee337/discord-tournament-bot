@@ -11,10 +11,12 @@ import {
 import getGameStartInfo from './replay';
 import {
   characterIdToMST,
+  MSTBestOf,
   MSTCharacter,
+  MSTNewFileScoreboardInfo,
   MSTPortColor,
-  MSTScoreboardInfo,
   MSTSkinColor,
+  MSTWL,
 } from '../common/mst';
 
 type RemoteBroadcast = {
@@ -48,7 +50,7 @@ const connectCodeToEntrant = new Map<
   string,
   { id: number; gamerTag: string }
 >();
-let tournamentName = '';
+let tournamentName: string | undefined;
 let entrantIdToPendingSets = new Map<number, StartggSet[]>();
 
 export function initSpectate(newMainWindow: BrowserWindow) {
@@ -244,33 +246,81 @@ export async function processReplay(filePath: string) {
     },
   );
 
-  const scoreboardInfo: MSTScoreboardInfo = {
-    p1Name: mstInfos[0].entrant?.gamerTag ?? '',
-    p1Team: '',
+  let p1Name = mstInfos[0].entrant?.gamerTag;
+  let p1Score: number | undefined;
+  let p1WL: MSTWL | undefined;
+  let p2Name = mstInfos[1].entrant?.gamerTag;
+  let p2Score: number | undefined;
+  let p2WL: MSTWL | undefined;
+
+  let set: StartggSet | undefined;
+  const p1PendingSets = mstInfos[0].entrant
+    ? entrantIdToPendingSets.get(mstInfos[0].entrant.id)
+    : undefined;
+  const p2PendingSets = mstInfos[1].entrant
+    ? entrantIdToPendingSets.get(mstInfos[1].entrant.id)
+    : undefined;
+  if (
+    p1PendingSets &&
+    p1PendingSets.length > 0 &&
+    p2PendingSets &&
+    p2PendingSets.length > 0
+  ) {
+    const intersectionSets = p1PendingSets.filter((pendingSet) =>
+      p2PendingSets.find(
+        (otherPendingSet) => pendingSet.id === otherPendingSet.id,
+      ),
+    );
+    if (intersectionSets.length === 1) {
+      [set] = intersectionSets;
+    }
+  } else if (p1PendingSets && p1PendingSets.length > 0) {
+    if (p1PendingSets.length === 1) {
+      [set] = p1PendingSets;
+    }
+  } else if (p2PendingSets && p2PendingSets.length > 0) {
+    if (p2PendingSets.length === 1) {
+      [set] = p2PendingSets;
+    }
+  }
+
+  let bestOf: MSTBestOf | undefined;
+  let round: string | undefined;
+  if (set) {
+    bestOf = set.bestOf === 5 ? 'Bo5' : 'Bo3';
+    round = set.fullRoundText;
+    if (mstInfos[0].entrant || mstInfos[1].entrant) {
+      const p1IsEntrant1 = mstInfos[0].entrant
+        ? set.entrant1Id === mstInfos[0].entrant.id
+        : set.entrant2Id === mstInfos[1].entrant!.id;
+      p1Name = p1IsEntrant1 ? set.entrant1Name : set.entrant2Name;
+      p1Score = p1IsEntrant1 ? set.entrant1Score : set.entrant2Score;
+      p1WL =
+        !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
+      p2Name = p1IsEntrant1 ? set.entrant2Name : set.entrant1Name;
+      p2Score = p1IsEntrant1 ? set.entrant2Score : set.entrant1Score;
+      p2WL = p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
+    }
+  }
+
+  const newFileScoreboardInfo: MSTNewFileScoreboardInfo = {
+    p1Name,
     p1Character: mstInfos[0].character,
     p1Skin: mstInfos[0].skinColor,
     p1Color: mstInfos[0].portColor,
-    p1Score: 0, // TODO
-    p1WL: 'Nada', // TODO
-    p2Name: mstInfos[1].entrant?.gamerTag ?? '',
-    p2Team: '',
+    p1Score,
+    p1WL,
+    p2Name,
     p2Character: mstInfos[1].character,
     p2Skin: mstInfos[1].skinColor,
     p2Color: mstInfos[1].portColor,
-    p2Score: 0, // TODO
-    p2WL: 'Nada', // TODO
-    bestOf: 'Bo3', // TODO
-    round: '', // TODO
+    p2Score,
+    p2WL,
+    bestOf,
+    round,
     tournamentName,
-    caster1Name: '', // TODO
-    caster1Twitter: '', // TODO
-    caster1Twitch: '', // TODO
-    caster2Name: '', // TODO
-    caster2Twitter: '', // TODO
-    caster2Twitch: '', // TODO
-    allowIntro: false,
   };
-  return scoreboardInfo;
+  return newFileScoreboardInfo;
 }
 
 export function connect(port: number) {

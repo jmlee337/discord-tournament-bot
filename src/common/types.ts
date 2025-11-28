@@ -19,6 +19,7 @@ export type ReportStartggSet = {
 
 export type StartggSet = {
   id: number;
+  bestOf: number;
   completedAt: number | null;
   isDQ: boolean;
   entrant1Id: number;
