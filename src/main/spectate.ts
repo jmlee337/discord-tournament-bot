@@ -11,12 +11,11 @@ import {
 import getGameStartInfo from './replay';
 import {
   characterIdToMST,
-  MSTBestOf,
   MSTCharacter,
   MSTNewFileScoreboardInfo,
   MSTPortColor,
+  MSTSetData,
   MSTSkinColor,
-  MSTWL,
 } from '../common/mst';
 import { newFileUpdate } from './mst';
 
@@ -279,40 +278,35 @@ export async function processReplay(filePath: string, dolphinId: string) {
     }
   }
 
-  let p1Score: number | undefined;
-  let p1WL: MSTWL | undefined;
-  let p2Score: number | undefined;
-  let p2WL: MSTWL | undefined;
-  let bestOf: MSTBestOf | undefined;
-  let round: string | undefined;
+  let setData: MSTSetData | undefined;
   if (set) {
-    bestOf = set.bestOf === 5 ? 'Bo5' : 'Bo3';
-    round = set.fullRoundText;
-    if (mstInfos[0].entrant || mstInfos[1].entrant) {
-      const p1IsEntrant1 = mstInfos[0].entrant
-        ? set.entrant1Id === mstInfos[0].entrant.id
-        : set.entrant2Id === mstInfos[1].entrant!.id;
-      p1Name = p1IsEntrant1 ? set.entrant1Name : set.entrant2Name;
-      p1Score = p1IsEntrant1 ? set.entrant1Score : set.entrant2Score;
-      p1WL =
-        !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
-      p2Name = p1IsEntrant1 ? set.entrant2Name : set.entrant1Name;
-      p2Score = p1IsEntrant1 ? set.entrant2Score : set.entrant1Score;
-      p2WL = p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
+    const p1IsEntrant1 = mstInfos[0].entrant
+      ? set.entrant1Id === mstInfos[0].entrant.id
+      : set.entrant2Id === mstInfos[1].entrant!.id;
+    p1Name = p1IsEntrant1 ? set.entrant1Name : set.entrant2Name;
+    p2Name = p1IsEntrant1 ? set.entrant2Name : set.entrant1Name;
+    setData = {
+      setId: set.id,
+      bestOf: set.bestOf === 5 ? 'Bo5' : 'Bo3',
+      round: set.fullRoundText,
+      p1Score: p1IsEntrant1 ? set.entrant1Score : set.entrant2Score,
+      p1WL: !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada',
+      p2Score: p1IsEntrant1 ? set.entrant2Score : set.entrant1Score,
+      p2WL: p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada',
+    };
 
-      const spectating = dolphinIdToSpectating.get(dolphinId);
-      if (spectating) {
-        const broadcast = idToBroadcast.get(spectating.broadcastId);
-        if (broadcast) {
-          idToBroadcast.set(spectating.broadcastId, {
-            ...broadcast,
-            set: {
-              id: set.id,
-              names: `${set.entrant1Name} vs ${set.entrant2Name}`,
-            },
-          });
-          sendBroadcasts();
-        }
+    const spectating = dolphinIdToSpectating.get(dolphinId);
+    if (spectating) {
+      const broadcast = idToBroadcast.get(spectating.broadcastId);
+      if (broadcast) {
+        idToBroadcast.set(spectating.broadcastId, {
+          ...broadcast,
+          set: {
+            id: set.id,
+            names: `${set.entrant1Name} vs ${set.entrant2Name}`,
+          },
+        });
+        sendBroadcasts();
       }
     }
   }
@@ -320,21 +314,15 @@ export async function processReplay(filePath: string, dolphinId: string) {
   const newFileScoreboardInfo: MSTNewFileScoreboardInfo = {
     p1EntrantId: mstInfos[0].entrant?.id,
     p2EntrantId: mstInfos[1].entrant?.id,
-    setId: set?.id,
     p1Name,
     p1Character: mstInfos[0].character,
     p1Skin: mstInfos[0].skinColor,
     p1Color: mstInfos[0].portColor,
-    p1Score,
-    p1WL,
     p2Name,
     p2Character: mstInfos[1].character,
     p2Skin: mstInfos[1].skinColor,
     p2Color: mstInfos[1].portColor,
-    p2Score,
-    p2WL,
-    bestOf,
-    round,
+    setData,
   };
 
   await newFileUpdate(newFileScoreboardInfo);

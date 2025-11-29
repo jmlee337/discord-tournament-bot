@@ -70,13 +70,13 @@ export async function newFileUpdate(
 ) {
   p1EntrantId = newFileScoreboardInfo.p1EntrantId;
   p2EntrantId = newFileScoreboardInfo.p2EntrantId;
-  if (newFileScoreboardInfo.setId === undefined) {
+  if (!newFileScoreboardInfo.setData) {
     // request sgg refresh
   }
 
-  const setChanged = newFileScoreboardInfo.setId !== setId;
+  const setChanged = newFileScoreboardInfo.setData?.setId !== setId;
   if (setChanged) {
-    setId = newFileScoreboardInfo.setId;
+    setId = newFileScoreboardInfo.setData?.setId;
   }
 
   scoreboardInfo.p1Character = newFileScoreboardInfo.p1Character;
@@ -89,32 +89,27 @@ export async function newFileUpdate(
   if (newFileScoreboardInfo.p1Name) {
     scoreboardInfo.p1Name = newFileScoreboardInfo.p1Name;
   }
-  if (
-    newFileScoreboardInfo.p1Score !== undefined &&
-    (setChanged || newFileScoreboardInfo.p1Score > scoreboardInfo.p1Score)
-  ) {
-    scoreboardInfo.p1Score = newFileScoreboardInfo.p1Score;
-  }
-  if (newFileScoreboardInfo.p1WL) {
-    scoreboardInfo.p1WL = newFileScoreboardInfo.p1WL;
-  }
   if (newFileScoreboardInfo.p2Name) {
     scoreboardInfo.p2Name = newFileScoreboardInfo.p2Name;
   }
-  if (
-    newFileScoreboardInfo.p2Score !== undefined &&
-    (setChanged || newFileScoreboardInfo.p2Score > scoreboardInfo.p2Score)
-  ) {
-    scoreboardInfo.p2Score = newFileScoreboardInfo.p2Score;
-  }
-  if (newFileScoreboardInfo.p2WL) {
-    scoreboardInfo.p2WL = newFileScoreboardInfo.p2WL;
-  }
-  if (newFileScoreboardInfo.bestOf) {
-    scoreboardInfo.bestOf = newFileScoreboardInfo.bestOf;
-  }
-  if (newFileScoreboardInfo.round) {
-    scoreboardInfo.round = newFileScoreboardInfo.round;
+
+  if (newFileScoreboardInfo.setData) {
+    scoreboardInfo.p1WL = newFileScoreboardInfo.setData.p1WL;
+    scoreboardInfo.p2WL = newFileScoreboardInfo.setData.p2WL;
+    scoreboardInfo.bestOf = newFileScoreboardInfo.setData.bestOf;
+    scoreboardInfo.round = newFileScoreboardInfo.setData.round;
+    if (
+      setChanged ||
+      newFileScoreboardInfo.setData.p1Score > scoreboardInfo.p1Score
+    ) {
+      scoreboardInfo.p1Score = newFileScoreboardInfo.setData.p1Score;
+    }
+    if (
+      setChanged ||
+      newFileScoreboardInfo.setData.p2Score > scoreboardInfo.p2Score
+    ) {
+      scoreboardInfo.p2Score = newFileScoreboardInfo.setData.p2Score;
+    }
   }
 
   await writeScoreboardInfo();
