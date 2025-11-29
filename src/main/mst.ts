@@ -9,6 +9,7 @@ let p1EntrantId: number | undefined;
 let p2EntrantId: number | undefined;
 let setId: number | undefined;
 let scoreboardInfo = EMPTY_SCOREBOARD_INFO;
+let requestGetEventSets: (() => void) | undefined;
 
 export function initMST(window: BrowserWindow) {
   mainWindow = window;
@@ -16,6 +17,11 @@ export function initMST(window: BrowserWindow) {
   p2EntrantId = undefined;
   setId = undefined;
   scoreboardInfo = EMPTY_SCOREBOARD_INFO;
+  requestGetEventSets = undefined;
+}
+
+export function setRequestGetEventSets(newRequestEventSets: () => void) {
+  requestGetEventSets = newRequestEventSets;
 }
 
 let enable = false;
@@ -70,8 +76,8 @@ export async function newFileUpdate(
 ) {
   p1EntrantId = newFileScoreboardInfo.p1EntrantId;
   p2EntrantId = newFileScoreboardInfo.p2EntrantId;
-  if (!newFileScoreboardInfo.setData) {
-    // request sgg refresh
+  if (!newFileScoreboardInfo.setData && requestGetEventSets) {
+    requestGetEventSets();
   }
 
   const setChanged = newFileScoreboardInfo.setData?.setId !== setId;
