@@ -7,15 +7,19 @@ import {
   CardActions,
   CardContent,
   CardHeader,
+  CircularProgress,
   FormControlLabel,
+  IconButton,
   List,
   ListItem,
   ListItemText,
   Radio,
   Stack,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
+import { Refresh } from '@mui/icons-material';
 import {
   Broadcast,
   ChipData,
@@ -274,13 +278,16 @@ export default function Remote({
   overlayEnabled,
   remoteState,
   searchSubstr,
+  showErrorDialog,
 }: {
   overlayEnabled: boolean;
   remoteState: RemoteState;
   searchSubstr: string;
+  showErrorDialog: (messages: string[]) => void;
 }) {
   const [port, setPort] = useState(0);
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
   const [overlayDolphinId, setOverlayDolphinId] = useState('');
   const [spectating, setSpectating] = useState<Spectating[]>([]);
   const [selectedChipData, setSelectedChipData] = useState<ChipData>({
@@ -305,6 +312,7 @@ export default function Remote({
   useEffect(() => {
     window.electron.onBroadcasts((event, newBroadcasts) => {
       setBroadcasts(newBroadcasts);
+      setRefreshing(false);
     });
     window.electron.onSpectating((event, newSpectating) => {
       setSpectating(newSpectating);
@@ -335,6 +343,27 @@ export default function Remote({
       >
         <Status remoteState={remoteState} />
         <Stack direction="row" alignItems="center" spacing="8px">
+          <Tooltip arrow title={refreshing ? 'Refreshing' : 'Refresh'}>
+            <span>
+              <IconButton
+                disabled={
+                  refreshing || remoteState.status !== RemoteStatus.CONNECTED
+                }
+                onClick={async () => {
+                  try {
+                    setRefreshing(true);
+                    await window.electron.refreshBroadcasts();
+                  } catch (e: any) {
+                    const message = e instanceof Error ? e.message : e;
+                    showErrorDialog([message]);
+                    setRefreshing(false);
+                  }
+                }}
+              >
+                {refreshing ? <CircularProgress size="24px" /> : <Refresh />}
+              </IconButton>
+            </span>
+          </Tooltip>
           <TextField
             disabled={
               remoteState.status === RemoteStatus.CONNECTING ||
@@ -382,7 +411,7 @@ export default function Remote({
           {spectating.map((spectate) => (
             <Card
               key={spectate.dolphinId}
-              style={{ width: '193px' }}
+              style={{ width: '208px' }}
               sx={
                 spectate.spectating
                   ? undefined

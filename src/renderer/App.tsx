@@ -165,9 +165,14 @@ function Hello() {
     inner();
   }, []);
 
+  const [refreshing, setRefreshing] = useState(false);
+
   useEffect(() => {
     window.electron.onDiscordStatus((event, newDiscordStatus) => {
       setDiscordStatus(newDiscordStatus);
+    });
+    window.electron.onGettingSets((event, getting) => {
+      setRefreshing(getting);
     });
     window.electron.onRemoteState((event, newRemoteState) => {
       setRemoteState(newRemoteState);
@@ -222,8 +227,6 @@ function Hello() {
       setSearchSubstr('');
     });
   }, []);
-
-  const [refreshing, setRefreshing] = useState(false);
 
   return (
     <>
@@ -295,45 +298,26 @@ function Hello() {
               searchSubstr={searchSubstr}
               setSearchSubstr={setSearchSubstr}
             />
-            {refreshing ? (
-              <CircularProgress size="24px" style={{ margin: '8px' }} />
-            ) : (
-              <Tooltip
-                arrow
-                title={
-                  tabValue === TabValue.BRACKET
-                    ? 'Refresh sets'
-                    : 'Refresh broadcasts'
-                }
-              >
-                <div>
-                  <IconButton
-                    disabled={
-                      (tabValue === TabValue.BRACKET && !eventDescription) ||
-                      (tabValue === TabValue.BROADCASTS &&
-                        remoteState.status !== RemoteStatus.CONNECTED)
+            <Tooltip arrow title="Refresh sets">
+              <span>
+                <IconButton
+                  disabled={refreshing || !eventDescription}
+                  onClick={async () => {
+                    try {
+                      setRefreshing(true);
+                      await window.electron.refreshSets();
+                    } catch (e: any) {
+                      const message = e instanceof Error ? e.message : e;
+                      showErrorDialog([message]);
+                    } finally {
+                      setRefreshing(false);
                     }
-                    onClick={async () => {
-                      try {
-                        setRefreshing(true);
-                        if (tabValue === TabValue.BRACKET) {
-                          await window.electron.refreshSets();
-                        } else if (tabValue === TabValue.BROADCASTS) {
-                          await window.electron.refreshBroadcasts();
-                        }
-                      } catch (e: any) {
-                        const message = e instanceof Error ? e.message : e;
-                        showErrorDialog([message]);
-                      } finally {
-                        setRefreshing(false);
-                      }
-                    }}
-                  >
-                    <Refresh />
-                  </IconButton>
-                </div>
-              </Tooltip>
-            )}
+                  }}
+                >
+                  {refreshing ? <CircularProgress size="24px" /> : <Refresh />}
+                </IconButton>
+              </span>
+            </Tooltip>
           </Stack>
         </Stack>
         <Tabs
@@ -370,6 +354,7 @@ function Hello() {
           overlayEnabled={enableMST && Boolean(resourcesPath)}
           remoteState={remoteState}
           searchSubstr={searchSubstr}
+          showErrorDialog={showErrorDialog}
         />
       </TabPanel>
       <TabPanel value={tabValue} index={TabValue.OVERLAY}>

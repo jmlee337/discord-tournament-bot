@@ -110,6 +110,12 @@ const electronHandler = {
     ipcRenderer.removeAllListeners('discordStatus');
     ipcRenderer.on('discordStatus', callback);
   },
+  onGettingSets: (
+    callback: (event: IpcRendererEvent, getting: boolean) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('gettingSets');
+    ipcRenderer.on('gettingSets', callback);
+  },
   onSets: (callback: (event: IpcRendererEvent, sets: Sets) => void) => {
     ipcRenderer.removeAllListeners('sets');
     ipcRenderer.on('sets', callback);

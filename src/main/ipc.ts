@@ -280,13 +280,23 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let timeoutId: NodeJS.Timeout | undefined;
   const setGetEventSetsTimeout = () => {
     timeoutId = setTimeout(async () => {
-      updateEntrantIdToSet(await getEventSets(startggEvent));
+      try {
+        mainWindow.webContents.send('gettingSets', true);
+        updateEntrantIdToSet(await getEventSets(startggEvent));
+      } finally {
+        mainWindow.webContents.send('gettingSets', false);
+      }
       setGetEventSetsTimeout();
     }, 30000);
   };
   const preemptGetEventSets = async () => {
     clearTimeout(timeoutId);
-    updateEntrantIdToSet(await getEventSets(startggEvent));
+    try {
+      mainWindow.webContents.send('gettingSets', true);
+      updateEntrantIdToSet(await getEventSets(startggEvent));
+    } finally {
+      mainWindow.webContents.send('gettingSets', false);
+    }
     setGetEventSetsTimeout();
   };
   setRequestGetEventSets(() => {
@@ -1021,15 +1031,19 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         throw new Error('Please set start.gg token');
       }
       clearTimeout(timeoutId);
-      const entrantsPromise = getEventEntrants(newEvent.id, startggApiKey);
-      const setsPromise = getEventSets(newEvent);
 
-      // await both, we don't want to proceed if either throws
-      const entrants = await entrantsPromise;
-      const newSets = await setsPromise;
-
-      updateEntrants(entrants);
-      updateEntrantIdToSet(newSets);
+      try {
+        mainWindow.webContents.send('gettingSets', true);
+        const entrantsPromise = getEventEntrants(newEvent.id, startggApiKey);
+        const setsPromise = getEventSets(newEvent);
+        // await both, we don't want to proceed if either throws
+        const entrants = await entrantsPromise;
+        const newSets = await setsPromise;
+        updateEntrants(entrants);
+        updateEntrantIdToSet(newSets);
+      } finally {
+        mainWindow.webContents.send('gettingSets', false);
+      }
 
       startggEvent = newEvent;
       setGetEventSetsTimeout();
