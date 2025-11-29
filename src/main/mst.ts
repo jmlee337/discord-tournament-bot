@@ -85,9 +85,7 @@ export async function newFileUpdate(
   }
 
   const setChanged = newFileScoreboardInfo.setData?.setId !== setId;
-  if (setChanged) {
-    setId = newFileScoreboardInfo.setData?.setId;
-  }
+  setId = newFileScoreboardInfo.setData?.setId;
 
   scoreboardInfo.p1Character = newFileScoreboardInfo.p1Character;
   scoreboardInfo.p1Skin = newFileScoreboardInfo.p1Skin;
@@ -130,6 +128,9 @@ async function pendingSetUpdate(
   localP1EntrantId: number | undefined,
   localP2EntrantId: number | undefined,
 ) {
+  const setChanged = set.id !== setId;
+  setId = set.id;
+
   scoreboardInfo.bestOf = set.bestOf === 5 ? 'Bo5' : 'Bo3';
   scoreboardInfo.round = set.fullRoundText;
 
@@ -138,13 +139,20 @@ async function pendingSetUpdate(
       ? set.entrant1Id === localP1EntrantId
       : set.entrant2Id === localP2EntrantId;
   scoreboardInfo.p1Name = p1IsEntrant1 ? set.entrant1Name : set.entrant2Name;
-  scoreboardInfo.p1Score = p1IsEntrant1 ? set.entrant1Score : set.entrant2Score;
   scoreboardInfo.p1WL =
     !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
   scoreboardInfo.p2Name = p1IsEntrant1 ? set.entrant2Name : set.entrant1Name;
-  scoreboardInfo.p2Score = p1IsEntrant1 ? set.entrant2Score : set.entrant1Score;
   scoreboardInfo.p2WL =
     p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
+
+  const newP1Score = p1IsEntrant1 ? set.entrant1Score : set.entrant2Score;
+  if (setChanged || newP1Score > scoreboardInfo.p1Score) {
+    scoreboardInfo.p1Score = newP1Score;
+  }
+  const newP2Score = p1IsEntrant1 ? set.entrant2Score : set.entrant1Score;
+  if (setChanged || newP2Score > scoreboardInfo.p2Score) {
+    scoreboardInfo.p2Score = newP2Score;
+  }
 
   await writeScoreboardInfo();
 }
