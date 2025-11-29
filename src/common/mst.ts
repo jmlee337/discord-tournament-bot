@@ -299,3 +299,30 @@ export const characterIdToMST = new Map<
   [0x20, { character: MSTCharacter.RANDOM, skinColors: ['Default'] }], // Sopo
   [0x21, { character: MSTCharacter.RANDOM, skinColors: ['Default'] }], // "User Select(Event) / None"
 ]);
+
+export const EMPTY_SCOREBOARD_INFO: MSTScoreboardInfo = {
+  p1Name: '',
+  p1Team: '',
+  p1Character: MSTCharacter.RANDOM,
+  p1Skin: 'Default',
+  p1Color: 'Red',
+  p1Score: 0,
+  p1WL: 'Nada',
+  p2Name: '',
+  p2Team: '',
+  p2Character: MSTCharacter.RANDOM,
+  p2Skin: 'Default',
+  p2Color: 'Blue',
+  p2Score: 0,
+  p2WL: 'Nada',
+  bestOf: 'Bo3',
+  round: '',
+  tournamentName: '',
+  caster1Name: '',
+  caster1Twitter: '',
+  caster1Twitch: '',
+  caster2Name: '',
+  caster2Twitter: '',
+  caster2Twitch: '',
+  allowIntro: false,
+};

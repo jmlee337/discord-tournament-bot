@@ -44,6 +44,19 @@ const electronHandler = {
     ipcRenderer.invoke('refreshBroadcasts'),
   startSpectating: (broadcastId: string, dolphinId: string): Promise<void> =>
     ipcRenderer.invoke('startSpectating', broadcastId, dolphinId),
+  getOverlayDolphinId: (): Promise<string> =>
+    ipcRenderer.invoke('getOverlayDolphinId'),
+  setOverlayDolphinId: (overlayDolphinId: string): Promise<void> =>
+    ipcRenderer.invoke('setOverlayDolphinId', overlayDolphinId),
+  getEnableMST: (): Promise<boolean> => ipcRenderer.invoke('getEnableMST'),
+  setEnableMST: (enableMST: boolean): Promise<void> =>
+    ipcRenderer.invoke('setEnableMST', enableMST),
+  getResourcesPath: (): Promise<string> =>
+    ipcRenderer.invoke('getResourcesPath'),
+  chooseResourcesPath: (): Promise<string> =>
+    ipcRenderer.invoke('chooseResourcesPath'),
+  getScoreboardInfo: (): Promise<MSTScoreboardInfo> =>
+    ipcRenderer.invoke('getScoreboardInfo'),
   getStartggApiKey: (): Promise<string> =>
     ipcRenderer.invoke('getStartggApiKey'),
   setStartggApiKey: (startggApiKey: string): Promise<void> =>
@@ -108,6 +121,15 @@ const electronHandler = {
   ) => {
     ipcRenderer.removeAllListeners('spectating');
     ipcRenderer.on('spectating', callback);
+  },
+  onScoreboardInfo: (
+    callback: (
+      event: IpcRendererEvent,
+      scoreboardInfo: MSTScoreboardInfo,
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('scoreboardInfo');
+    ipcRenderer.on('scoreboardInfo', callback);
   },
   isMac: process.platform === 'darwin',
   // exposed for dev only

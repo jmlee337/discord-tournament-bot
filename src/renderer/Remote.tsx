@@ -393,15 +393,7 @@ export default function Remote({
                   )}
                   {spectate.broadcast && (
                     <Typography variant="caption">
-                      {spectate.broadcast.set && (
-                        <>
-                          {spectate.broadcast.set.names}
-                          {/*
-                          <br />
-                          {spectate.broadcast.set.score}
-                          */}
-                        </>
-                      )}
+                      {spectate.broadcast.set && spectate.broadcast.set.names}
                       {spectate.broadcast.set === undefined &&
                         (spectate.broadcast.gamerTag
                           ? spectate.broadcast.gamerTag

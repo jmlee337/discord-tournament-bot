@@ -24,6 +24,7 @@ import {
   IpcMainInvokeEvent,
   app,
   clipboard,
+  dialog,
   ipcMain,
 } from 'electron';
 import Store from 'electron-store';
@@ -58,6 +59,7 @@ import {
 import {
   connect,
   getBroadcasts,
+  getOverlayDolphinId,
   getRemoteState,
   getSpectating,
   initSpectate,
@@ -65,9 +67,16 @@ import {
   refreshBroadcasts,
   setConnectCodes,
   setEntrantIdToPendingSets,
+  setOverlayDolphinId,
   setTournamentName,
   startSpectating,
 } from './spectate';
+import {
+  initMST,
+  readScoreboardInfo,
+  setEnableMST,
+  setResourcesPath,
+} from './mst';
 
 const CONFIRMATION_TIMEOUT_MS = 30000;
 const STARTGG_BLACK = '#031221';
@@ -150,6 +159,7 @@ function getOpponentName(set: StartggSet, entrantId: number) {
 }
 
 export default function setupIPCs(mainWindow: BrowserWindow) {
+  initMST(mainWindow);
   initStartgg();
   initSpectate(mainWindow);
   const store = new Store<{
@@ -158,7 +168,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     discordCommandReport: boolean;
     discordCommandReset: boolean;
     discordRegisteredVersion: string;
+    enableMST: boolean;
     remotePort: number;
+    resourcesPath: string;
     startggApiKey: string;
   }>();
   let discordConfig = store.get('discordConfig', {
@@ -169,8 +181,13 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let discordCommandReport = store.get('discordCommandReport', true);
   let discordCommandReset = store.get('discordCommandReset', true);
   let discordRegisteredVersion = store.get('discordRegisteredVersion', '');
+  let enableMST = store.get('enableMST', false);
   let remotePort = store.get('remotePort', 49809);
+  let resourcesPath = store.get('resourcesPath', '');
   let startggApiKey = store.get('startggApiKey', '');
+
+  setEnableMST(enableMST);
+  setResourcesPath(resourcesPath);
 
   /**
    * Needed for both Discord and start.gg
@@ -863,6 +880,50 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       startSpectating(broadcastId, dolphinId);
     },
   );
+
+  ipcMain.removeHandler('getOverlayDolphinId');
+  ipcMain.handle('getOverlayDolphinId', () => getOverlayDolphinId());
+
+  ipcMain.removeHandler('setOverlayDolphinId');
+  ipcMain.handle(
+    'setOverlayDolphinId',
+    (event: IpcMainInvokeEvent, newOverlayDolphinId: string) =>
+      setOverlayDolphinId(newOverlayDolphinId),
+  );
+
+  ipcMain.removeHandler('getEnableMST');
+  ipcMain.handle('getEnableMST', () => enableMST);
+
+  ipcMain.removeHandler('setEnableMST');
+  ipcMain.handle(
+    'setEnableMST',
+    (event: IpcMainInvokeEvent, newEnableMST: boolean) => {
+      store.set('enableMST', newEnableMST);
+      enableMST = newEnableMST;
+      setEnableMST(enableMST);
+    },
+  );
+
+  ipcMain.removeHandler('getResourcesPath');
+  ipcMain.handle('getResourcesPath', () => resourcesPath);
+
+  ipcMain.removeHandler('chooseResourcesPath');
+  ipcMain.handle('chooseResourcesPath', async () => {
+    const openDialogRes = await dialog.showOpenDialog({
+      properties: ['openDirectory', 'showHiddenFiles'],
+    });
+    if (openDialogRes.canceled) {
+      return resourcesPath;
+    }
+    const [newResourcesPath] = openDialogRes.filePaths;
+    store.set('resourcesPath', newResourcesPath);
+    resourcesPath = newResourcesPath;
+    setResourcesPath(resourcesPath);
+    return resourcesPath;
+  });
+
+  ipcMain.removeHandler('getScoreboardInfo');
+  ipcMain.handle('getScoreboardInfo', () => readScoreboardInfo());
 
   /**
    * start.gg

@@ -38,10 +38,12 @@ import ConnectCodes from './ConnectCodes';
 import Bracket from './Bracket';
 import Remote from './Remote';
 import { pushWindowEventListener, WindowEvent } from './windowEvent';
+import Overlay from './Overlay';
 
 enum TabValue {
   BRACKET = 'bracket',
   BROADCASTS = 'broadcasts',
+  OVERLAY = 'overlay',
 }
 
 function TabPanel({
@@ -332,6 +334,12 @@ function Hello() {
             value={TabValue.BROADCASTS}
           />
           <Tab
+            label="Overlay"
+            id="tab-overlay"
+            aria-controls="tabpanel-overlay"
+            value={TabValue.OVERLAY}
+          />
+          <Tab
             label="Bracket"
             id="tab-bracket"
             aria-controls="tabpanel-bracket"
@@ -342,6 +350,9 @@ function Hello() {
       <div style={{ marginTop: '168px' }} />
       <TabPanel value={tabValue} index={TabValue.BROADCASTS}>
         <Remote remoteState={remoteState} searchSubstr={searchSubstr} />
+      </TabPanel>
+      <TabPanel value={tabValue} index={TabValue.OVERLAY}>
+        <Overlay showErrorDialog={showErrorDialog} />
       </TabPanel>
       <TabPanel value={tabValue} index={TabValue.BRACKET}>
         <Bracket discordStatus={discordStatus} searchSubstr={searchSubstr} />

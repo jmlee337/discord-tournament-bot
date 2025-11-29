@@ -18,6 +18,7 @@ import {
   MSTSkinColor,
   MSTWL,
 } from '../common/mst';
+import { newFileUpdate } from './mst';
 
 type RemoteBroadcast = {
   id: string;
@@ -50,10 +51,13 @@ const connectCodeToEntrant = new Map<
   string,
   { id: number; gamerTag: string }
 >();
+let overlayDolphinId: string | undefined;
 let tournamentName: string | undefined;
 let entrantIdToPendingSets = new Map<number, StartggSet[]>();
 
 export function initSpectate(newMainWindow: BrowserWindow) {
+  remoteErr = '';
+  remoteStatus = RemoteStatus.DISCONNECTED;
   if (webSocketClient) {
     webSocketClient.close();
     webSocketClient = null;
@@ -62,6 +66,7 @@ export function initSpectate(newMainWindow: BrowserWindow) {
   dolphinIdToSpectating.clear();
   connectCodeMisses.clear();
   connectCodeToEntrant.clear();
+  overlayDolphinId = '';
   tournamentName = '';
   mainWindow = newMainWindow;
 }
@@ -181,6 +186,13 @@ export function setEntrantIdToPendingSets(
 ) {
   entrantIdToPendingSets = newEntrantIdToPendingSets;
   recalculateAndSendBroadcasts();
+}
+
+export function getOverlayDolphinId() {
+  return overlayDolphinId;
+}
+export function setOverlayDolphinId(newOverlayDolphinId: string) {
+  overlayDolphinId = newOverlayDolphinId;
 }
 
 export async function processReplay(filePath: string) {
@@ -320,6 +332,8 @@ export async function processReplay(filePath: string) {
     round,
     tournamentName,
   };
+
+  await newFileUpdate(newFileScoreboardInfo);
   return newFileScoreboardInfo;
 }
 
@@ -389,6 +403,15 @@ export function connect(port: number) {
             sendSpectating();
             return;
           case 'game-end-event':
+            if (!dolphinIdToSpectating.has(message.dolphinId)) {
+              dolphinIdToSpectating.set(message.dolphinId, {
+                dolphinId: message.dolphinId,
+                broadcastId: message.broadcastId,
+                spectating: true,
+              });
+              sendSpectating();
+            }
+            return;
           case 'new-file-event':
             if (!dolphinIdToSpectating.has(message.dolphinId)) {
               dolphinIdToSpectating.set(message.dolphinId, {
@@ -397,6 +420,12 @@ export function connect(port: number) {
                 spectating: true,
               });
               sendSpectating();
+            }
+            // todo dolphinid to latest file
+            if (overlayDolphinId === message.dolphinId) {
+              processReplay(message.filePath).catch(() => {
+                // just catch
+              });
             }
             return;
           case 'list-broadcasts-response':
