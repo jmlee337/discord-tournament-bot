@@ -119,7 +119,6 @@ export type Broadcast = {
   set?: {
     id: number;
     names: string;
-    score: string;
   };
   slippiName: string;
 };

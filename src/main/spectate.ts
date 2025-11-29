@@ -159,7 +159,6 @@ function recalculateAndSendBroadcasts() {
             ? {
                 id: pendingSets[0].id,
                 names: `${pendingSets[0].entrant1Name} vs ${pendingSets[0].entrant2Name}`,
-                score: `${pendingSets[0].entrant1Score} - ${pendingSets[0].entrant2Score}`,
               }
             : undefined,
       });
@@ -509,7 +508,6 @@ export function connect(port: number) {
                     ? {
                         id: pendingSets[0].id,
                         names: `${pendingSets[0].entrant1Name} vs ${pendingSets[0].entrant2Name}`,
-                        score: `${pendingSets[0].entrant1Score} - ${pendingSets[0].entrant2Score}`,
                       }
                     : undefined,
                 slippiName: broadcast.broadcaster.name,
