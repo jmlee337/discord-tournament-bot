@@ -1242,6 +1242,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   ipcMain.removeHandler('processReplay');
   ipcMain.handle(
     'processReplay',
-    (event: IpcMainInvokeEvent, filePath: string) => processReplay(filePath),
+    (event: IpcMainInvokeEvent, filePath: string) =>
+      processReplay(filePath, ''),
   );
 }

@@ -189,7 +189,7 @@ export function setEntrantIdToPendingSets(
   recalculateAndSendBroadcasts();
 }
 
-export async function processReplay(filePath: string) {
+export async function processReplay(filePath: string, dolphinId: string) {
   const gameStartInfos = await getGameStartInfo(filePath);
   const infosWithPlayers = gameStartInfos.filter(
     (gameStartInfo) => gameStartInfo.playerType === 0,
@@ -306,6 +306,21 @@ export async function processReplay(filePath: string) {
       p2Name = p1IsEntrant1 ? set.entrant2Name : set.entrant1Name;
       p2Score = p1IsEntrant1 ? set.entrant2Score : set.entrant1Score;
       p2WL = p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
+
+      const spectating = dolphinIdToSpectating.get(dolphinId);
+      if (spectating) {
+        const broadcast = idToBroadcast.get(spectating.broadcastId);
+        if (broadcast) {
+          idToBroadcast.set(spectating.broadcastId, {
+            ...broadcast,
+            set: {
+              id: set.id,
+              names: `${set.entrant1Name} vs ${set.entrant2Name}`,
+            },
+          });
+          sendBroadcasts();
+        }
+      }
     }
   }
 
@@ -341,7 +356,7 @@ export async function setOverlayDolphinId(newOverlayDolphinId: string) {
   if (changed) {
     const filePath = dolphinIdToFilePath.get(overlayDolphinId);
     if (filePath) {
-      await processReplay(filePath);
+      await processReplay(filePath, overlayDolphinId);
     }
   }
 }
@@ -432,7 +447,7 @@ export function connect(port: number) {
             }
             dolphinIdToFilePath.set(message.dolphinId, message.filePath);
             if (overlayDolphinId === message.dolphinId) {
-              processReplay(message.filePath).catch(() => {
+              processReplay(message.filePath, message.dolphinId).catch(() => {
                 // just catch
               });
             }
