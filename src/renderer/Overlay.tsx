@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import {
   CircularProgress,
   IconButton,
@@ -8,38 +8,23 @@ import {
   Tooltip,
 } from '@mui/material';
 import { DisplaySettings } from '@mui/icons-material';
-import { EMPTY_SCOREBOARD_INFO } from '../common/mst';
+import { MSTScoreboardInfo } from '../common/mst';
 
 export default function Overlay({
+  enableMST,
+  resourcesPath,
+  scoreboardInfo,
+  setEnableMST,
+  setResourcesPath,
   showErrorDialog,
 }: {
+  enableMST: boolean;
+  resourcesPath: string;
+  scoreboardInfo: MSTScoreboardInfo;
+  setEnableMST: (newEnableMST: boolean) => void;
+  setResourcesPath: (newResourcesPath: string) => void;
   showErrorDialog: (errors: string[]) => void;
 }) {
-  const [enableMST, setEnableMST] = useState(false);
-  const [resourcesPath, setResourcesPath] = useState('');
-  const [scoreboardInfo, setScoreboardInfo] = useState(EMPTY_SCOREBOARD_INFO);
-
-  useEffect(() => {
-    (async () => {
-      const enableMSTPromise = window.electron.getEnableMST();
-      const resourcesPathPromise = window.electron.getResourcesPath();
-      const initEnableMST = await enableMSTPromise;
-      const initResourcesPath = await resourcesPathPromise;
-      setEnableMST(initEnableMST);
-      setResourcesPath(initResourcesPath);
-
-      if (initEnableMST && initResourcesPath) {
-        setScoreboardInfo(await window.electron.getScoreboardInfo());
-      }
-    })();
-  }, []);
-
-  useEffect(() => {
-    window.electron.onScoreboardInfo((event, newScoreboardInfo) => {
-      setScoreboardInfo(newScoreboardInfo);
-    });
-  }, []);
-
   const [choosingResourcesPath, setChoosingResourcesPath] = useState(false);
 
   return (

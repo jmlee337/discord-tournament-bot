@@ -7,9 +7,11 @@ import {
   CardActions,
   CardContent,
   CardHeader,
+  FormControlLabel,
   List,
   ListItem,
   ListItemText,
+  Radio,
   Stack,
   TextField,
   Typography,
@@ -269,14 +271,17 @@ function BroadcastWithHighlightListItem({
 }
 
 export default function Remote({
+  overlayEnabled,
   remoteState,
   searchSubstr,
 }: {
+  overlayEnabled: boolean;
   remoteState: RemoteState;
   searchSubstr: string;
 }) {
   const [port, setPort] = useState(0);
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
+  const [overlayDolphinId, setOverlayDolphinId] = useState('');
   const [spectating, setSpectating] = useState<Spectating[]>([]);
   const [selectedChipData, setSelectedChipData] = useState<ChipData>({
     id: '',
@@ -287,8 +292,10 @@ export default function Remote({
   useEffect(() => {
     (async () => {
       const portPromise = window.electron.getRemotePort();
+      const overlayDolphinIdPromise = window.electron.getOverlayDolphinId();
       const startingRemotePromise = window.electron.getStartingRemote();
       setPort(await portPromise);
+      setOverlayDolphinId(await overlayDolphinIdPromise);
       const startingRemote = await startingRemotePromise;
       setBroadcasts(startingRemote.broadcasts);
       setSpectating(startingRemote.spectating);
@@ -402,7 +409,13 @@ export default function Remote({
                   )}
                 </CardContent>
               )}
-              <CardActions disableSpacing style={{ position: 'relative' }}>
+              <CardActions
+                disableSpacing
+                style={{
+                  justifyContent: 'space-between',
+                  position: 'relative',
+                }}
+              >
                 <DroppableChip
                   selectedChipData={selectedChipData}
                   onClickOrDrop={async (chipData) => {
@@ -434,6 +447,26 @@ export default function Remote({
                       left: '4px',
                       zIndex: 1,
                     }}
+                  />
+                )}
+                {overlayEnabled && (
+                  <FormControlLabel
+                    label="Overlay"
+                    slotProps={{ typography: { variant: 'caption' } }}
+                    control={
+                      <Radio
+                        checked={overlayDolphinId === spectate.dolphinId}
+                        disabled={!spectate.spectating}
+                        onChange={async (event, checked) => {
+                          if (checked) {
+                            await window.electron.setOverlayDolphinId(
+                              spectate.dolphinId,
+                            );
+                            setOverlayDolphinId(spectate.dolphinId);
+                          }
+                        }}
+                      />
+                    }
                   />
                 )}
               </CardActions>

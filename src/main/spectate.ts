@@ -51,6 +51,7 @@ const connectCodeToEntrant = new Map<
   string,
   { id: number; gamerTag: string }
 >();
+const dolphinIdToFilePath = new Map<string, string>();
 let overlayDolphinId: string | undefined;
 let tournamentName: string | undefined;
 let entrantIdToPendingSets = new Map<number, StartggSet[]>();
@@ -66,6 +67,7 @@ export function initSpectate(newMainWindow: BrowserWindow) {
   dolphinIdToSpectating.clear();
   connectCodeMisses.clear();
   connectCodeToEntrant.clear();
+  dolphinIdToFilePath.clear();
   overlayDolphinId = '';
   tournamentName = '';
   mainWindow = newMainWindow;
@@ -186,13 +188,6 @@ export function setEntrantIdToPendingSets(
 ) {
   entrantIdToPendingSets = newEntrantIdToPendingSets;
   recalculateAndSendBroadcasts();
-}
-
-export function getOverlayDolphinId() {
-  return overlayDolphinId;
-}
-export function setOverlayDolphinId(newOverlayDolphinId: string) {
-  overlayDolphinId = newOverlayDolphinId;
 }
 
 export async function processReplay(filePath: string) {
@@ -337,6 +332,20 @@ export async function processReplay(filePath: string) {
   return newFileScoreboardInfo;
 }
 
+export function getOverlayDolphinId() {
+  return overlayDolphinId;
+}
+export async function setOverlayDolphinId(newOverlayDolphinId: string) {
+  const changed = newOverlayDolphinId !== overlayDolphinId;
+  overlayDolphinId = newOverlayDolphinId;
+  if (changed) {
+    const filePath = dolphinIdToFilePath.get(overlayDolphinId);
+    if (filePath) {
+      await processReplay(filePath);
+    }
+  }
+}
+
 export function connect(port: number) {
   if (webSocketClient) {
     return;
@@ -421,7 +430,7 @@ export function connect(port: number) {
               });
               sendSpectating();
             }
-            // todo dolphinid to latest file
+            dolphinIdToFilePath.set(message.dolphinId, message.filePath);
             if (overlayDolphinId === message.dolphinId) {
               processReplay(message.filePath).catch(() => {
                 // just catch

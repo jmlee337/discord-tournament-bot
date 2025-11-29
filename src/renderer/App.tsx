@@ -39,6 +39,7 @@ import Bracket from './Bracket';
 import Remote from './Remote';
 import { pushWindowEventListener, WindowEvent } from './windowEvent';
 import Overlay from './Overlay';
+import { EMPTY_SCOREBOARD_INFO } from '../common/mst';
 
 enum TabValue {
   BRACKET = 'bracket',
@@ -98,6 +99,9 @@ function Hello() {
     err: '',
     status: RemoteStatus.DISCONNECTED,
   });
+  const [enableMST, setEnableMST] = useState(false);
+  const [resourcesPath, setResourcesPath] = useState('');
+  const [scoreboardInfo, setScoreboardInfo] = useState(EMPTY_SCOREBOARD_INFO);
 
   // tabs
   const [tabValue, setTabValue] = useState(TabValue.BROADCASTS);
@@ -106,6 +110,8 @@ function Hello() {
     const inner = async () => {
       const discordConfigPromise = window.electron.getDiscordConfig();
       const startingStatePromise = window.electron.getStartingState();
+      const enableMSTPromise = window.electron.getEnableMST();
+      const resourcesPathPromise = window.electron.getResourcesPath();
 
       // req network
       const latestAppVersionPromise = window.electron.getLatestVersion();
@@ -123,6 +129,14 @@ function Hello() {
       }
       setRemoteState((await startingStatePromise).remoteState);
       setTournament((await startingStatePromise).tournament);
+
+      const initEnableMST = await enableMSTPromise;
+      const initResourcesPath = await resourcesPathPromise;
+      setEnableMST(initEnableMST);
+      setResourcesPath(initResourcesPath);
+      if (initEnableMST && initResourcesPath) {
+        setScoreboardInfo(await window.electron.getScoreboardInfo());
+      }
 
       // req network
       const messages: string[] = [];
@@ -157,6 +171,9 @@ function Hello() {
     });
     window.electron.onRemoteState((event, newRemoteState) => {
       setRemoteState(newRemoteState);
+    });
+    window.electron.onScoreboardInfo((event, newScoreboardInfo) => {
+      setScoreboardInfo(newScoreboardInfo);
     });
   });
 
@@ -349,10 +366,21 @@ function Hello() {
       </AppBar>
       <div style={{ marginTop: '168px' }} />
       <TabPanel value={tabValue} index={TabValue.BROADCASTS}>
-        <Remote remoteState={remoteState} searchSubstr={searchSubstr} />
+        <Remote
+          overlayEnabled={enableMST && Boolean(resourcesPath)}
+          remoteState={remoteState}
+          searchSubstr={searchSubstr}
+        />
       </TabPanel>
       <TabPanel value={tabValue} index={TabValue.OVERLAY}>
-        <Overlay showErrorDialog={showErrorDialog} />
+        <Overlay
+          enableMST={enableMST}
+          resourcesPath={resourcesPath}
+          scoreboardInfo={scoreboardInfo}
+          setEnableMST={setEnableMST}
+          setResourcesPath={setResourcesPath}
+          showErrorDialog={showErrorDialog}
+        />
       </TabPanel>
       <TabPanel value={tabValue} index={TabValue.BRACKET}>
         <Bracket discordStatus={discordStatus} searchSubstr={searchSubstr} />
