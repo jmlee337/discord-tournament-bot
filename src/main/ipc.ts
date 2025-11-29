@@ -68,14 +68,15 @@ import {
   setConnectCodes,
   setEntrantIdToPendingSets,
   setOverlayDolphinId,
-  setTournamentName,
   startSpectating,
 } from './spectate';
 import {
   initMST,
+  pendingSetsUpdate,
   readScoreboardInfo,
   setEnableMST,
   setResourcesPath,
+  setTournamentName,
 } from './mst';
 
 const CONFIRMATION_TIMEOUT_MS = 30000;
@@ -246,6 +247,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       });
     });
     setEntrantIdToPendingSets(entrantIdToPendingSets);
+    pendingSetsUpdate(entrantIdToPendingSets);
     mainWindow.webContents.send('sets', newSets);
     sets = newSets;
   };

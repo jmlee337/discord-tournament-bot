@@ -53,7 +53,6 @@ const connectCodeToEntrant = new Map<
 >();
 const dolphinIdToFilePath = new Map<string, string>();
 let overlayDolphinId: string | undefined;
-let tournamentName: string | undefined;
 let entrantIdToPendingSets = new Map<number, StartggSet[]>();
 
 export function initSpectate(newMainWindow: BrowserWindow) {
@@ -69,7 +68,6 @@ export function initSpectate(newMainWindow: BrowserWindow) {
   connectCodeToEntrant.clear();
   dolphinIdToFilePath.clear();
   overlayDolphinId = '';
-  tournamentName = '';
   mainWindow = newMainWindow;
 }
 
@@ -167,10 +165,6 @@ function recalculateAndSendBroadcasts() {
   sendBroadcasts();
 }
 
-export function setTournamentName(newTournamentName: string) {
-  tournamentName = newTournamentName;
-}
-
 export function setConnectCodes(connectCodes: ConnectCode[]) {
   connectCodeMisses.clear();
   connectCodes.forEach(({ connectCode, entrantId, gamerTag }) => {
@@ -251,13 +245,8 @@ export async function processReplay(filePath: string, dolphinId: string) {
       };
     },
   );
-
   let p1Name = mstInfos[0].entrant?.gamerTag;
-  let p1Score: number | undefined;
-  let p1WL: MSTWL | undefined;
   let p2Name = mstInfos[1].entrant?.gamerTag;
-  let p2Score: number | undefined;
-  let p2WL: MSTWL | undefined;
 
   let set: StartggSet | undefined;
   const p1PendingSets = mstInfos[0].entrant
@@ -290,6 +279,10 @@ export async function processReplay(filePath: string, dolphinId: string) {
     }
   }
 
+  let p1Score: number | undefined;
+  let p1WL: MSTWL | undefined;
+  let p2Score: number | undefined;
+  let p2WL: MSTWL | undefined;
   let bestOf: MSTBestOf | undefined;
   let round: string | undefined;
   if (set) {
@@ -325,6 +318,8 @@ export async function processReplay(filePath: string, dolphinId: string) {
   }
 
   const newFileScoreboardInfo: MSTNewFileScoreboardInfo = {
+    p1EntrantId: mstInfos[0].entrant?.id,
+    p2EntrantId: mstInfos[1].entrant?.id,
     setId: set?.id,
     p1Name,
     p1Character: mstInfos[0].character,
@@ -340,7 +335,6 @@ export async function processReplay(filePath: string, dolphinId: string) {
     p2WL,
     bestOf,
     round,
-    tournamentName,
   };
 
   await newFileUpdate(newFileScoreboardInfo);

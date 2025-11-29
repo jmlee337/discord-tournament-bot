@@ -52,6 +52,8 @@ export type MSTWL = 'Nada' | 'W' | 'L';
 export type MSTBestOf = 'Bo3' | 'Bo5';
 
 export type MSTNewFileScoreboardInfo = {
+  p1EntrantId?: number;
+  p2EntrantId?: number;
   setId?: number;
   p1Name?: string;
   p1Character: MSTCharacter;
@@ -67,7 +69,6 @@ export type MSTNewFileScoreboardInfo = {
   p2WL?: MSTWL;
   bestOf?: MSTBestOf;
   round?: string;
-  tournamentName?: string;
 };
 
 export type MSTScoreboardInfo = {

@@ -2,13 +2,18 @@ import { readFile, writeFile } from 'fs/promises';
 import path from 'path';
 import { BrowserWindow } from 'electron';
 import { EMPTY_SCOREBOARD_INFO, MSTNewFileScoreboardInfo } from '../common/mst';
+import { StartggSet } from '../common/types';
 
 let mainWindow: BrowserWindow | undefined;
+let p1EntrantId: number | undefined;
+let p2EntrantId: number | undefined;
 let setId: number | undefined;
 let scoreboardInfo = EMPTY_SCOREBOARD_INFO;
 
 export function initMST(window: BrowserWindow) {
   mainWindow = window;
+  p1EntrantId = undefined;
+  p2EntrantId = undefined;
   setId = undefined;
   scoreboardInfo = EMPTY_SCOREBOARD_INFO;
 }
@@ -44,6 +49,10 @@ export function setResourcesPath(newResourcesPath: string, canUpdate: boolean) {
   }
 }
 
+export function setTournamentName(newTournamentName: string) {
+  scoreboardInfo.tournamentName = newTournamentName;
+}
+
 async function writeScoreboardInfo() {
   if (!enable || !resourcesPath) {
     return;
@@ -59,9 +68,13 @@ async function writeScoreboardInfo() {
 export async function newFileUpdate(
   newFileScoreboardInfo: MSTNewFileScoreboardInfo,
 ) {
-  const setChanged =
-    newFileScoreboardInfo.setId !== undefined &&
-    newFileScoreboardInfo.setId !== setId;
+  p1EntrantId = newFileScoreboardInfo.p1EntrantId;
+  p2EntrantId = newFileScoreboardInfo.p2EntrantId;
+  if (newFileScoreboardInfo.setId === undefined) {
+    // request sgg refresh
+  }
+
+  const setChanged = newFileScoreboardInfo.setId !== setId;
   if (setChanged) {
     setId = newFileScoreboardInfo.setId;
   }
@@ -103,9 +116,73 @@ export async function newFileUpdate(
   if (newFileScoreboardInfo.round) {
     scoreboardInfo.round = newFileScoreboardInfo.round;
   }
-  if (newFileScoreboardInfo.tournamentName) {
-    scoreboardInfo.tournamentName = newFileScoreboardInfo.tournamentName;
-  }
 
   await writeScoreboardInfo();
+}
+
+async function pendingSetUpdate(
+  set: StartggSet,
+  localP1EntrantId: number | undefined,
+  localP2EntrantId: number | undefined,
+) {
+  scoreboardInfo.bestOf = set.bestOf === 5 ? 'Bo5' : 'Bo3';
+  scoreboardInfo.round = set.fullRoundText;
+
+  const p1IsEntrant1 =
+    localP1EntrantId !== undefined
+      ? set.entrant1Id === localP1EntrantId
+      : set.entrant2Id === localP2EntrantId;
+  scoreboardInfo.p1Name = p1IsEntrant1 ? set.entrant1Name : set.entrant2Name;
+  scoreboardInfo.p1Score = p1IsEntrant1 ? set.entrant1Score : set.entrant2Score;
+  scoreboardInfo.p1WL =
+    !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
+  scoreboardInfo.p2Name = p1IsEntrant1 ? set.entrant2Name : set.entrant1Name;
+  scoreboardInfo.p2Score = p1IsEntrant1 ? set.entrant2Score : set.entrant1Score;
+  scoreboardInfo.p2WL =
+    p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
+
+  await writeScoreboardInfo();
+}
+
+export async function pendingSetsUpdate(
+  entrantIdToPendingSets: Map<number, StartggSet[]>,
+) {
+  if (p1EntrantId === undefined && p2EntrantId === undefined) {
+    return;
+  }
+
+  const idToPendingSet = new Map<number, StartggSet>();
+  const idToIntersectionSet = new Map<number, StartggSet>();
+  [p1EntrantId, p2EntrantId]
+    .filter((entrantId) => entrantId !== undefined)
+    .forEach((entrantId) => {
+      const pendingSets = entrantIdToPendingSets.get(entrantId);
+      if (pendingSets) {
+        pendingSets.forEach((pendingSet) => {
+          if (idToPendingSet.has(pendingSet.id)) {
+            idToIntersectionSet.set(pendingSet.id, pendingSet);
+          } else {
+            idToPendingSet.set(pendingSet.id, pendingSet);
+          }
+        });
+      }
+    });
+
+  if (idToIntersectionSet.size > 1) {
+    return;
+  }
+
+  if (idToIntersectionSet.size === 1) {
+    await pendingSetUpdate(
+      Array.from(idToIntersectionSet.values())[0],
+      p1EntrantId,
+      p2EntrantId,
+    );
+  } else if (idToPendingSet.size === 1) {
+    await pendingSetUpdate(
+      Array.from(idToPendingSet.values())[0],
+      p1EntrantId,
+      p2EntrantId,
+    );
+  }
 }
