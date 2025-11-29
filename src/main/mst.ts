@@ -4,10 +4,12 @@ import { BrowserWindow } from 'electron';
 import { EMPTY_SCOREBOARD_INFO, MSTNewFileScoreboardInfo } from '../common/mst';
 
 let mainWindow: BrowserWindow | undefined;
+let setId: number | undefined;
 let scoreboardInfo = EMPTY_SCOREBOARD_INFO;
 
 export function initMST(window: BrowserWindow) {
   mainWindow = window;
+  setId = undefined;
   scoreboardInfo = EMPTY_SCOREBOARD_INFO;
 }
 
@@ -20,7 +22,7 @@ export async function readScoreboardInfo() {
 
   const json = await readFile(
     path.join(resourcesPath, 'Texts', 'ScoreboardInfo.json'),
-    'utf8',
+    { encoding: 'utf8' },
   );
   scoreboardInfo = JSON.parse(json);
   return scoreboardInfo;
@@ -34,9 +36,10 @@ export function setEnableMST(newEnable: boolean) {
   }
 }
 
-export function setResourcesPath(newResourcesPath: string) {
+export function setResourcesPath(newResourcesPath: string, canUpdate: boolean) {
+  const changed = resourcesPath !== newResourcesPath;
   resourcesPath = newResourcesPath;
-  if (enable && resourcesPath) {
+  if (enable && changed && canUpdate) {
     mainWindow?.webContents.send('scoreboardInfo', readScoreboardInfo());
   }
 }
@@ -46,16 +49,23 @@ async function writeScoreboardInfo() {
     return;
   }
 
-  mainWindow?.webContents.send('scoreboardInfo', scoreboardInfo);
   await writeFile(
     path.join(resourcesPath, 'Texts', 'ScoreboardInfo.json'),
     JSON.stringify(scoreboardInfo, undefined, 2),
   );
+  mainWindow?.webContents.send('scoreboardInfo', scoreboardInfo);
 }
 
 export async function newFileUpdate(
   newFileScoreboardInfo: MSTNewFileScoreboardInfo,
 ) {
+  const setChanged =
+    newFileScoreboardInfo.setId !== undefined &&
+    newFileScoreboardInfo.setId !== setId;
+  if (setChanged) {
+    setId = newFileScoreboardInfo.setId;
+  }
+
   scoreboardInfo.p1Character = newFileScoreboardInfo.p1Character;
   scoreboardInfo.p1Skin = newFileScoreboardInfo.p1Skin;
   scoreboardInfo.p1Color = newFileScoreboardInfo.p1Color;
@@ -66,10 +76,9 @@ export async function newFileUpdate(
   if (newFileScoreboardInfo.p1Name) {
     scoreboardInfo.p1Name = newFileScoreboardInfo.p1Name;
   }
-  // TODO: always overwrite score if set changed
   if (
-    newFileScoreboardInfo.p1Score &&
-    newFileScoreboardInfo.p1Score > scoreboardInfo.p1Score
+    newFileScoreboardInfo.p1Score !== undefined &&
+    (setChanged || newFileScoreboardInfo.p1Score > scoreboardInfo.p1Score)
   ) {
     scoreboardInfo.p1Score = newFileScoreboardInfo.p1Score;
   }
@@ -79,10 +88,9 @@ export async function newFileUpdate(
   if (newFileScoreboardInfo.p2Name) {
     scoreboardInfo.p2Name = newFileScoreboardInfo.p2Name;
   }
-  // TODO: always overwrite score if set changed
   if (
-    newFileScoreboardInfo.p2Score &&
-    newFileScoreboardInfo.p2Score > scoreboardInfo.p2Score
+    newFileScoreboardInfo.p2Score !== undefined &&
+    (setChanged || newFileScoreboardInfo.p2Score > scoreboardInfo.p2Score)
   ) {
     scoreboardInfo.p2Score = newFileScoreboardInfo.p2Score;
   }

@@ -311,6 +311,7 @@ export async function processReplay(filePath: string) {
   }
 
   const newFileScoreboardInfo: MSTNewFileScoreboardInfo = {
+    setId: set?.id,
     p1Name,
     p1Character: mstInfos[0].character,
     p1Skin: mstInfos[0].skinColor,

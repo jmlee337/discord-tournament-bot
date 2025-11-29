@@ -52,6 +52,7 @@ export type MSTWL = 'Nada' | 'W' | 'L';
 export type MSTBestOf = 'Bo3' | 'Bo5';
 
 export type MSTNewFileScoreboardInfo = {
+  setId?: number;
   p1Name?: string;
   p1Character: MSTCharacter;
   p1Skin: MSTSkinColor;

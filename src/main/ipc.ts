@@ -187,7 +187,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let startggApiKey = store.get('startggApiKey', '');
 
   setEnableMST(enableMST);
-  setResourcesPath(resourcesPath);
+  setResourcesPath(resourcesPath, false);
 
   /**
    * Needed for both Discord and start.gg
@@ -918,7 +918,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     const [newResourcesPath] = openDialogRes.filePaths;
     store.set('resourcesPath', newResourcesPath);
     resourcesPath = newResourcesPath;
-    setResourcesPath(resourcesPath);
+    setResourcesPath(resourcesPath, true);
     return resourcesPath;
   });
 
