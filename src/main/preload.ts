@@ -17,7 +17,11 @@ import {
   StartggTournament,
   StartingState,
 } from '../common/types';
-import { MSTScoreboardInfo } from '../common/mst';
+import {
+  MSTGameEndScoreboardInfo,
+  MSTNewFileScoreboardInfo,
+  MSTScoreboardInfo,
+} from '../common/mst';
 
 const electronHandler = {
   getDiscordConfig: (): Promise<DiscordConfig> =>
@@ -135,8 +139,14 @@ const electronHandler = {
   // exposed for dev only
   registerSlashCommands: (): Promise<void> =>
     ipcRenderer.invoke('registerSlashCommands'),
-  processReplay: (filePath: string): Promise<MSTScoreboardInfo | null> =>
-    ipcRenderer.invoke('processReplay', filePath),
+  processNewReplay: (
+    filePath: string,
+  ): Promise<MSTNewFileScoreboardInfo | null> =>
+    ipcRenderer.invoke('processNewReplay', filePath),
+  processFinishedReplay: (
+    filePath: string,
+  ): Promise<MSTGameEndScoreboardInfo | null> =>
+    ipcRenderer.invoke('processFinishedReplay', filePath),
 };
 
 contextBridge.exposeInMainWorld('electron', electronHandler);

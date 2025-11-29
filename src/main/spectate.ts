@@ -8,16 +8,17 @@ import {
   Spectating,
   StartggSet,
 } from '../common/types';
-import getGameStartInfo from './replay';
+import { getGameEndInfo, getGameStartInfos } from './replay';
 import {
   characterIdToMST,
   MSTCharacter,
+  MSTGameEndScoreboardInfo,
   MSTNewFileScoreboardInfo,
   MSTPortColor,
   MSTSetData,
   MSTSkinColor,
 } from '../common/mst';
-import { newFileUpdate } from './mst';
+import { gameEndUpdate, newFileUpdate } from './mst';
 
 type RemoteBroadcast = {
   id: string;
@@ -182,16 +183,19 @@ export function setEntrantIdToPendingSets(
   recalculateAndSendBroadcasts();
 }
 
-export async function processReplay(filePath: string, dolphinId: string) {
-  const gameStartInfos = await getGameStartInfo(filePath);
-  const infosWithPlayers = gameStartInfos.filter(
+export async function processNewReplay(filePath: string, dolphinId: string) {
+  const gameStartInfos = await getGameStartInfos(filePath);
+  const emptyInfos = gameStartInfos.filter(
+    (gameStartInfo) => gameStartInfo.playerType === 3,
+  );
+  const playerInfos = gameStartInfos.filter(
     (gameStartInfo) => gameStartInfo.playerType === 0,
   );
-  if (infosWithPlayers.length !== 2) {
+  if (emptyInfos.length !== 2 || playerInfos.length !== 2) {
     return null;
   }
 
-  const mstInfos = infosWithPlayers.map(
+  const mstInfos = playerInfos.map(
     (
       gameStartInfo,
       i,
@@ -326,9 +330,40 @@ export async function processReplay(filePath: string, dolphinId: string) {
     p2Color: mstInfos[1].portColor,
     setData,
   };
-
   await newFileUpdate(newFileScoreboardInfo);
   return newFileScoreboardInfo;
+}
+
+export async function processFinishedReplay(filePath: string) {
+  const gameEndInfo = await getGameEndInfo(filePath);
+  if (!gameEndInfo.definite) {
+    return null;
+  }
+
+  const emptySlots = gameEndInfo.playerTypes.filter(
+    (playerType) => playerType === 3,
+  );
+  const playerSlots = gameEndInfo.playerTypes.filter(
+    (playerType) => playerType === 0,
+  );
+  if (emptySlots.length !== 2 || playerSlots.length !== 2) {
+    return null;
+  }
+
+  const placings = gameEndInfo.placings.filter(
+    (placing) =>
+      placing === 0 || placing === 1 || placing === 2 || placing === 3,
+  );
+  if (placings.length !== 2) {
+    return null;
+  }
+
+  const gameEndScoreboardInfo: MSTGameEndScoreboardInfo = {
+    p1ScoreIncrement: placings[0] === 0,
+    p2ScoreIncrement: placings[1] === 0,
+  };
+  await gameEndUpdate(gameEndScoreboardInfo);
+  return gameEndScoreboardInfo;
 }
 
 export function getOverlayDolphinId() {
@@ -340,7 +375,7 @@ export async function setOverlayDolphinId(newOverlayDolphinId: string) {
   if (changed) {
     const filePath = dolphinIdToFilePath.get(overlayDolphinId);
     if (filePath) {
-      await processReplay(filePath, overlayDolphinId);
+      await processNewReplay(filePath, overlayDolphinId);
     }
   }
 }
@@ -412,6 +447,16 @@ export function connect(port: number) {
             sendSpectating();
             return;
           case 'game-end-event':
+            if (
+              overlayDolphinId === message.dolphinId &&
+              dolphinIdToFilePath.has(message.dolphinId)
+            ) {
+              processFinishedReplay(
+                dolphinIdToFilePath.get(message.dolphinId)!,
+              ).catch(() => {
+                // just catch
+              });
+            }
             if (!dolphinIdToSpectating.has(message.dolphinId)) {
               dolphinIdToSpectating.set(message.dolphinId, {
                 dolphinId: message.dolphinId,
@@ -424,9 +469,11 @@ export function connect(port: number) {
           case 'new-file-event':
             dolphinIdToFilePath.set(message.dolphinId, message.filePath);
             if (overlayDolphinId === message.dolphinId) {
-              processReplay(message.filePath, message.dolphinId).catch(() => {
-                // just catch
-              });
+              processNewReplay(message.filePath, message.dolphinId).catch(
+                () => {
+                  // just catch
+                },
+              );
             }
             if (!dolphinIdToSpectating.has(message.dolphinId)) {
               dolphinIdToSpectating.set(message.dolphinId, {

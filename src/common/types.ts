@@ -162,3 +162,9 @@ export type GameStartInfo = {
   costumeIndex: number;
   connectCode?: string;
 };
+
+export type GameEndInfo = {
+  definite: boolean;
+  placings: number[];
+  playerTypes: number[];
+};

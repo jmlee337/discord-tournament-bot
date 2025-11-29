@@ -63,7 +63,8 @@ import {
   getRemoteState,
   getSpectating,
   initSpectate,
-  processReplay,
+  processFinishedReplay,
+  processNewReplay,
   refreshBroadcasts,
   setConnectCodes,
   setEntrantIdToPendingSets,
@@ -922,9 +923,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       return resourcesPath;
     }
     const [newResourcesPath] = openDialogRes.filePaths;
-    store.set('resourcesPath', newResourcesPath);
-    resourcesPath = newResourcesPath;
-    setResourcesPath(resourcesPath, true);
+    if (resourcesPath !== newResourcesPath) {
+      store.set('resourcesPath', newResourcesPath);
+      resourcesPath = newResourcesPath;
+      setResourcesPath(resourcesPath, true);
+    }
     return resourcesPath;
   });
 
@@ -1240,10 +1243,17 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
-  ipcMain.removeHandler('processReplay');
+  ipcMain.removeHandler('processNewReplay');
   ipcMain.handle(
-    'processReplay',
+    'processNewReplay',
     (event: IpcMainInvokeEvent, filePath: string) =>
-      processReplay(filePath, ''),
+      processNewReplay(filePath, ''),
+  );
+
+  ipcMain.removeHandler('processFinishedReplay');
+  ipcMain.handle(
+    'processFinishedReplay',
+    (event: IpcMainInvokeEvent, filePath: string) =>
+      processFinishedReplay(filePath),
   );
 }

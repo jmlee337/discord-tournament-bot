@@ -60,6 +60,7 @@ export type MSTSetData = {
   bestOf: MSTBestOf;
   round: string;
 };
+
 export type MSTNewFileScoreboardInfo = {
   p1EntrantId?: number;
   p2EntrantId?: number;
@@ -72,6 +73,11 @@ export type MSTNewFileScoreboardInfo = {
   p2Skin: MSTSkinColor;
   p2Color: MSTPortColor;
   setData?: MSTSetData;
+};
+
+export type MSTGameEndScoreboardInfo = {
+  p1ScoreIncrement: boolean;
+  p2ScoreIncrement: boolean;
 };
 
 export type MSTScoreboardInfo = {

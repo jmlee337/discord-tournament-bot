@@ -1,7 +1,11 @@
 import { readFile, writeFile } from 'fs/promises';
 import path from 'path';
 import { BrowserWindow } from 'electron';
-import { EMPTY_SCOREBOARD_INFO, MSTNewFileScoreboardInfo } from '../common/mst';
+import {
+  EMPTY_SCOREBOARD_INFO,
+  MSTGameEndScoreboardInfo,
+  MSTNewFileScoreboardInfo,
+} from '../common/mst';
 import { StartggSet } from '../common/types';
 
 let mainWindow: BrowserWindow | undefined;
@@ -188,4 +192,16 @@ export async function pendingSetsUpdate(
       p2EntrantId,
     );
   }
+}
+
+export async function gameEndUpdate(
+  gameEndScoreboardInfo: MSTGameEndScoreboardInfo,
+) {
+  if (gameEndScoreboardInfo.p1ScoreIncrement) {
+    scoreboardInfo.p1Score += 1;
+  } else if (gameEndScoreboardInfo.p2ScoreIncrement) {
+    scoreboardInfo.p2Score += 1;
+  }
+
+  await writeScoreboardInfo();
 }
