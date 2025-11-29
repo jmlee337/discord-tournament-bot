@@ -153,6 +153,8 @@ export async function pendingSetsUpdate(
   }
 
   const idToPendingSet = new Map<number, StartggSet>();
+
+  // TODO: require intersection
   const idToIntersectionSet = new Map<number, StartggSet>();
   [p1EntrantId, p2EntrantId]
     .filter((entrantId) => entrantId !== undefined)

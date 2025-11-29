@@ -254,6 +254,8 @@ export async function processReplay(filePath: string, dolphinId: string) {
   const p2PendingSets = mstInfos[1].entrant
     ? entrantIdToPendingSets.get(mstInfos[1].entrant.id)
     : undefined;
+
+  // TODO: require intersection
   if (
     p1PendingSets &&
     p1PendingSets.length > 0 &&
