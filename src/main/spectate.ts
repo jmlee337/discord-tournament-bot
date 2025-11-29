@@ -405,6 +405,7 @@ export function connect(port: number) {
             sendSpectating();
             return;
           case 'dolphin-closed-event':
+            dolphinIdToFilePath.delete(message.dolphinId);
             dolphinIdToSpectating.delete(message.dolphinId);
             sendSpectating();
             return;
@@ -419,6 +420,12 @@ export function connect(port: number) {
             }
             return;
           case 'new-file-event':
+            dolphinIdToFilePath.set(message.dolphinId, message.filePath);
+            if (overlayDolphinId === message.dolphinId) {
+              processReplay(message.filePath, message.dolphinId).catch(() => {
+                // just catch
+              });
+            }
             if (!dolphinIdToSpectating.has(message.dolphinId)) {
               dolphinIdToSpectating.set(message.dolphinId, {
                 dolphinId: message.dolphinId,
@@ -426,12 +433,6 @@ export function connect(port: number) {
                 spectating: true,
               });
               sendSpectating();
-            }
-            dolphinIdToFilePath.set(message.dolphinId, message.filePath);
-            if (overlayDolphinId === message.dolphinId) {
-              processReplay(message.filePath, message.dolphinId).catch(() => {
-                // just catch
-              });
             }
             return;
           case 'list-broadcasts-response':
