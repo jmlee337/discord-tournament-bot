@@ -21,6 +21,7 @@ export enum MSTCharacter {
   PEACH = 'Peach',
   ROY = 'Roy',
   SAMUS = 'Samus',
+  SHEIK = 'Sheik', // only used internally, not supported by MST/MGS
   YOSHI = 'Yoshi',
   YL = 'Young Link',
   ZELDA = 'Zelda',
@@ -252,7 +253,7 @@ export const characterIdToMST = new Map<
   [
     0x13,
     {
-      character: MSTCharacter.ZELDA,
+      character: MSTCharacter.SHEIK,
       skinColors: [
         'Sheik Default',
         'Sheik Red',
@@ -261,7 +262,7 @@ export const characterIdToMST = new Map<
         'Sheik Purple',
       ],
     },
-  ], // Sheik
+  ],
   [
     0x14,
     {
@@ -305,38 +306,15 @@ export const characterIdToMST = new Map<
     },
   ],
   [0x1a, { character: MSTCharacter.RANDOM, skinColors: ['Default'] }], // Master Hand
-  [0x1b, { character: MSTCharacter.RANDOM, skinColors: ['Default'] }], // Wireframe Male
-  [0x1c, { character: MSTCharacter.RANDOM, skinColors: ['Default'] }], // Wireframe Female
-  [0x1d, { character: MSTCharacter.RANDOM, skinColors: ['Default'] }], // Giga Bowser
-  [0x1e, { character: MSTCharacter.RANDOM, skinColors: ['Default'] }], // Crazy Hand
-  [0x1f, { character: MSTCharacter.RANDOM, skinColors: ['Default'] }], // Sandbag
-  [0x20, { character: MSTCharacter.RANDOM, skinColors: ['Default'] }], // Sopo
-  [0x21, { character: MSTCharacter.RANDOM, skinColors: ['Default'] }], // "User Select(Event) / None"
+  // there are more but they all map to RANDOM/Default
 ]);
 
-export const MSTCharacterToSkinColors = new Map([
-  ...Array.from(characterIdToMST.values()).map(
-    ({ character, skinColors }): [MSTCharacter, MSTSkinColor[]] => [
-      character,
-      skinColors,
-    ],
-  ),
-  [
-    MSTCharacter.ZELDA,
-    [
-      'Sheik Default',
-      'Sheik Red',
-      'Sheik Blue',
-      'Sheik Green',
-      'Sheik Purple',
-      'Default',
-      'Red',
-      'Blue',
-      'Green',
-      'Purple',
-    ],
-  ],
-]);
+export const MSTCharacterToSkinColors = new Map(
+  Array.from(characterIdToMST.values()).map(({ character, skinColors }) => [
+    character,
+    skinColors,
+  ]),
+);
 
 export const EMPTY_SCOREBOARD_INFO: MSTScoreboardInfo = {
   p1Name: '',
@@ -364,3 +342,19 @@ export const EMPTY_SCOREBOARD_INFO: MSTScoreboardInfo = {
   caster2Twitch: '',
   allowIntro: false,
 };
+
+export const SHEIK_SKIN_TO_ZELDA_SKIN = new Map<MSTSkinColor, MSTSkinColor>([
+  ['Sheik Default', 'Default'],
+  ['Sheik Red', 'Red'],
+  ['Sheik Blue', 'Blue'],
+  ['Sheik Green', 'Green'],
+  ['Sheik Purple', 'Purple'],
+]);
+
+export const ZELDA_SKIN_TO_SHEIK_SKIN = new Map<MSTSkinColor, MSTSkinColor>([
+  ['Default', 'Sheik Default'],
+  ['Red', 'Sheik Red'],
+  ['Blue', 'Sheik Blue'],
+  ['Green', 'Sheik Green'],
+  ['Purple', 'Sheik Purple'],
+]);

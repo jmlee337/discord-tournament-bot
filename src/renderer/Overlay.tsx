@@ -22,6 +22,8 @@ import {
   MSTScoreboardInfo,
   MSTSkinColor,
   MSTWL,
+  SHEIK_SKIN_TO_ZELDA_SKIN,
+  ZELDA_SKIN_TO_SHEIK_SKIN,
 } from '../common/mst';
 
 export default function Overlay({
@@ -217,20 +219,45 @@ export default function Overlay({
                     labelId="p1-character-select-label"
                     value={p1Character}
                     onChange={(event) => {
+                      const oldCharacter = p1Character;
                       const newCharacter = event.target.value;
-                      setP1Character(event.target.value);
-                      setP1Skin(
-                        newCharacter === MSTCharacter.ZELDA
-                          ? 'Sheik Default'
-                          : 'Default',
-                      );
+                      if (oldCharacter !== newCharacter) {
+                        setP1Character(newCharacter);
+                        if (
+                          oldCharacter === MSTCharacter.SHEIK &&
+                          newCharacter === MSTCharacter.ZELDA
+                        ) {
+                          setP1Skin((previousP1Skin) => {
+                            const zeldaSkin =
+                              SHEIK_SKIN_TO_ZELDA_SKIN.get(previousP1Skin);
+                            if (!zeldaSkin) {
+                              throw new Error('unreachable');
+                            }
+                            return zeldaSkin;
+                          });
+                        } else if (
+                          oldCharacter === MSTCharacter.ZELDA &&
+                          newCharacter === MSTCharacter.SHEIK
+                        ) {
+                          setP1Skin((previousP1Skin) => {
+                            const sheikSkin =
+                              ZELDA_SKIN_TO_SHEIK_SKIN.get(previousP1Skin);
+                            if (!sheikSkin) {
+                              throw new Error('unreachable');
+                            }
+                            return sheikSkin;
+                          });
+                        } else {
+                          setP1Skin(
+                            MSTCharacterToSkinColors.get(newCharacter)![0],
+                          );
+                        }
+                      }
                     }}
                   >
                     {Object.values(MSTCharacter).map((character) => (
                       <MenuItem key={character} value={character}>
-                        {character === MSTCharacter.ZELDA
-                          ? 'Zelda/Sheik'
-                          : character}
+                        {character}
                       </MenuItem>
                     ))}
                   </Select>
@@ -328,20 +355,45 @@ export default function Overlay({
                     labelId="p2-character-select-label"
                     value={p2Character}
                     onChange={(event) => {
+                      const oldCharacter = p2Character;
                       const newCharacter = event.target.value;
-                      setP2Character(event.target.value);
-                      setP2Skin(
-                        newCharacter === MSTCharacter.ZELDA
-                          ? 'Sheik Default'
-                          : 'Default',
-                      );
+                      if (oldCharacter !== newCharacter) {
+                        setP2Character(newCharacter);
+                        if (
+                          oldCharacter === MSTCharacter.SHEIK &&
+                          newCharacter === MSTCharacter.ZELDA
+                        ) {
+                          setP2Skin((previousP2Skin) => {
+                            const zeldaSkin =
+                              SHEIK_SKIN_TO_ZELDA_SKIN.get(previousP2Skin);
+                            if (!zeldaSkin) {
+                              throw new Error('unreachable');
+                            }
+                            return zeldaSkin;
+                          });
+                        } else if (
+                          oldCharacter === MSTCharacter.ZELDA &&
+                          newCharacter === MSTCharacter.SHEIK
+                        ) {
+                          setP2Skin((previousP2Skin) => {
+                            const sheikSkin =
+                              ZELDA_SKIN_TO_SHEIK_SKIN.get(previousP2Skin);
+                            if (!sheikSkin) {
+                              throw new Error('unreachable');
+                            }
+                            return sheikSkin;
+                          });
+                        } else {
+                          setP2Skin(
+                            MSTCharacterToSkinColors.get(newCharacter)![0],
+                          );
+                        }
+                      }
                     }}
                   >
                     {Object.values(MSTCharacter).map((character) => (
                       <MenuItem key={character} value={character}>
-                        {character === MSTCharacter.ZELDA
-                          ? 'Zelda/Sheik'
-                          : character}
+                        {character}
                       </MenuItem>
                     ))}
                   </Select>

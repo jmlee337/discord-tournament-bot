@@ -3,9 +3,12 @@ import path from 'path';
 import { BrowserWindow } from 'electron';
 import {
   EMPTY_SCOREBOARD_INFO,
+  MSTCharacter,
+  MSTCharacterToSkinColors,
   MSTGameEndScoreboardInfo,
   MSTManualUpdateScoreboardInfo,
   MSTNewFileScoreboardInfo,
+  MSTScoreboardInfo,
 } from '../common/mst';
 import { StartggSet } from '../common/types';
 
@@ -78,21 +81,32 @@ async function writeScoreboardInfo() {
   }
 
   if (!enableSkinColor) {
-    if (scoreboardInfo.p1Skin.startsWith('Sheik')) {
-      scoreboardInfo.p1Skin = 'Sheik Default';
-    } else {
-      scoreboardInfo.p1Skin = 'Default';
-    }
-    if (scoreboardInfo.p2Skin.startsWith('Sheik')) {
-      scoreboardInfo.p2Skin = 'Sheik Default';
-    } else {
-      scoreboardInfo.p2Skin = 'Default';
-    }
+    [scoreboardInfo.p1Skin] = MSTCharacterToSkinColors.get(
+      scoreboardInfo.p1Character,
+    )!;
+    [scoreboardInfo.p2Skin] = MSTCharacterToSkinColors.get(
+      scoreboardInfo.p2Character,
+    )!;
   }
+
+  let { p1Character } = scoreboardInfo;
+  if (p1Character === MSTCharacter.SHEIK) {
+    p1Character = MSTCharacter.ZELDA;
+  }
+  let { p2Character } = scoreboardInfo;
+  if (p2Character === MSTCharacter.SHEIK) {
+    p2Character = MSTCharacter.ZELDA;
+  }
+
+  const writtenScoreboardInfo: MSTScoreboardInfo = {
+    ...scoreboardInfo,
+    p1Character,
+    p2Character,
+  };
 
   await writeFile(
     path.join(resourcesPath, 'Texts', 'ScoreboardInfo.json'),
-    JSON.stringify(scoreboardInfo, undefined, 2),
+    JSON.stringify(writtenScoreboardInfo, undefined, 2),
   );
   mainWindow?.webContents.send('scoreboardInfo', scoreboardInfo);
 }

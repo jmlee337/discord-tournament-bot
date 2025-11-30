@@ -236,7 +236,7 @@ export async function processNewReplay(filePath: string, dolphinId: string) {
 
       let skinColor = mst.skinColors[gameStartInfo.costumeIndex];
       if (!skinColor) {
-        skinColor = 'Default';
+        [skinColor] = mst.skinColors;
       }
       return {
         portColor,
