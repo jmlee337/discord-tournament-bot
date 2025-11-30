@@ -16,6 +16,7 @@ import {
 } from '@mui/material';
 import { DisplaySettings, OpenInBrowser, Restore } from '@mui/icons-material';
 import {
+  matchesGrandFinal,
   MSTBestOf,
   MSTCharacter,
   MSTCharacterToSkinColors,
@@ -191,7 +192,7 @@ export default function Overlay({
                     setP1Score(Number.parseInt(event.target.value, 10));
                   }}
                 />
-                {round.toLowerCase() === 'grand final' && (
+                {matchesGrandFinal(round) && (
                   <ToggleButton
                     size="small"
                     onChange={() => {
@@ -327,7 +328,7 @@ export default function Overlay({
                     setP2Score(Number.parseInt(event.target.value, 10));
                   }}
                 />
-                {round.toLowerCase() === 'grand final' && (
+                {matchesGrandFinal(round) && (
                   <ToggleButton
                     size="small"
                     onChange={() => {
@@ -557,7 +558,6 @@ export default function Overlay({
               onClick={async () => {
                 try {
                   setUpdating(true);
-                  // TODO: only send WL if grand finals
                   await window.electron.setScoreboardInfo({
                     p1Name,
                     p1Team,

@@ -3,12 +3,14 @@ import path from 'path';
 import { BrowserWindow } from 'electron';
 import {
   EMPTY_SCOREBOARD_INFO,
+  matchesGrandFinal,
   MSTCharacter,
   MSTCharacterToSkinColors,
   MSTGameEndScoreboardInfo,
   MSTManualUpdateScoreboardInfo,
   MSTNewFileScoreboardInfo,
   MSTScoreboardInfo,
+  MSTWL,
 } from '../common/mst';
 import { StartggSet } from '../common/types';
 
@@ -97,11 +99,19 @@ async function writeScoreboardInfo() {
   if (p2Character === MSTCharacter.SHEIK) {
     p2Character = MSTCharacter.ZELDA;
   }
+  let p1WL: MSTWL = 'Nada';
+  let p2WL: MSTWL = 'Nada';
+  if (matchesGrandFinal(scoreboardInfo.round)) {
+    ({ p1WL } = scoreboardInfo);
+    ({ p2WL } = scoreboardInfo);
+  }
 
   const writtenScoreboardInfo: MSTScoreboardInfo = {
     ...scoreboardInfo,
     p1Character,
+    p1WL,
     p2Character,
+    p2WL,
   };
 
   await writeFile(

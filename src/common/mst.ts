@@ -358,3 +358,7 @@ export const ZELDA_SKIN_TO_SHEIK_SKIN = new Map<MSTSkinColor, MSTSkinColor>([
   ['Green', 'Sheik Green'],
   ['Purple', 'Sheik Purple'],
 ]);
+
+export function matchesGrandFinal(round: string) {
+  return /^grand(.?|\s+)finals?$/i.test(round);
+}
