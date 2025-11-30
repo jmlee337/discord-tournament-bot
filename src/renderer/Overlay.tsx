@@ -33,14 +33,17 @@ export default function Overlay({
         <InputBase
           disabled
           size="small"
-          value={resourcesPath || 'Set MST/MGS Resources Folder...'}
+          value={
+            resourcesPath ||
+            'Set Melee Stream Tool/Melee Ghost Streamer Resources folder...'
+          }
           style={{ flexGrow: 1 }}
         />
         <Tooltip
           title={
             enableMST
-              ? 'Set MST/MGS Resources Folder'
-              : 'MST/MGS Overlay Disabled'
+              ? 'Set Melee Stream Tool/Melee Ghost Streamer Resources folder'
+              : 'Melee Stream Tool/Melee Ghost Streamer overlay disabled'
           }
         >
           <div>
@@ -65,7 +68,13 @@ export default function Overlay({
             </IconButton>
           </div>
         </Tooltip>
-        <Tooltip title="Enable MST/MGS Overlay">
+        <Tooltip
+          title={
+            enableMST
+              ? 'Melee Stream Tool/Melee Ghost Streamer overlay enabled'
+              : 'Melee Stream Tool/Melee Ghost Streamer overlay disabled'
+          }
+        >
           <Switch
             checked={enableMST}
             onChange={async (event) => {
