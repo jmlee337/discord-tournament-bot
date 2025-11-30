@@ -1,6 +1,6 @@
 import { readFile, writeFile } from 'fs/promises';
-import path from 'path';
 import { BrowserWindow } from 'electron';
+import path from 'path';
 import {
   EMPTY_SCOREBOARD_INFO,
   matchesGrandFinal,
@@ -13,6 +13,10 @@ import {
   MSTWL,
 } from '../common/mst';
 import { StartggSet } from '../common/types';
+
+export function getScoreboardInfoJSONPath(resourcesPath: string) {
+  return path.join(resourcesPath, 'Texts', 'ScoreboardInfo.json');
+}
 
 let mainWindow: BrowserWindow | undefined;
 let p1EntrantId: number | undefined;
@@ -41,10 +45,9 @@ export async function readScoreboardInfo() {
     return EMPTY_SCOREBOARD_INFO;
   }
 
-  const json = await readFile(
-    path.join(resourcesPath, 'Texts', 'ScoreboardInfo.json'),
-    { encoding: 'utf8' },
-  );
+  const json = await readFile(getScoreboardInfoJSONPath(resourcesPath), {
+    encoding: 'utf8',
+  });
   scoreboardInfo = JSON.parse(json);
   return scoreboardInfo;
 }
@@ -115,7 +118,7 @@ async function writeScoreboardInfo() {
   };
 
   await writeFile(
-    path.join(resourcesPath, 'Texts', 'ScoreboardInfo.json'),
+    getScoreboardInfoJSONPath(resourcesPath),
     JSON.stringify(writtenScoreboardInfo, undefined, 2),
   );
   mainWindow?.webContents.send('scoreboardInfo', scoreboardInfo);

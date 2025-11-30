@@ -28,6 +28,7 @@ import {
   ipcMain,
 } from 'electron';
 import Store from 'electron-store';
+import { access, constants } from 'fs/promises';
 import {
   ConnectCode,
   Discord,
@@ -72,6 +73,7 @@ import {
   startSpectating,
 } from './spectate';
 import {
+  getScoreboardInfoJSONPath,
   initMST,
   manualUpdate,
   pendingSetsUpdate,
@@ -940,7 +942,17 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     }
     const [newResourcesPath] = openDialogRes.filePaths;
     if (resourcesPath !== newResourcesPath) {
-      // TODO: validate new resources path
+      const scoreboardInfoJSONPath =
+        getScoreboardInfoJSONPath(newResourcesPath);
+      try {
+        // eslint-disable-next-line no-bitwise
+        await access(scoreboardInfoJSONPath, constants.R_OK | constants.W_OK);
+      } catch (e: any) {
+        throw new Error(
+          `Invalid Resources folder: cannot access ${scoreboardInfoJSONPath}`,
+        );
+      }
+
       store.set('resourcesPath', newResourcesPath);
       resourcesPath = newResourcesPath;
       await setResourcesPath(resourcesPath, true);
