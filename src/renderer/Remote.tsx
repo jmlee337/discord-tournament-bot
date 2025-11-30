@@ -343,7 +343,10 @@ export default function Remote({
       >
         <Status remoteState={remoteState} />
         <Stack direction="row" alignItems="center" spacing="8px">
-          <Tooltip arrow title={refreshing ? 'Refreshing' : 'Refresh'}>
+          <Tooltip
+            placement="left"
+            title={refreshing ? 'Refreshing' : 'Refresh'}
+          >
             <span>
               <IconButton
                 disabled={

@@ -46,7 +46,7 @@ export default function SearchBar({
           input: {
             endAdornment: (
               <InputAdornment position="end">
-                <Tooltip title="Clear search">
+                <Tooltip placement="top" title="Clear search">
                   <IconButton onClick={() => setSearchSubstr('')}>
                     <Clear />
                   </IconButton>

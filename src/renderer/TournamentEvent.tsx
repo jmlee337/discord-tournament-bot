@@ -106,7 +106,7 @@ export default function TournamentEvent({
         value={eventDescription || 'Select start.gg event...'}
         style={{ flexGrow: 1 }}
       />
-      <Tooltip arrow title="Select start.gg event">
+      <Tooltip placement="left" title="Select start.gg event">
         <IconButton
           onClick={async () => {
             setTournamentDialogOpen(true);
@@ -171,7 +171,7 @@ export default function TournamentEvent({
               >
                 <DialogContentText>{tournament.name}</DialogContentText>
                 {!gettingTournament && (
-                  <Tooltip title="Choose another tournament">
+                  <Tooltip placement="right" title="Choose another tournament">
                     <IconButton
                       onClick={() => {
                         setShouldRestore({

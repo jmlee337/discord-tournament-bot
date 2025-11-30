@@ -140,7 +140,7 @@ export function DroppableChip({
       })}
     >
       <Tooltip
-        arrow
+        placement="top"
         title={hasSelectedChip ? `Click to spectate` : `Drop here to spectate`}
       >
         <Chip

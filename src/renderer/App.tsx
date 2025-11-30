@@ -5,20 +5,19 @@ import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
 import { ReactNode, useEffect, useRef, useState } from 'react';
-import { Refresh } from '@mui/icons-material';
 import {
   Alert,
   AppBar,
+  Button,
   CircularProgress,
   Dialog,
   DialogContent,
   DialogContentText,
   DialogTitle,
-  IconButton,
   Stack,
+  SvgIcon,
   Tab,
   Tabs,
-  Tooltip,
 } from '@mui/material';
 import { GlobalHotKeys } from 'react-hotkeys';
 import Settings from './Settings';
@@ -65,6 +64,24 @@ function TabPanel({
     >
       {value === index && children}
     </div>
+  );
+}
+
+function StartggIcon() {
+  // https://github.com/project-slippi/slippi-launcher/blob/313aa9e2bca44783db6ad740083d8e9a131b7742/src/renderer/styles/images/startgg_logo.svg
+  return (
+    <SvgIcon viewBox="0 0 1001 1001">
+      <path
+        style={{ fill: '#3F80FF' }}
+        d="M32.2,500h187.5c17.3,0,31.2-14,31.2-31.2V281.2c0-17.3,14-31.2,31.2-31.2h687.5c17.3,0,31.2-14,31.2-31.2
+		V31.2C1001,14,987,0,969.7,0H251C112.9,0,1,111.9,1,250v218.8C1,486,15,500,32.2,500z"
+      />
+      <path
+        style={{ fill: '#FF2768' }}
+        d="M969.8,500H782.3c-17.3,0-31.2,14-31.2,31.2v187.5c0,17.3-14,31.2-31.2,31.2H32.3C15,750,1,764,1,781.2v187.5
+		C1,986,15,1000,32.3,1000H751c138.1,0,250-111.9,250-250V531.2C1001,514,987,500,969.8,500z"
+      />
+    </SvgIcon>
   );
 }
 
@@ -298,26 +315,25 @@ function Hello() {
               searchSubstr={searchSubstr}
               setSearchSubstr={setSearchSubstr}
             />
-            <Tooltip arrow title="Refresh sets">
-              <span>
-                <IconButton
-                  disabled={refreshing || !eventDescription}
-                  onClick={async () => {
-                    try {
-                      setRefreshing(true);
-                      await window.electron.refreshSets();
-                    } catch (e: any) {
-                      const message = e instanceof Error ? e.message : e;
-                      showErrorDialog([message]);
-                    } finally {
-                      setRefreshing(false);
-                    }
-                  }}
-                >
-                  {refreshing ? <CircularProgress size="24px" /> : <Refresh />}
-                </IconButton>
-              </span>
-            </Tooltip>
+            <Button
+              disabled={refreshing || !eventDescription}
+              startIcon={
+                refreshing ? <CircularProgress size="20px" /> : <StartggIcon />
+              }
+              onClick={async () => {
+                try {
+                  setRefreshing(true);
+                  await window.electron.refreshSets();
+                } catch (e: any) {
+                  const message = e instanceof Error ? e.message : e;
+                  showErrorDialog([message]);
+                } finally {
+                  setRefreshing(false);
+                }
+              }}
+            >
+              Refresh
+            </Button>
           </Stack>
         </Stack>
         <Tabs

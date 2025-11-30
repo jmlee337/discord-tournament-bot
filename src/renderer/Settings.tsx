@@ -157,7 +157,7 @@ export default function Settings({
 
   return (
     <>
-      <Tooltip title="Settings">
+      <Tooltip placement="top" title="Settings">
         <IconButton onClick={() => setOpen(true)}>
           <SettingsIcon />
         </IconButton>

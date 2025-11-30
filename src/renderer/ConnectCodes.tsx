@@ -92,7 +92,7 @@ export default function ConnectCodes({
 
   return (
     <>
-      <Tooltip arrow title="View connect codes">
+      <Tooltip placement="top" title="View connect codes">
         <div>
           <IconButton
             disabled={connectCodes.length === 0}
@@ -150,7 +150,10 @@ export default function ConnectCodes({
               searchSubstr={searchSubstr}
               setSearchSubstr={setSearchSubstr}
             />
-            <Tooltip arrow title={refreshing ? 'Refreshing' : 'Refresh'}>
+            <Tooltip
+              placement="top"
+              title={refreshing ? 'Refreshing' : 'Refresh'}
+            >
               <span>
                 <IconButton
                   disabled={refreshing}
