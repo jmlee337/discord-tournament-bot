@@ -372,13 +372,13 @@ export default function Remote({
               remoteState.status === RemoteStatus.CONNECTING ||
               remoteState.status === RemoteStatus.CONNECTED
             }
-            inputProps={{ min: 1024, max: 65535 }}
             label="Port"
             name="port"
             onChange={(event) => {
               setPort(Number.parseInt(event.target.value, 10));
             }}
             size="small"
+            slotProps={{ htmlInput: { min: 1024, max: 65536 } }}
             type="number"
             value={port}
             variant="filled"

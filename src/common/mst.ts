@@ -1,29 +1,29 @@
 export enum MSTCharacter {
-  DOC = 'Dr Mario',
-  MARIO = 'Mario',
-  LUIGI = 'Luigi',
-  BOWSER = 'Bowser',
-  PEACH = 'Peach',
-  YOSHI = 'Yoshi',
-  DK = 'Donkey Kong',
   FALCON = 'Captain Falcon',
-  GANON = 'Ganondorf',
+  BOWSER = 'Bowser',
+  DK = 'Donkey Kong',
+  DOC = 'Dr Mario',
   FALCO = 'Falco',
   FOX = 'Fox',
-  NESS = 'Ness',
+  GANON = 'Ganondorf',
   ICS = 'Ice Climbers',
-  KIRBY = 'Kirby',
-  SAMUS = 'Samus',
-  ZELDA = 'Zelda',
-  LINK = 'Link',
-  YL = 'Young Link',
-  PICHU = 'Pichu',
-  PIKACHU = 'Pikachu',
   JIGGLYPUFF = 'Jigglypuff',
+  KIRBY = 'Kirby',
+  LINK = 'Link',
+  LUIGI = 'Luigi',
+  MARIO = 'Mario',
+  MARTH = 'Marth',
   MEWTWO = 'Mewtwo',
   GW = 'Mr Game & Watch',
-  MARTH = 'Marth',
+  NESS = 'Ness',
+  PICHU = 'Pichu',
+  PIKACHU = 'Pikachu',
+  PEACH = 'Peach',
   ROY = 'Roy',
+  SAMUS = 'Samus',
+  YOSHI = 'Yoshi',
+  YL = 'Young Link',
+  ZELDA = 'Zelda',
   RANDOM = 'Random',
 }
 
@@ -80,19 +80,17 @@ export type MSTGameEndScoreboardInfo = {
   p2ScoreIncrement: boolean;
 };
 
-export type MSTScoreboardInfo = {
+export type MSTManualUpdateScoreboardInfo = {
   p1Name: string;
   p1Team: string;
   p1Character: MSTCharacter;
   p1Skin: MSTSkinColor;
-  p1Color: MSTPortColor;
   p1Score: number;
   p1WL: MSTWL;
   p2Name: string;
   p2Team: string;
   p2Character: MSTCharacter;
   p2Skin: MSTSkinColor;
-  p2Color: MSTPortColor;
   p2Score: number;
   p2WL: MSTWL;
   bestOf: MSTBestOf;
@@ -104,6 +102,11 @@ export type MSTScoreboardInfo = {
   caster2Name: string;
   caster2Twitter: string;
   caster2Twitch: string;
+};
+
+export type MSTScoreboardInfo = MSTManualUpdateScoreboardInfo & {
+  p1Color: MSTPortColor;
+  p2Color: MSTPortColor;
   allowIntro: false;
 };
 
@@ -309,6 +312,30 @@ export const characterIdToMST = new Map<
   [0x1f, { character: MSTCharacter.RANDOM, skinColors: ['Default'] }], // Sandbag
   [0x20, { character: MSTCharacter.RANDOM, skinColors: ['Default'] }], // Sopo
   [0x21, { character: MSTCharacter.RANDOM, skinColors: ['Default'] }], // "User Select(Event) / None"
+]);
+
+export const MSTCharacterToSkinColors = new Map([
+  ...Array.from(characterIdToMST.values()).map(
+    ({ character, skinColors }): [MSTCharacter, MSTSkinColor[]] => [
+      character,
+      skinColors,
+    ],
+  ),
+  [
+    MSTCharacter.ZELDA,
+    [
+      'Sheik Default',
+      'Sheik Red',
+      'Sheik Blue',
+      'Sheik Green',
+      'Sheik Purple',
+      'Default',
+      'Red',
+      'Blue',
+      'Green',
+      'Purple',
+    ],
+  ],
 ]);
 
 export const EMPTY_SCOREBOARD_INFO: MSTScoreboardInfo = {

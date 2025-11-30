@@ -19,6 +19,7 @@ import {
 } from '../common/types';
 import {
   MSTGameEndScoreboardInfo,
+  MSTManualUpdateScoreboardInfo,
   MSTNewFileScoreboardInfo,
   MSTScoreboardInfo,
 } from '../common/mst';
@@ -61,6 +62,9 @@ const electronHandler = {
     ipcRenderer.invoke('chooseResourcesPath'),
   getScoreboardInfo: (): Promise<MSTScoreboardInfo> =>
     ipcRenderer.invoke('getScoreboardInfo'),
+  setScoreboardInfo: (
+    scoreboardInfo: MSTManualUpdateScoreboardInfo,
+  ): Promise<void> => ipcRenderer.invoke('setScoreboardInfo', scoreboardInfo),
   getStartggApiKey: (): Promise<string> =>
     ipcRenderer.invoke('getStartggApiKey'),
   setStartggApiKey: (startggApiKey: string): Promise<void> =>

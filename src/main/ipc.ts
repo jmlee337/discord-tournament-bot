@@ -73,6 +73,7 @@ import {
 } from './spectate';
 import {
   initMST,
+  manualUpdate,
   pendingSetsUpdate,
   readScoreboardInfo,
   setEnableMST,
@@ -80,6 +81,7 @@ import {
   setResourcesPath,
   setTournamentName,
 } from './mst';
+import { MSTManualUpdateScoreboardInfo } from '../common/mst';
 
 const CONFIRMATION_TIMEOUT_MS = 30000;
 const STARTGG_BLACK = '#031221';
@@ -934,6 +936,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     }
     const [newResourcesPath] = openDialogRes.filePaths;
     if (resourcesPath !== newResourcesPath) {
+      // TODO: validate new resources path
       store.set('resourcesPath', newResourcesPath);
       resourcesPath = newResourcesPath;
       setResourcesPath(resourcesPath, true);
@@ -943,6 +946,15 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
 
   ipcMain.removeHandler('getScoreboardInfo');
   ipcMain.handle('getScoreboardInfo', () => readScoreboardInfo());
+
+  ipcMain.removeHandler('setScoreboardInfo');
+  ipcMain.handle(
+    'setScoreboardInfo',
+    (
+      event: IpcMainInvokeEvent,
+      scoreboardInfo: MSTManualUpdateScoreboardInfo,
+    ) => manualUpdate(scoreboardInfo),
+  );
 
   /**
    * start.gg

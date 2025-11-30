@@ -38,7 +38,6 @@ import Bracket from './Bracket';
 import Remote from './Remote';
 import { pushWindowEventListener, WindowEvent } from './windowEvent';
 import Overlay from './Overlay';
-import { EMPTY_SCOREBOARD_INFO } from '../common/mst';
 
 enum TabValue {
   BRACKET = 'bracket',
@@ -118,7 +117,6 @@ function Hello() {
   });
   const [enableMST, setEnableMST] = useState(false);
   const [resourcesPath, setResourcesPath] = useState('');
-  const [scoreboardInfo, setScoreboardInfo] = useState(EMPTY_SCOREBOARD_INFO);
 
   // tabs
   const [tabValue, setTabValue] = useState(TabValue.BROADCASTS);
@@ -146,14 +144,8 @@ function Hello() {
       }
       setRemoteState((await startingStatePromise).remoteState);
       setTournament((await startingStatePromise).tournament);
-
-      const initEnableMST = await enableMSTPromise;
-      const initResourcesPath = await resourcesPathPromise;
-      setEnableMST(initEnableMST);
-      setResourcesPath(initResourcesPath);
-      if (initEnableMST && initResourcesPath) {
-        setScoreboardInfo(await window.electron.getScoreboardInfo());
-      }
+      setEnableMST(await enableMSTPromise);
+      setResourcesPath(await resourcesPathPromise);
 
       // req network
       const messages: string[] = [];
@@ -193,9 +185,6 @@ function Hello() {
     });
     window.electron.onRemoteState((event, newRemoteState) => {
       setRemoteState(newRemoteState);
-    });
-    window.electron.onScoreboardInfo((event, newScoreboardInfo) => {
-      setScoreboardInfo(newScoreboardInfo);
     });
   });
 
@@ -377,7 +366,7 @@ function Hello() {
         <Overlay
           enableMST={enableMST}
           resourcesPath={resourcesPath}
-          scoreboardInfo={scoreboardInfo}
+          gotSettings={gotSettings}
           setEnableMST={setEnableMST}
           setResourcesPath={setResourcesPath}
           showErrorDialog={showErrorDialog}

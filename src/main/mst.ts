@@ -4,6 +4,7 @@ import { BrowserWindow } from 'electron';
 import {
   EMPTY_SCOREBOARD_INFO,
   MSTGameEndScoreboardInfo,
+  MSTManualUpdateScoreboardInfo,
   MSTNewFileScoreboardInfo,
 } from '../common/mst';
 import { StartggSet } from '../common/types';
@@ -75,6 +76,7 @@ async function writeScoreboardInfo() {
   mainWindow?.webContents.send('scoreboardInfo', scoreboardInfo);
 }
 
+// TODO: sponsor
 export async function newFileUpdate(
   newFileScoreboardInfo: MSTNewFileScoreboardInfo,
 ) {
@@ -157,6 +159,7 @@ async function pendingSetUpdate(
   await writeScoreboardInfo();
 }
 
+// TODO: sponsor
 export async function pendingSetsUpdate(
   entrantIdToPendingSets: Map<number, StartggSet[]>,
 ) {
@@ -210,6 +213,34 @@ export async function gameEndUpdate(
   } else if (gameEndScoreboardInfo.p2ScoreIncrement) {
     scoreboardInfo.p2Score += 1;
   }
+
+  await writeScoreboardInfo();
+}
+
+export async function manualUpdate(
+  manualUpdateScoreboardInfo: MSTManualUpdateScoreboardInfo,
+) {
+  scoreboardInfo.p1Name = manualUpdateScoreboardInfo.p1Name;
+  scoreboardInfo.p1Team = manualUpdateScoreboardInfo.p1Team;
+  scoreboardInfo.p1Character = manualUpdateScoreboardInfo.p1Character;
+  scoreboardInfo.p1Skin = manualUpdateScoreboardInfo.p1Skin;
+  scoreboardInfo.p1Score = manualUpdateScoreboardInfo.p1Score;
+  scoreboardInfo.p1WL = manualUpdateScoreboardInfo.p1WL;
+  scoreboardInfo.p2Name = manualUpdateScoreboardInfo.p2Name;
+  scoreboardInfo.p2Team = manualUpdateScoreboardInfo.p2Team;
+  scoreboardInfo.p2Character = manualUpdateScoreboardInfo.p2Character;
+  scoreboardInfo.p2Skin = manualUpdateScoreboardInfo.p2Skin;
+  scoreboardInfo.p2Score = manualUpdateScoreboardInfo.p2Score;
+  scoreboardInfo.p2WL = manualUpdateScoreboardInfo.p2WL;
+  scoreboardInfo.bestOf = manualUpdateScoreboardInfo.bestOf;
+  scoreboardInfo.round = manualUpdateScoreboardInfo.round;
+  scoreboardInfo.tournamentName = manualUpdateScoreboardInfo.tournamentName;
+  scoreboardInfo.caster1Name = manualUpdateScoreboardInfo.caster1Name;
+  scoreboardInfo.caster1Twitter = manualUpdateScoreboardInfo.caster1Twitter;
+  scoreboardInfo.caster1Twitch = manualUpdateScoreboardInfo.caster1Twitch;
+  scoreboardInfo.caster2Name = manualUpdateScoreboardInfo.caster2Name;
+  scoreboardInfo.caster2Twitter = manualUpdateScoreboardInfo.caster2Twitter;
+  scoreboardInfo.caster2Twitch = manualUpdateScoreboardInfo.caster2Twitch;
 
   await writeScoreboardInfo();
 }
