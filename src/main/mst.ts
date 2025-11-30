@@ -115,11 +115,11 @@ async function writeScoreboardInfo() {
 export async function newFileUpdate(
   newFileScoreboardInfo: MSTNewFileScoreboardInfo,
 ) {
+  const entrantsChanged =
+    newFileScoreboardInfo.p1EntrantId !== p1EntrantId ||
+    newFileScoreboardInfo.p2EntrantId !== p2EntrantId;
   p1EntrantId = newFileScoreboardInfo.p1EntrantId;
   p2EntrantId = newFileScoreboardInfo.p2EntrantId;
-  if (!newFileScoreboardInfo.setData && requestGetEventSets) {
-    requestGetEventSets();
-  }
 
   const setChanged = newFileScoreboardInfo.setData?.setId !== setId;
   setId = newFileScoreboardInfo.setData?.setId;
@@ -154,6 +154,14 @@ export async function newFileUpdate(
       newFileScoreboardInfo.setData.p2Score > scoreboardInfo.p2Score
     ) {
       scoreboardInfo.p2Score = newFileScoreboardInfo.setData.p2Score;
+    }
+  } else {
+    if (setChanged || entrantsChanged) {
+      scoreboardInfo.p1Score = 0;
+      scoreboardInfo.p2Score = 0;
+    }
+    if (requestGetEventSets) {
+      requestGetEventSets();
     }
   }
 
