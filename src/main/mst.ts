@@ -44,20 +44,28 @@ export async function readScoreboardInfo() {
   return scoreboardInfo;
 }
 
-export function setEnableMST(newEnable: boolean) {
+export async function setEnableMST(newEnable: boolean, canUpdate: boolean) {
   const positiveEdge = !enable && newEnable;
   enable = newEnable;
-  if (positiveEdge && resourcesPath) {
-    mainWindow?.webContents.send('scoreboardInfo', readScoreboardInfo());
+  if (canUpdate && positiveEdge && resourcesPath) {
+    mainWindow?.webContents.send('scoreboardInfo', await readScoreboardInfo());
   }
 }
 
-export function setResourcesPath(newResourcesPath: string, canUpdate: boolean) {
+export async function setResourcesPath(
+  newResourcesPath: string,
+  canUpdate: boolean,
+) {
   const changed = resourcesPath !== newResourcesPath;
   resourcesPath = newResourcesPath;
-  if (enable && changed && canUpdate) {
-    mainWindow?.webContents.send('scoreboardInfo', readScoreboardInfo());
+  if (canUpdate && changed && enable) {
+    mainWindow?.webContents.send('scoreboardInfo', await readScoreboardInfo());
   }
+}
+
+let enableSkinColor = false;
+export function setEnableSkinColor(newEnableSkinColor: boolean) {
+  enableSkinColor = newEnableSkinColor;
 }
 
 export function setTournamentName(newTournamentName: string) {
@@ -67,6 +75,19 @@ export function setTournamentName(newTournamentName: string) {
 async function writeScoreboardInfo() {
   if (!enable || !resourcesPath) {
     return;
+  }
+
+  if (!enableSkinColor) {
+    if (scoreboardInfo.p1Skin.startsWith('Sheik')) {
+      scoreboardInfo.p1Skin = 'Sheik Default';
+    } else {
+      scoreboardInfo.p1Skin = 'Default';
+    }
+    if (scoreboardInfo.p2Skin.startsWith('Sheik')) {
+      scoreboardInfo.p2Skin = 'Sheik Default';
+    } else {
+      scoreboardInfo.p2Skin = 'Default';
+    }
   }
 
   await writeFile(

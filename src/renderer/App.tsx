@@ -116,6 +116,7 @@ function Hello() {
     status: RemoteStatus.DISCONNECTED,
   });
   const [enableMST, setEnableMST] = useState(false);
+  const [enableSkinColor, setEnableSkinColor] = useState(false);
   const [resourcesPath, setResourcesPath] = useState('');
 
   // tabs
@@ -126,6 +127,7 @@ function Hello() {
       const discordConfigPromise = window.electron.getDiscordConfig();
       const startingStatePromise = window.electron.getStartingState();
       const enableMSTPromise = window.electron.getEnableMST();
+      const enableSkinColorPromise = window.electron.getEnableSkinColor();
       const resourcesPathPromise = window.electron.getResourcesPath();
 
       // req network
@@ -145,6 +147,7 @@ function Hello() {
       setRemoteState((await startingStatePromise).remoteState);
       setTournament((await startingStatePromise).tournament);
       setEnableMST(await enableMSTPromise);
+      setEnableSkinColor(await enableSkinColorPromise);
       setResourcesPath(await resourcesPathPromise);
 
       // req network
@@ -283,6 +286,10 @@ function Hello() {
               setDiscordApplicationId={setDiscordApplicationId}
               discordToken={discordToken}
               setDiscordToken={setDiscordToken}
+              enableMST={enableMST}
+              setEnableMST={setEnableMST}
+              enableSkinColor={enableSkinColor}
+              setEnableSkinColor={setEnableSkinColor}
               setTournaments={setTournaments}
               latestAppVersion={latestAppVersion}
               gotSettings={gotSettings}
@@ -339,12 +346,14 @@ function Hello() {
             aria-controls="tabpanel-broadcasts"
             value={TabValue.BROADCASTS}
           />
-          <Tab
-            label="Overlay"
-            id="tab-overlay"
-            aria-controls="tabpanel-overlay"
-            value={TabValue.OVERLAY}
-          />
+          {enableMST && (
+            <Tab
+              label="Overlay"
+              id="tab-overlay"
+              aria-controls="tabpanel-overlay"
+              value={TabValue.OVERLAY}
+            />
+          )}
           <Tab
             label="Bracket"
             id="tab-bracket"
@@ -362,16 +371,18 @@ function Hello() {
           showErrorDialog={showErrorDialog}
         />
       </TabPanel>
-      <TabPanel value={tabValue} index={TabValue.OVERLAY}>
-        <Overlay
-          enableMST={enableMST}
-          resourcesPath={resourcesPath}
-          gotSettings={gotSettings}
-          setEnableMST={setEnableMST}
-          setResourcesPath={setResourcesPath}
-          showErrorDialog={showErrorDialog}
-        />
-      </TabPanel>
+      {enableMST && (
+        <TabPanel value={tabValue} index={TabValue.OVERLAY}>
+          <Overlay
+            enableMST={enableMST}
+            enableSkinColor={enableSkinColor}
+            resourcesPath={resourcesPath}
+            gotSettings={gotSettings}
+            setResourcesPath={setResourcesPath}
+            showErrorDialog={showErrorDialog}
+          />
+        </TabPanel>
+      )}
       <TabPanel value={tabValue} index={TabValue.BRACKET}>
         <Bracket discordStatus={discordStatus} searchSubstr={searchSubstr} />
       </TabPanel>

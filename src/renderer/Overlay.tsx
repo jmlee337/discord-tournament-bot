@@ -9,7 +9,6 @@ import {
   MenuItem,
   Select,
   Stack,
-  Switch,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -27,16 +26,16 @@ import {
 
 export default function Overlay({
   enableMST,
+  enableSkinColor,
   resourcesPath,
   gotSettings,
-  setEnableMST,
   setResourcesPath,
   showErrorDialog,
 }: {
   enableMST: boolean;
+  enableSkinColor: boolean;
   resourcesPath: string;
   gotSettings: boolean;
-  setEnableMST: (newEnableMST: boolean) => void;
   setResourcesPath: (newResourcesPath: string) => void;
   showErrorDialog: (errors: string[]) => void;
 }) {
@@ -109,7 +108,7 @@ export default function Overlay({
 
   return (
     <Stack>
-      <Stack direction="row" alignItems="center">
+      <Stack direction="row" alignItems="center" marginRight="-8px">
         <InputBase
           disabled
           size="small"
@@ -147,22 +146,6 @@ export default function Overlay({
               )}
             </IconButton>
           </div>
-        </Tooltip>
-        <Tooltip
-          title={
-            enableMST
-              ? 'Melee Stream Tool/Melee Ghost Streamer overlay enabled'
-              : 'Melee Stream Tool/Melee Ghost Streamer overlay disabled'
-          }
-        >
-          <Switch
-            checked={enableMST}
-            onChange={async (event) => {
-              const newEnableMST = event.target.checked;
-              await window.electron.setEnableMST(newEnableMST);
-              setEnableMST(newEnableMST);
-            }}
-          />
         </Tooltip>
       </Stack>
       {enableMST && resourcesPath && (
@@ -252,27 +235,29 @@ export default function Overlay({
                     ))}
                   </Select>
                 </FormControl>
-                <FormControl>
-                  <InputLabel id="p1-skin-select-label">Color</InputLabel>
-                  <Select
-                    size="small"
-                    style={{ width: '142px' }}
-                    label="Color"
-                    labelId="p1-skin-select-label"
-                    value={p1Skin}
-                    onChange={(event) => {
-                      setP1Skin(event.target.value);
-                    }}
-                  >
-                    {MSTCharacterToSkinColors.get(p1Character)?.map(
-                      (skinColor) => (
-                        <MenuItem key={skinColor} value={skinColor}>
-                          {skinColor}
-                        </MenuItem>
-                      ),
-                    )}
-                  </Select>
-                </FormControl>
+                {enableSkinColor && (
+                  <FormControl>
+                    <InputLabel id="p1-skin-select-label">Color</InputLabel>
+                    <Select
+                      size="small"
+                      style={{ width: '142px' }}
+                      label="Color"
+                      labelId="p1-skin-select-label"
+                      value={p1Skin}
+                      onChange={(event) => {
+                        setP1Skin(event.target.value);
+                      }}
+                    >
+                      {MSTCharacterToSkinColors.get(p1Character)?.map(
+                        (skinColor) => (
+                          <MenuItem key={skinColor} value={skinColor}>
+                            {skinColor}
+                          </MenuItem>
+                        ),
+                      )}
+                    </Select>
+                  </FormControl>
+                )}
               </Stack>
             </Stack>
             <Stack
@@ -361,27 +346,29 @@ export default function Overlay({
                     ))}
                   </Select>
                 </FormControl>
-                <FormControl>
-                  <InputLabel id="p2-skin-select-label">Color</InputLabel>
-                  <Select
-                    size="small"
-                    style={{ width: '142px' }}
-                    label="Color"
-                    labelId="p2-skin-select-label"
-                    value={p2Skin}
-                    onChange={(event) => {
-                      setP2Skin(event.target.value);
-                    }}
-                  >
-                    {MSTCharacterToSkinColors.get(p2Character)?.map(
-                      (skinColor) => (
-                        <MenuItem key={skinColor} value={skinColor}>
-                          {skinColor}
-                        </MenuItem>
-                      ),
-                    )}
-                  </Select>
-                </FormControl>
+                {enableSkinColor && (
+                  <FormControl>
+                    <InputLabel id="p2-skin-select-label">Color</InputLabel>
+                    <Select
+                      size="small"
+                      style={{ width: '142px' }}
+                      label="Color"
+                      labelId="p2-skin-select-label"
+                      value={p2Skin}
+                      onChange={(event) => {
+                        setP2Skin(event.target.value);
+                      }}
+                    >
+                      {MSTCharacterToSkinColors.get(p2Character)?.map(
+                        (skinColor) => (
+                          <MenuItem key={skinColor} value={skinColor}>
+                            {skinColor}
+                          </MenuItem>
+                        ),
+                      )}
+                    </Select>
+                  </FormControl>
+                )}
               </Stack>
             </Stack>
           </Stack>
@@ -518,6 +505,7 @@ export default function Overlay({
               onClick={async () => {
                 try {
                   setUpdating(true);
+                  // TODO: only send WL if grand finals
                   await window.electron.setScoreboardInfo({
                     p1Name,
                     p1Team,

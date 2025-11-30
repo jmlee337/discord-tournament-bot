@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Divider,
   FormControlLabel,
   IconButton,
   Stack,
@@ -60,6 +61,10 @@ export default function Settings({
   setDiscordApplicationId,
   discordToken,
   setDiscordToken,
+  enableMST,
+  setEnableMST,
+  enableSkinColor,
+  setEnableSkinColor,
   setTournaments,
   latestAppVersion,
   gotSettings,
@@ -69,6 +74,10 @@ export default function Settings({
   setDiscordApplicationId: (discordApplicationId: string) => void;
   discordToken: string;
   setDiscordToken: (discordToken: string) => void;
+  enableMST: boolean;
+  setEnableMST: (enableMST: boolean) => void;
+  enableSkinColor: boolean;
+  setEnableSkinColor: (enableSkinColor: boolean) => void;
   setTournaments: (tournaments: AdminedTournament[]) => void;
   latestAppVersion: string;
   gotSettings: boolean;
@@ -199,6 +208,49 @@ export default function Settings({
         </Stack>
         <DialogContent sx={{ pt: 0 }}>
           <DialogContentText>
+            Get your start.gg token by clicking “Create new token” in the
+            “Personal Access Tokens” tab of{' '}
+            <a
+              href="https://start.gg/admin/profile/developer"
+              target="_blank"
+              rel="noreferrer"
+            >
+              this page
+            </a>
+            . Keep it private!
+          </DialogContentText>
+          <Stack alignItems="center" direction="row" gap="8px">
+            <TextField
+              autoFocus
+              fullWidth
+              label="start.gg token (Keep it private!)"
+              onChange={(event) => {
+                setStartggApiKey(event.target.value);
+                setShouldGetTournaments(true);
+              }}
+              size="small"
+              style={{ marginTop: '4px', marginBottom: '8px' }}
+              type="password"
+              value={startggApiKey}
+              variant="standard"
+            />
+            <Button
+              disabled={startggApiKeyCopied}
+              endIcon={startggApiKeyCopied ? undefined : <ContentCopy />}
+              onClick={async () => {
+                await window.electron.copyToClipboard(startggApiKey);
+                setStartggApiKeyCopied(true);
+                setTimeout(() => setStartggApiKeyCopied(false), 5000);
+              }}
+              variant="contained"
+            >
+              {startggApiKeyCopied ? 'Copied!' : 'Copy'}
+            </Button>
+          </Stack>
+          <Divider style={{ margin: '8px -24px' }}>
+            <Typography variant="button">Discord</Typography>
+          </Divider>
+          <DialogContentText>
             Get your bot&apos;s application id from the “General Information”
             settings tab in the appropriate app found on{' '}
             <a
@@ -219,6 +271,7 @@ export default function Settings({
                 setDiscordApplicationId(event.target.value);
               }}
               size="small"
+              style={{ marginTop: '4px', marginBottom: '8px' }}
               value={discordApplicationId}
               variant="standard"
             />
@@ -244,6 +297,7 @@ export default function Settings({
                 setDiscordToken(event.target.value);
               }}
               size="small"
+              style={{ marginTop: '4px', marginBottom: '8px' }}
               type="password"
               value={discordToken}
               variant="standard"
@@ -261,49 +315,10 @@ export default function Settings({
               {discordTokenCopied ? 'Copied!' : 'Copy'}
             </Button>
           </Stack>
-          <DialogContentText>
-            Get your start.gg token by clicking “Create new token” in the
-            “Personal Access Tokens” tab of{' '}
-            <a
-              href="https://start.gg/admin/profile/developer"
-              target="_blank"
-              rel="noreferrer"
-            >
-              this page
-            </a>
-            . Keep it private!
-          </DialogContentText>
-          <Stack alignItems="center" direction="row" gap="8px">
-            <TextField
-              autoFocus
-              fullWidth
-              label="start.gg token (Keep it private!)"
-              onChange={(event) => {
-                setStartggApiKey(event.target.value);
-                setShouldGetTournaments(true);
-              }}
-              size="small"
-              type="password"
-              value={startggApiKey}
-              variant="standard"
-            />
-            <Button
-              disabled={startggApiKeyCopied}
-              endIcon={startggApiKeyCopied ? undefined : <ContentCopy />}
-              onClick={async () => {
-                await window.electron.copyToClipboard(startggApiKey);
-                setStartggApiKeyCopied(true);
-                setTimeout(() => setStartggApiKeyCopied(false), 5000);
-              }}
-              variant="contained"
-            >
-              {startggApiKeyCopied ? 'Copied!' : 'Copy'}
-            </Button>
-          </Stack>
           <Stack>
             <LabeledCheckbox
               checked={discordCommandDq}
-              label="Enable /dq command"
+              label="Enable Discord /dq command"
               set={async (checked) => {
                 await window.electron.setDiscordCommandDq(checked);
                 setDiscordCommandDq(checked);
@@ -311,7 +326,7 @@ export default function Settings({
             />
             <LabeledCheckbox
               checked={discordCommandReport}
-              label="Enable /reportset command"
+              label="Enable Discord /reportset command"
               set={async (checked) => {
                 await window.electron.setDiscordCommandReport(checked);
                 setDiscordCommandReport(checked);
@@ -319,10 +334,32 @@ export default function Settings({
             />
             <LabeledCheckbox
               checked={discordCommandReset}
-              label="Enable /resetset command"
+              label="Enable Discord /resetset command"
               set={async (checked) => {
                 await window.electron.setDiscordCommandReset(checked);
                 setDiscordCommandReset(checked);
+              }}
+            />
+          </Stack>
+          <Divider style={{ marginLeft: '-24px', marginRight: '-24px' }}>
+            <Typography variant="button">Overlay</Typography>
+          </Divider>
+          <Stack>
+            <LabeledCheckbox
+              checked={enableMST}
+              label="Enable overlay"
+              set={async (checked) => {
+                await window.electron.setEnableMST(checked);
+                setEnableMST(checked);
+              }}
+            />
+            <LabeledCheckbox
+              checked={enableSkinColor}
+              disabled={!enableMST}
+              label="Enable character colors"
+              set={async (checked) => {
+                await window.electron.setEnableSkinColor(checked);
+                setEnableSkinColor(checked);
               }}
             />
           </Stack>

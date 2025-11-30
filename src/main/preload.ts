@@ -60,6 +60,10 @@ const electronHandler = {
     ipcRenderer.invoke('getResourcesPath'),
   chooseResourcesPath: (): Promise<string> =>
     ipcRenderer.invoke('chooseResourcesPath'),
+  getEnableSkinColor: (): Promise<boolean> =>
+    ipcRenderer.invoke('getEnableSkinColor'),
+  setEnableSkinColor: (enableSkinColor: boolean): Promise<void> =>
+    ipcRenderer.invoke('setEnableSkinColor', enableSkinColor),
   getScoreboardInfo: (): Promise<MSTScoreboardInfo> =>
     ipcRenderer.invoke('getScoreboardInfo'),
   setScoreboardInfo: (

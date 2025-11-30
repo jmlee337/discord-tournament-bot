@@ -77,6 +77,7 @@ import {
   pendingSetsUpdate,
   readScoreboardInfo,
   setEnableMST,
+  setEnableSkinColor,
   setRequestGetEventSets,
   setResourcesPath,
   setTournamentName,
@@ -174,6 +175,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     discordCommandReset: boolean;
     discordRegisteredVersion: string;
     enableMST: boolean;
+    enableSkinColor: boolean;
     remotePort: number;
     resourcesPath: string;
     startggApiKey: string;
@@ -187,12 +189,14 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let discordCommandReset = store.get('discordCommandReset', true);
   let discordRegisteredVersion = store.get('discordRegisteredVersion', '');
   let enableMST = store.get('enableMST', false);
+  let enableSkinColor = store.get('enableSkinColor', true);
   let remotePort = store.get('remotePort', 49809);
   let resourcesPath = store.get('resourcesPath', '');
   let startggApiKey = store.get('startggApiKey', '');
 
-  setEnableMST(enableMST);
+  setEnableMST(enableMST, false);
   setResourcesPath(resourcesPath, false);
+  setEnableSkinColor(enableSkinColor);
 
   /**
    * Needed for both Discord and start.gg
@@ -916,10 +920,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   ipcMain.removeHandler('setEnableMST');
   ipcMain.handle(
     'setEnableMST',
-    (event: IpcMainInvokeEvent, newEnableMST: boolean) => {
+    async (event: IpcMainInvokeEvent, newEnableMST: boolean) => {
       store.set('enableMST', newEnableMST);
       enableMST = newEnableMST;
-      setEnableMST(enableMST);
+      await setEnableMST(enableMST, true);
     },
   );
 
@@ -939,10 +943,23 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       // TODO: validate new resources path
       store.set('resourcesPath', newResourcesPath);
       resourcesPath = newResourcesPath;
-      setResourcesPath(resourcesPath, true);
+      await setResourcesPath(resourcesPath, true);
     }
     return resourcesPath;
   });
+
+  ipcMain.removeHandler('getEnableSkinColor');
+  ipcMain.handle('getEnableSkinColor', () => enableSkinColor);
+
+  ipcMain.removeHandler('setEnableSkinColor');
+  ipcMain.handle(
+    'setEnableSkinColor',
+    (event: IpcMainInvokeEvent, newEnableSkinColor: boolean) => {
+      store.set('enableSkinColor', newEnableSkinColor);
+      enableSkinColor = newEnableSkinColor;
+      setEnableSkinColor(enableSkinColor);
+    },
+  );
 
   ipcMain.removeHandler('getScoreboardInfo');
   ipcMain.handle('getScoreboardInfo', () => readScoreboardInfo());
