@@ -1,30 +1,27 @@
 import { Chip, createTheme, ThemeProvider, Tooltip } from '@mui/material';
 import { DragEvent, useCallback, useMemo } from 'react';
 import { LiveTv, PlayArrow } from '@mui/icons-material';
-import { Broadcast, ChipData } from '../common/types';
+import { Broadcast } from '../common/types';
 
 function dragStart(event: DragEvent<HTMLDivElement>) {
-  const chipData: ChipData = {
-    id: event.currentTarget.dataset.id!,
-    connectCode: event.currentTarget.dataset.connectCode!,
-    gamerTag: event.currentTarget.dataset.gamerTag,
-    slippiName: event.currentTarget.dataset.slippiName!,
-  };
-  event.dataTransfer.setData('text/plain', JSON.stringify(chipData));
+  event.dataTransfer.setData(
+    'text/plain',
+    event.currentTarget.dataset.broadcastId!,
+  );
 }
 
 export function DraggableChip({
   broadcast,
-  selectedChipData,
-  setSelectedChipData,
+  selectedChipBroadcastId,
+  setSelectedChipBroadcastId,
 }: {
   broadcast: Broadcast;
-  selectedChipData: ChipData;
-  setSelectedChipData: (chipData: ChipData) => void;
+  selectedChipBroadcastId: string;
+  setSelectedChipBroadcastId: (broadcastId: string) => void;
 }) {
   const isSelected = useMemo(
-    () => selectedChipData.id === broadcast.id,
-    [broadcast, selectedChipData],
+    () => selectedChipBroadcastId === broadcast.id,
+    [broadcast, selectedChipBroadcastId],
   );
 
   return (
@@ -63,21 +60,14 @@ export function DraggableChip({
     >
       <Chip
         color={isSelected ? 'primary' : undefined}
-        data-id={broadcast.id}
-        data-connect-code={broadcast.connectCode}
-        data-gamer-tag={broadcast.gamerTag}
-        data-slippi-name={broadcast.slippiName}
+        data-broadcast-id={broadcast.id}
         draggable
         icon={<PlayArrow />}
         onClick={() => {
           if (isSelected) {
-            setSelectedChipData({
-              id: '',
-              connectCode: '',
-              slippiName: '',
-            });
+            setSelectedChipBroadcastId('');
           } else {
-            setSelectedChipData(broadcast);
+            setSelectedChipBroadcastId(broadcast.id);
           }
         }}
         onDragStart={dragStart}
@@ -88,25 +78,22 @@ export function DraggableChip({
 }
 
 export function DroppableChip({
-  selectedChipData,
+  selectedChipBroadcastId,
   onClickOrDrop,
 }: {
-  selectedChipData: ChipData;
-  onClickOrDrop: (chipData: ChipData) => void;
+  selectedChipBroadcastId: string;
+  onClickOrDrop: (broadcastId: string) => void;
 }) {
   const drop = useCallback(
     (event: DragEvent<HTMLDivElement>) => {
-      const chipData = JSON.parse(
-        event.dataTransfer.getData('text/plain'),
-      ) as ChipData;
-      onClickOrDrop(chipData);
+      onClickOrDrop(event.dataTransfer.getData('text/plain'));
     },
     [onClickOrDrop],
   );
 
   const hasSelectedChip = useMemo(
-    () => Boolean(selectedChipData.id),
-    [selectedChipData],
+    () => Boolean(selectedChipBroadcastId),
+    [selectedChipBroadcastId],
   );
 
   const dragEnterOver = useCallback((event: DragEvent<HTMLDivElement>) => {
@@ -149,7 +136,7 @@ export function DroppableChip({
           onClick={
             hasSelectedChip
               ? (event) => {
-                  onClickOrDrop(selectedChipData);
+                  onClickOrDrop(selectedChipBroadcastId);
                   event.stopPropagation();
                 }
               : undefined

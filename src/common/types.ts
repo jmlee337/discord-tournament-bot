@@ -122,7 +122,7 @@ export type Broadcast = {
   gamerTag?: string;
   sets: {
     id: number;
-    names: string;
+    opponentName: string;
   }[];
   slippiName: string;
 };
@@ -148,8 +148,6 @@ export type Highlight = {
   start: number;
   end: number;
 };
-
-export type ChipData = Broadcast;
 
 export type Discord = DiscordUsername & {
   discordId: string;

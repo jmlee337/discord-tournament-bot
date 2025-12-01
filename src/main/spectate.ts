@@ -155,7 +155,10 @@ function recalculateAndSendBroadcasts() {
         sets: pendingSets
           ? pendingSets.map((pendingSet) => ({
               id: pendingSet.id,
-              names: `${pendingSet.entrant1Name} vs ${pendingSet.entrant2Name}`,
+              opponentName:
+                entrant.entrantId === pendingSet.entrant1Id
+                  ? pendingSet.entrant2Name
+                  : pendingSet.entrant1Name,
             }))
           : [],
       });
@@ -464,6 +467,7 @@ export function connect(port: number) {
           case 'list-broadcasts-response':
             idToBroadcast.clear();
             // some mock broadcasts for demo
+            /*
             idToBroadcast.set('abc', {
               id: 'abc',
               connectCode: 'ANCO#203',
@@ -530,6 +534,7 @@ export function connect(port: number) {
               slippiName: 'Nicolet',
               sets: [],
             });
+            */
 
             (message.broadcasts as RemoteBroadcast[]).forEach((broadcast) => {
               const connectCode = broadcast.name;
@@ -544,7 +549,10 @@ export function connect(port: number) {
                 sets: pendingSets
                   ? pendingSets.map((pendingSet) => ({
                       id: pendingSet.id,
-                      names: `${pendingSet.entrant1Name} vs ${pendingSet.entrant2Name}`,
+                      opponentName:
+                        entrant!.entrantId === pendingSet.entrant1Id
+                          ? pendingSet.entrant2Name
+                          : pendingSet.entrant1Name,
                     }))
                   : [],
                 slippiName: broadcast.broadcaster.name,

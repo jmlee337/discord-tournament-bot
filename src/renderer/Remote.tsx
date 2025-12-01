@@ -22,7 +22,6 @@ import {
 import { Refresh } from '@mui/icons-material';
 import {
   Broadcast,
-  ChipData,
   Highlight,
   HIGHLIGHT_COLOR,
   RemoteState,
@@ -35,7 +34,7 @@ import LabeledCheckbox from './LabeledCheckbox';
 type BroadcastWithHighlight = {
   connectCodeHighlight?: Highlight;
   gamerTagHighlight?: Highlight;
-  setNamesHighlight?: Highlight;
+  opponentNameHighlights: (Highlight | undefined)[];
   slippiNameHighlight?: Highlight;
   broadcast: Broadcast;
 };
@@ -56,14 +55,16 @@ function Status({ remoteState }: { remoteState: RemoteState }) {
   throw new Error('unreachable');
 }
 
-// TODO: handle broadcast with multiple sets
 function getBroadcastsWithHighlights(
   broadcasts: Broadcast[],
   requireSet: boolean,
   searchSubstr: string,
 ): BroadcastWithHighlight[] {
   if (!requireSet && !searchSubstr) {
-    return broadcasts.map((broadcast) => ({ broadcast }));
+    return broadcasts.map((broadcast) => ({
+      broadcast,
+      opponentNameHighlights: [],
+    }));
   }
 
   let remainingBroadcasts = [...broadcasts];
@@ -72,7 +73,10 @@ function getBroadcastsWithHighlights(
       (broadcast) => broadcast.sets.length > 0,
     );
     if (!searchSubstr) {
-      return remainingBroadcasts.map((broadcast) => ({ broadcast }));
+      return remainingBroadcasts.map((broadcast) => ({
+        broadcast,
+        opponentNameHighlights: [],
+      }));
     }
   }
 
@@ -82,7 +86,7 @@ function getBroadcastsWithHighlights(
     for (const broadcast of remainingBroadcasts) {
       let connectCodeHighlight: Highlight | undefined;
       let gamerTagHighlight: Highlight | undefined;
-      let setNamesHighlight: Highlight | undefined;
+      let opponentNameHighlights: (Highlight | undefined)[] = [];
       let slippiNameHighlight: Highlight | undefined;
       let include = false;
       const includeStr = searchSubstr.toLowerCase();
@@ -108,17 +112,21 @@ function getBroadcastsWithHighlights(
           };
         }
       }
-      if (broadcast.sets.length === 1) {
-        const setNamesStart = broadcast.sets[0].names
-          .toLowerCase()
-          .indexOf(includeStr);
-        if (setNamesStart >= 0) {
-          include = true;
-          setNamesHighlight = {
-            start: setNamesStart,
-            end: setNamesStart + includeStr.length,
-          };
-        }
+      if (broadcast.sets.length > 0) {
+        opponentNameHighlights = broadcast.sets.map((set) => {
+          const opponentNameStart = set.opponentName
+            .toLowerCase()
+            .indexOf(includeStr);
+          if (opponentNameStart >= 0) {
+            include = true;
+            const opponentNameHighlight: Highlight = {
+              start: opponentNameStart,
+              end: opponentNameStart + includeStr.length,
+            };
+            return opponentNameHighlight;
+          }
+          return undefined;
+        });
       }
       const slippiNameStart = broadcast.slippiName
         .toLowerCase()
@@ -134,7 +142,7 @@ function getBroadcastsWithHighlights(
         broadcastsWithHighlights.push({
           connectCodeHighlight,
           gamerTagHighlight,
-          setNamesHighlight,
+          opponentNameHighlights,
           slippiNameHighlight,
           broadcast,
         });
@@ -147,12 +155,12 @@ function getBroadcastsWithHighlights(
 
 function BroadcastWithHighlightListItem({
   bwh,
-  selectedChipData,
-  setSelectedChipData,
+  selectedChipBroadcastId,
+  setSelectedChipBroadcastId,
 }: {
   bwh: BroadcastWithHighlight;
-  selectedChipData: ChipData;
-  setSelectedChipData: (chipData: ChipData) => void;
+  selectedChipBroadcastId: string;
+  setSelectedChipBroadcastId: (broadcastId: string) => void;
 }) {
   const connectCodeSlippiNameFrag = (
     <ListItemText>
@@ -229,54 +237,66 @@ function BroadcastWithHighlightListItem({
                 borderRight: (theme) => `1px solid ${theme.palette.grey[400]}`,
               }}
             >
-              {bwh.broadcast.sets.length === 1 &&
-                (bwh.setNamesHighlight ? (
-                  <>
-                    <span>
-                      {bwh.broadcast.sets[0].names.substring(
-                        0,
-                        bwh.setNamesHighlight.start,
-                      )}
-                    </span>
-                    <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
-                      {bwh.broadcast.sets[0].names.substring(
-                        bwh.setNamesHighlight.start,
-                        bwh.setNamesHighlight.end,
-                      )}
-                    </span>
-                    <span>
-                      {bwh.broadcast.sets[0].names.substring(
-                        bwh.setNamesHighlight.end,
-                      )}
-                    </span>
-                  </>
-                ) : (
-                  bwh.broadcast.sets[0].names
-                ))}
-              {bwh.broadcast.sets.length !== 1 &&
-                (bwh.gamerTagHighlight ? (
-                  <>
-                    <span>
-                      {bwh.broadcast.gamerTag.substring(
-                        0,
-                        bwh.gamerTagHighlight.start,
-                      )}
-                    </span>
-                    <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
-                      {bwh.broadcast.gamerTag.substring(
-                        bwh.gamerTagHighlight.start,
-                        bwh.gamerTagHighlight.end,
-                      )}
-                    </span>
-                    <span>
-                      {bwh.broadcast.gamerTag.substring(
-                        bwh.gamerTagHighlight.end,
-                      )}
-                    </span>
-                  </>
-                ) : (
-                  bwh.broadcast.gamerTag
-                ))}
+              {bwh.gamerTagHighlight ? (
+                <>
+                  <span>
+                    {bwh.broadcast.gamerTag.substring(
+                      0,
+                      bwh.gamerTagHighlight.start,
+                    )}
+                  </span>
+                  <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+                    {bwh.broadcast.gamerTag.substring(
+                      bwh.gamerTagHighlight.start,
+                      bwh.gamerTagHighlight.end,
+                    )}
+                  </span>
+                  <span>
+                    {bwh.broadcast.gamerTag.substring(
+                      bwh.gamerTagHighlight.end,
+                    )}
+                  </span>
+                </>
+              ) : (
+                bwh.broadcast.gamerTag
+              )}
+              {bwh.broadcast.sets.length > 0 && (
+                <>
+                  {' '}
+                  vs{' '}
+                  <Stack
+                    display="inline"
+                    direction="row"
+                    divider={<span>, </span>}
+                  >
+                    {bwh.broadcast.sets.map((set, i) =>
+                      bwh.opponentNameHighlights[i] === undefined ? (
+                        set.opponentName
+                      ) : (
+                        <span>
+                          <span>
+                            {set.opponentName.substring(
+                              0,
+                              bwh.opponentNameHighlights[i].start,
+                            )}
+                          </span>
+                          <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+                            {set.opponentName.substring(
+                              bwh.opponentNameHighlights[i].start,
+                              bwh.opponentNameHighlights[i].end,
+                            )}
+                          </span>
+                          <span>
+                            {set.opponentName.substring(
+                              bwh.opponentNameHighlights[i].end,
+                            )}
+                          </span>
+                        </span>
+                      ),
+                    )}
+                  </Stack>
+                </>
+              )}
             </ListItemText>
             {connectCodeSlippiNameFrag}
           </>
@@ -284,8 +304,8 @@ function BroadcastWithHighlightListItem({
       </Stack>
       <DraggableChip
         broadcast={bwh.broadcast}
-        selectedChipData={selectedChipData}
-        setSelectedChipData={setSelectedChipData}
+        selectedChipBroadcastId={selectedChipBroadcastId}
+        setSelectedChipBroadcastId={setSelectedChipBroadcastId}
       />
     </ListItem>
   );
@@ -308,12 +328,7 @@ export default function Remote({
   const [requireSet, setRequireSet] = useState(false);
   const [overlayDolphinId, setOverlayDolphinId] = useState('');
   const [spectating, setSpectating] = useState<Spectating[]>([]);
-  const [selectedChipData, setSelectedChipData] = useState<ChipData>({
-    id: '',
-    connectCode: '',
-    slippiName: '',
-    sets: [],
-  });
+  const [selectedChipBroadcastId, setSelectedChipBroadcastId] = useState('');
 
   useEffect(() => {
     (async () => {
@@ -402,8 +417,8 @@ export default function Remote({
             <BroadcastWithHighlightListItem
               key={bwh.broadcast.id}
               bwh={bwh}
-              selectedChipData={selectedChipData}
-              setSelectedChipData={setSelectedChipData}
+              selectedChipBroadcastId={selectedChipBroadcastId}
+              setSelectedChipBroadcastId={setSelectedChipBroadcastId}
             />
           ))}
         </List>
@@ -462,9 +477,13 @@ export default function Remote({
                   )}
                   {spectate.broadcast && (
                     <Typography variant="caption">
-                      {spectate.broadcast.sets.length === 1 &&
-                        spectate.broadcast.sets[0].names}
-                      {spectate.broadcast.sets.length !== undefined &&
+                      {spectate.broadcast.sets.length > 0 &&
+                        `${
+                          spectate.broadcast.gamerTag
+                        } vs ${spectate.broadcast.sets
+                          .map((set) => set.opponentName)
+                          .join(', ')}`}
+                      {spectate.broadcast.sets.length === 0 &&
                         (spectate.broadcast.gamerTag
                           ? spectate.broadcast.gamerTag
                           : `${spectate.broadcast.connectCode} (${spectate.broadcast.slippiName})`)}
@@ -480,20 +499,15 @@ export default function Remote({
                 }}
               >
                 <DroppableChip
-                  selectedChipData={selectedChipData}
-                  onClickOrDrop={async (chipData) => {
-                    if (chipData.id !== spectate.broadcast?.id) {
+                  selectedChipBroadcastId={selectedChipBroadcastId}
+                  onClickOrDrop={async (broadcastId) => {
+                    if (broadcastId !== spectate.broadcast?.id) {
                       await window.electron.startSpectating(
-                        chipData.id,
+                        broadcastId,
                         spectate.dolphinId,
                       );
                     }
-                    setSelectedChipData({
-                      id: '',
-                      connectCode: '',
-                      slippiName: '',
-                      sets: [],
-                    });
+                    setSelectedChipBroadcastId('');
                   }}
                 />
                 {spectate.spectating && (
