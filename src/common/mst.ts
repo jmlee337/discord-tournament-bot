@@ -66,10 +66,12 @@ export type MSTNewFileScoreboardInfo = {
   p1EntrantId?: number;
   p2EntrantId?: number;
   p1Name?: string;
+  p1Team?: string;
   p1Character: MSTCharacter;
   p1Skin: MSTSkinColor;
   p1Color: MSTPortColor;
   p2Name?: string;
+  p2Team?: string;
   p2Character: MSTCharacter;
   p2Skin: MSTSkinColor;
   p2Color: MSTPortColor;

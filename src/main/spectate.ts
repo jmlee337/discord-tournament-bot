@@ -47,9 +47,9 @@ let remoteStatus = RemoteStatus.DISCONNECTED;
 let webSocketClient: WebSocket | null = null;
 let mainWindow: BrowserWindow | null = null;
 const connectCodeMisses = new Set<string>();
-const connectCodeToEntrant = new Map<
+const connectCodeToParticipant = new Map<
   string,
-  { id: number; gamerTag: string }
+  { entrantId: number; gamerTag: string; prefix: string }
 >();
 const dolphinIdToFilePath = new Map<string, string>();
 let overlayDolphinId: string | undefined;
@@ -65,7 +65,7 @@ export function initSpectate(newMainWindow: BrowserWindow) {
   idToBroadcast.clear();
   dolphinIdToSpectating.clear();
   connectCodeMisses.clear();
-  connectCodeToEntrant.clear();
+  connectCodeToParticipant.clear();
   dolphinIdToFilePath.clear();
   overlayDolphinId = '';
   mainWindow = newMainWindow;
@@ -123,32 +123,32 @@ function matchConnectCode(connectCode: string) {
     throw new Error(`Unexepected connect code format: ${connectCode}`);
   }
   // eslint-disable-next-line no-restricted-syntax
-  for (const [candidateCC, entrant] of connectCodeToEntrant.entries()) {
+  for (const [candidateCC, partcipant] of connectCodeToParticipant.entries()) {
     const lcCC = candidateCC.toLowerCase();
     if (parts.every((part) => lcCC.includes(part))) {
-      connectCodeToEntrant.set(connectCode, entrant);
-      return entrant;
+      connectCodeToParticipant.set(connectCode, partcipant);
+      return partcipant;
     }
   }
   connectCodeMisses.add(connectCode);
   return undefined;
 }
 
-function getEntrant(connectCode: string) {
+function getParticipant(connectCode: string) {
   const lcConnectCode = connectCode.toLowerCase();
-  let entrant = connectCodeToEntrant.get(lcConnectCode);
-  if (!entrant && !connectCodeMisses.has(lcConnectCode)) {
-    entrant = matchConnectCode(lcConnectCode);
+  let participant = connectCodeToParticipant.get(lcConnectCode);
+  if (!participant && !connectCodeMisses.has(lcConnectCode)) {
+    participant = matchConnectCode(lcConnectCode);
   }
 
-  return entrant;
+  return participant;
 }
 
 function recalculateAndSendBroadcasts() {
   Array.from(idToBroadcast.entries()).forEach(([broadcastId, broadcast]) => {
-    const entrant = getEntrant(broadcast.connectCode);
+    const entrant = getParticipant(broadcast.connectCode);
     if (entrant) {
-      const pendingSets = entrantIdToPendingSets.get(entrant.id);
+      const pendingSets = entrantIdToPendingSets.get(entrant.entrantId);
       idToBroadcast.set(broadcastId, {
         ...broadcast,
         gamerTag: entrant.gamerTag,
@@ -167,10 +167,11 @@ function recalculateAndSendBroadcasts() {
 
 export function setConnectCodes(connectCodes: ConnectCode[]) {
   connectCodeMisses.clear();
-  connectCodes.forEach(({ connectCode, entrantId, gamerTag }) => {
-    connectCodeToEntrant.set(connectCode.toLowerCase(), {
-      id: entrantId,
+  connectCodes.forEach(({ connectCode, entrantId, gamerTag, prefix }) => {
+    connectCodeToParticipant.set(connectCode.toLowerCase(), {
+      entrantId,
       gamerTag,
+      prefix,
     });
   });
   recalculateAndSendBroadcasts();
@@ -203,7 +204,7 @@ export async function processNewReplay(filePath: string, dolphinId: string) {
       portColor: MSTPortColor;
       character: MSTCharacter;
       skinColor: MSTSkinColor;
-      entrant?: { id: number; gamerTag: string };
+      participant?: { entrantId: number; gamerTag: string; prefix: string };
     } => {
       let portColor: MSTPortColor = 'CPU';
       switch (i) {
@@ -228,8 +229,8 @@ export async function processNewReplay(filePath: string, dolphinId: string) {
           portColor,
           character: MSTCharacter.RANDOM,
           skinColor: 'Default',
-          entrant: gameStartInfo.connectCode
-            ? getEntrant(gameStartInfo.connectCode)
+          participant: gameStartInfo.connectCode
+            ? getParticipant(gameStartInfo.connectCode)
             : undefined,
         };
       }
@@ -242,21 +243,23 @@ export async function processNewReplay(filePath: string, dolphinId: string) {
         portColor,
         character: mst.character,
         skinColor,
-        entrant: gameStartInfo.connectCode
-          ? getEntrant(gameStartInfo.connectCode)
+        participant: gameStartInfo.connectCode
+          ? getParticipant(gameStartInfo.connectCode)
           : undefined,
       };
     },
   );
-  let p1Name = mstInfos[0].entrant?.gamerTag;
-  let p2Name = mstInfos[1].entrant?.gamerTag;
+  let p1Name = mstInfos[0].participant?.gamerTag;
+  let p1Team = mstInfos[0].participant?.prefix;
+  let p2Name = mstInfos[1].participant?.gamerTag;
+  let p2Team = mstInfos[1].participant?.prefix;
 
   let set: StartggSet | undefined;
-  const p1PendingSets = mstInfos[0].entrant
-    ? entrantIdToPendingSets.get(mstInfos[0].entrant.id)
+  const p1PendingSets = mstInfos[0].participant
+    ? entrantIdToPendingSets.get(mstInfos[0].participant.entrantId)
     : undefined;
-  const p2PendingSets = mstInfos[1].entrant
-    ? entrantIdToPendingSets.get(mstInfos[1].entrant.id)
+  const p2PendingSets = mstInfos[1].participant
+    ? entrantIdToPendingSets.get(mstInfos[1].participant.entrantId)
     : undefined;
 
   // TODO: require intersection
@@ -286,11 +289,13 @@ export async function processNewReplay(filePath: string, dolphinId: string) {
 
   let setData: MSTSetData | undefined;
   if (set) {
-    const p1IsEntrant1 = mstInfos[0].entrant
-      ? set.entrant1Id === mstInfos[0].entrant.id
-      : set.entrant2Id === mstInfos[1].entrant!.id;
+    const p1IsEntrant1 = mstInfos[0].participant
+      ? set.entrant1Id === mstInfos[0].participant.entrantId
+      : set.entrant2Id === mstInfos[1].participant!.entrantId;
     p1Name = p1IsEntrant1 ? set.entrant1Name : set.entrant2Name;
+    p1Team = p1IsEntrant1 ? set.entrant1Sponsor : set.entrant2Sponsor;
     p2Name = p1IsEntrant1 ? set.entrant2Name : set.entrant1Name;
+    p2Team = p1IsEntrant1 ? set.entrant2Sponsor : set.entrant1Sponsor;
     setData = {
       setId: set.id,
       bestOf: set.bestOf === 5 ? 'Bo5' : 'Bo3',
@@ -318,13 +323,15 @@ export async function processNewReplay(filePath: string, dolphinId: string) {
   }
 
   const newFileScoreboardInfo: MSTNewFileScoreboardInfo = {
-    p1EntrantId: mstInfos[0].entrant?.id,
-    p2EntrantId: mstInfos[1].entrant?.id,
+    p1EntrantId: mstInfos[0].participant?.entrantId,
+    p2EntrantId: mstInfos[1].participant?.entrantId,
     p1Name,
+    p1Team,
     p1Character: mstInfos[0].character,
     p1Skin: mstInfos[0].skinColor,
     p1Color: mstInfos[0].portColor,
     p2Name,
+    p2Team,
     p2Character: mstInfos[1].character,
     p2Skin: mstInfos[1].skinColor,
     p2Color: mstInfos[1].portColor,
@@ -542,9 +549,9 @@ export function connect(port: number) {
 
             (message.broadcasts as RemoteBroadcast[]).forEach((broadcast) => {
               const connectCode = broadcast.name;
-              const entrant = getEntrant(connectCode);
+              const entrant = getParticipant(connectCode);
               const pendingSets = entrant
-                ? entrantIdToPendingSets.get(entrant.id)
+                ? entrantIdToPendingSets.get(entrant.entrantId)
                 : undefined;
               idToBroadcast.set(broadcast.id, {
                 id: broadcast.id,

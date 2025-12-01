@@ -150,6 +150,7 @@ type ApiEntrant = {
     id: number;
     connectedAccounts: { slippi?: { value?: string | null } | null } | null;
     gamerTag: string;
+    prefix: string | null;
     requiredConnections:
       | {
           type: string;
@@ -172,6 +173,7 @@ const EVENT_ENTRANTS_QUERY = `
             id
             connectedAccounts
             gamerTag
+            prefix
             requiredConnections {
               type
               externalId
@@ -205,6 +207,7 @@ export async function getEventEntrants(id: number, key: string) {
             connectCode:
               participant.connectedAccounts?.slippi?.value || undefined,
             gamerTag: participant.gamerTag,
+            prefix: participant.prefix ?? '',
           };
           if (participant.requiredConnections) {
             const discords = participant.requiredConnections
@@ -267,7 +270,9 @@ type GroupJSON = {
     entrants: {
       id: number;
       mutations: {
-        participants: { [key: string]: { gamerTag: string; prefix: string } };
+        participants: {
+          [key: string]: { gamerTag: string; prefix: string | null };
+        };
       };
     }[];
     sets: SetJSON[];
@@ -330,7 +335,7 @@ export async function getEventSets(event: StartggEvent): Promise<Sets> {
               .map((participant) => participant.gamerTag)
               .join(' / ');
             const sponsor = participants
-              .map((participant) => participant.prefix)
+              .map((participant) => participant.prefix ?? '')
               .join(' / ');
             entrantIdToNameAndSponsor.set(entrant.id, { name, sponsor });
           });
@@ -498,7 +503,7 @@ type GqlSet = {
       id: number;
       participants: {
         gamerTag: string;
-        prefix: string;
+        prefix: string | null;
       }[];
     } | null;
     standing: {
@@ -531,7 +536,7 @@ function gqlSetToStartggSet(set: GqlSet): StartggSet {
       .map((participant) => participant.gamerTag)
       .join(' / '),
     entrant1Sponsor: entrant1Participants
-      .map((participant) => participant.prefix)
+      .map((participant) => participant.prefix ?? '')
       .join(' / '),
     entrant1Score: set.slots[0].standing?.stats.score.value || 0,
     entrant2Id: set.slots[1].entrant!.id,
@@ -539,7 +544,7 @@ function gqlSetToStartggSet(set: GqlSet): StartggSet {
       .map((participant) => participant.gamerTag)
       .join(' / '),
     entrant2Sponsor: entrant2Participants
-      .map((participant) => participant.prefix)
+      .map((participant) => participant.prefix ?? '')
       .join(' / '),
     entrant2Score: set.slots[1].standing?.stats.score.value || 0,
     fullRoundText: set.fullRoundText,

@@ -62,6 +62,7 @@ export type StartggParticipant = {
     username: string;
   };
   gamerTag: string;
+  prefix: string;
 };
 
 export type StartggEntrant = {
@@ -96,6 +97,7 @@ export type ConnectCode = {
   connectCode: string;
   entrantId: number;
   gamerTag: string;
+  prefix: string;
 };
 
 export type ParticipantConnections = {

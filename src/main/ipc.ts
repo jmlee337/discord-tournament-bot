@@ -1037,6 +1037,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             connectCode: participant.connectCode,
             entrantId: entrant.id,
             gamerTag: participant.gamerTag,
+            prefix: participant.prefix,
           });
         }
         if (participant.discord) {

@@ -124,7 +124,6 @@ async function writeScoreboardInfo() {
   mainWindow?.webContents.send('scoreboardInfo', scoreboardInfo);
 }
 
-// TODO: sponsor
 export async function newFileUpdate(
   newFileScoreboardInfo: MSTNewFileScoreboardInfo,
 ) {
@@ -147,8 +146,16 @@ export async function newFileUpdate(
   if (newFileScoreboardInfo.p1Name) {
     scoreboardInfo.p1Name = newFileScoreboardInfo.p1Name;
   }
+  // TODO: enable/disable sponsor tags from sgg
+  if (newFileScoreboardInfo.p1Team) {
+    scoreboardInfo.p1Team = newFileScoreboardInfo.p1Team;
+  }
   if (newFileScoreboardInfo.p2Name) {
     scoreboardInfo.p2Name = newFileScoreboardInfo.p2Name;
+  }
+  // TODO: enable/disable sponsor tags from sgg
+  if (newFileScoreboardInfo.p2Team) {
+    scoreboardInfo.p2Team = newFileScoreboardInfo.p2Team;
   }
 
   if (newFileScoreboardInfo.setData) {
@@ -197,9 +204,17 @@ async function pendingSetUpdate(
       ? set.entrant1Id === localP1EntrantId
       : set.entrant2Id === localP2EntrantId;
   scoreboardInfo.p1Name = p1IsEntrant1 ? set.entrant1Name : set.entrant2Name;
+  // TODO: enable/disable sponsor tags from sgg
+  scoreboardInfo.p1Team = p1IsEntrant1
+    ? set.entrant1Sponsor
+    : set.entrant2Sponsor;
   scoreboardInfo.p1WL =
     !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
   scoreboardInfo.p2Name = p1IsEntrant1 ? set.entrant2Name : set.entrant1Name;
+  // TODO: enable/disable sponsor tags from sgg
+  scoreboardInfo.p2Team = p1IsEntrant1
+    ? set.entrant2Sponsor
+    : set.entrant1Sponsor;
   scoreboardInfo.p2WL =
     p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
 
@@ -215,7 +230,6 @@ async function pendingSetUpdate(
   await writeScoreboardInfo();
 }
 
-// TODO: sponsor
 export async function pendingSetsUpdate(
   entrantIdToPendingSets: Map<number, StartggSet[]>,
 ) {
