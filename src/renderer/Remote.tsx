@@ -380,7 +380,7 @@ export default function Remote({
           <Stack direction="row" alignItems="center">
             <LabeledCheckbox
               checked={requireSet}
-              label="Hide broadcasts without matching set"
+              label="Hide broadcasts with no matching set"
               labelPlacement="start"
               set={async (checked) => {
                 setRequireSet(checked);
