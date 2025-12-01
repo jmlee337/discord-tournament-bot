@@ -173,7 +173,7 @@
     "webpack-merge": "^5.9.0"
   },
   "build": {
-    "productName": "Nicolet's Discord Tournament Bot",
+    "productName": "Nicolet's Netplay Tournament Suite",
     "appId": "org.jmlee337.DiscordTournamentBot",
     "asar": true,
     "asarUnpack": "**\\*.{node,dll}",

@@ -1,13 +1,16 @@
-# Nicolet's Discord Tournament Bot
+# Nicolet's Netplay Tournament Suite
+
 <img width="280" alt="Screenshot 2024-07-01 at 10 41 24 PM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/a59b2f42-821e-4028-9fb5-f2e785bffab5">
 
 ### TO Dashboard
+
 <img width="498" alt="Screenshot 2024-07-02 at 9 23 26 AM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/140582be-1145-4f4f-9889-dde054b0d99c">
 <img width="498" alt="Screenshot 2024-07-02 at 9 23 47 AM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/70468d87-44ca-4003-92b6-ceae64726f42">
 <img width="498" alt="Screenshot 2024-07-02 at 9 23 31 AM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/9373c1c0-420d-47c9-b0c3-8459f1e613f6">
 <img width="498" alt="Screenshot 2024-07-02 at 9 23 37 AM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/deee7d8d-93b5-4bb5-a78d-4a3e691f6ec6">
 
 ## Setup
+
 Mac users, please see how to [open an app from an unidentified developer](https://support.apple.com/en-gb/guide/mac-help/mh40616/mac).
 
 This will only work for start.gg tournaments that `Require Discord connection to register`.
@@ -54,20 +57,25 @@ Now verify that your bot has joined your server and you can use the `/reportset`
 <img width="252" alt="Screenshot 2024-07-01 at 10 38 06 PM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/aa69927c-bea8-4cef-8757-9f731f135241">
 
 ## Issues
+
 Please [check discussions/ask for help](https://github.com/jmlee337/discord-tournament-bot/discussions) before [checking issues/filing a bug report or feature request](https://github.com/jmlee337/discord-tournament-bot/issues).
 
 ## Development
+
 Clone the repo and install dependencies:
+
 ```bash
 git clone https://github.com/jmlee337/discord-tournament-bot.git discord-tournament-bot
 cd discord-tournament-bot
 npm install
 ```
+
 Start the app in the `dev` environment:
 
 ```bash
 npm start
 ```
+
 To package apps for the local platform:
 
 ```bash

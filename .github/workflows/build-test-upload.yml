@@ -38,7 +38,7 @@ jobs:
         with:
           name: macos
           path: |
-            release/build/Nicolet's Discord Tournament Bot*.dmg
+            release/build/Nicolet's Netplay Tournament Suite*.dmg
   ubuntu:
     runs-on: ubuntu-latest
 
@@ -70,7 +70,7 @@ jobs:
         with:
           name: ubuntu
           path: |
-            release/build/Nicolet's Discord Tournament Bot*.AppImage
+            release/build/Nicolet's Netplay Tournament Suite*.AppImage
   windows:
     runs-on: windows-latest
 
@@ -102,4 +102,4 @@ jobs:
         with:
           name: windows
           path: |
-            release/build/Nicolet's Discord Tournament Bot*.exe
+            release/build/Nicolet's Netplay Tournament Suite*.exe

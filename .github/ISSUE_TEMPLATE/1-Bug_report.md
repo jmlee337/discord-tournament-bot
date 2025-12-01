@@ -1,6 +1,6 @@
 ---
 name: Bug report
-about: There is a technical issue with Nicolet's Discord Tournament bot.
+about: There is a technical issue with Nicolet's Netplay Tournament Suite.
 labels: 'bug'
 ---
 
@@ -44,5 +44,5 @@ labels: 'bug'
 
 <!--- Include as many relevant details about the environment you experienced the bug in -->
 
-- Nicolet's Discord Tournament bot version or branch :
+- Nicolet's Netplay Tournament Suite version or branch :
 - Operating System and version :

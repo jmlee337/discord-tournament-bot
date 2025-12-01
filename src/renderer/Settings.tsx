@@ -156,7 +156,7 @@ export default function Settings({
         >
           <DialogTitle>Settings</DialogTitle>
           <Typography variant="caption">
-            Nicolet&apos;s Discord Tournament Bot {appVersion}
+            Nicolet&apos;s Netplay Tournament Suite {appVersion}
           </Typography>
         </Stack>
         <DialogContent sx={{ pt: 0 }}>

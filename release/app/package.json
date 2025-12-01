@@ -1,7 +1,7 @@
 {
   "name": "discord-tournament-bot",
   "version": "0.6.1",
-  "description": "A helper discord bot for running tournaments",
+  "description": "Tools for using Discord, Slippi, and start.gg with Melee netplay tournaments",
   "license": "MIT",
   "author": {
     "name": "Nicolet",
