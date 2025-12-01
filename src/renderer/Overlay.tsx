@@ -255,7 +255,7 @@ export default function Overlay({
                 variant="outlined"
                 size="small"
                 slotProps={{
-                  htmlInput: { min: 0, max: bestOf === 'Bo5' ? 5 : 3 },
+                  htmlInput: { min: 0, max: bestOf === 'Bo5' ? 3 : 2 },
                 }}
                 type="number"
                 label="Score"
@@ -397,7 +397,7 @@ export default function Overlay({
                 variant="outlined"
                 size="small"
                 slotProps={{
-                  htmlInput: { min: 0, max: bestOf === 'Bo5' ? 5 : 3 },
+                  htmlInput: { min: 0, max: bestOf === 'Bo5' ? 3 : 2 },
                 }}
                 type="number"
                 label="Score"

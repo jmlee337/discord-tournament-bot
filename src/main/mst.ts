@@ -86,7 +86,6 @@ export function setTournamentName(newTournamentName: string) {
   scoreboardInfo.tournamentName = newTournamentName;
 }
 
-// TODO: clamp score depending on BO3/BO5 (check MST impl to see if === or <)
 async function writeScoreboardInfo() {
   if (!enable || !resourcesPath) {
     return;
@@ -109,6 +108,18 @@ async function writeScoreboardInfo() {
   if (p2Character === MSTCharacter.SHEIK) {
     p2Character = MSTCharacter.ZELDA;
   }
+
+  const low = 0;
+  const high = scoreboardInfo.bestOf === 'Bo5' ? 3 : 2;
+  scoreboardInfo.p1Score = Math.min(
+    Math.max(scoreboardInfo.p1Score, low),
+    high,
+  );
+  scoreboardInfo.p2Score = Math.min(
+    Math.max(scoreboardInfo.p2Score, low),
+    high,
+  );
+
   let p1WL: MSTWL = 'Nada';
   let p2WL: MSTWL = 'Nada';
   if (matchesGrandFinal(scoreboardInfo.round)) {
