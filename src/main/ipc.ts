@@ -68,6 +68,7 @@ import {
   processNewReplay,
   refreshBroadcasts,
   setConnectCodes,
+  setEnableOverlay,
   setEntrantIdToPendingSets,
   setOverlayDolphinId,
   startSpectating,
@@ -199,6 +200,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let resourcesPath = store.get('resourcesPath', '');
   let startggApiKey = store.get('startggApiKey', '');
 
+  // spectate
+  setEnableOverlay(enableMST);
+
+  // mst
   setEnableMST(enableMST, false);
   setResourcesPath(resourcesPath, false);
   setEnableSkinColor(enableSkinColor);
@@ -261,7 +266,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       });
     });
     setEntrantIdToPendingSets(entrantIdToPendingSets);
-    pendingSetsUpdate(entrantIdToPendingSets);
+    if (enableMST) {
+      pendingSetsUpdate(entrantIdToPendingSets);
+    }
     mainWindow.webContents.send('sets', newSets);
     sets = newSets;
   };
@@ -929,6 +936,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     async (event: IpcMainInvokeEvent, newEnableMST: boolean) => {
       store.set('enableMST', newEnableMST);
       enableMST = newEnableMST;
+      setEnableOverlay(enableMST);
       await setEnableMST(enableMST, true);
     },
   );

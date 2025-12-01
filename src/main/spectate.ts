@@ -71,6 +71,11 @@ export function initSpectate(newMainWindow: BrowserWindow) {
   mainWindow = newMainWindow;
 }
 
+let enableOverlay = false;
+export function setEnableOverlay(newEnableOverlay: boolean) {
+  enableOverlay = newEnableOverlay;
+}
+
 export function getRemoteState() {
   const remoteState: RemoteState = {
     err: remoteErr,
@@ -354,7 +359,7 @@ export function getOverlayDolphinId() {
 export async function setOverlayDolphinId(newOverlayDolphinId: string) {
   const changed = newOverlayDolphinId !== overlayDolphinId;
   overlayDolphinId = newOverlayDolphinId;
-  if (changed) {
+  if (enableOverlay && changed) {
     const filePath = dolphinIdToFilePath.get(overlayDolphinId);
     if (filePath) {
       await processNewReplay(filePath);
@@ -430,6 +435,7 @@ export function connect(port: number) {
             return;
           case 'game-end-event':
             if (
+              enableOverlay &&
               overlayDolphinId === message.dolphinId &&
               dolphinIdToFilePath.has(message.dolphinId)
             ) {
@@ -450,7 +456,7 @@ export function connect(port: number) {
             return;
           case 'new-file-event':
             dolphinIdToFilePath.set(message.dolphinId, message.filePath);
-            if (overlayDolphinId === message.dolphinId) {
+            if (enableOverlay && overlayDolphinId === message.dolphinId) {
               processNewReplay(message.filePath).catch(() => {
                 // just catch
               });
