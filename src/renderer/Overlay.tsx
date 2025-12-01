@@ -13,6 +13,10 @@ import {
   Select,
   Stack,
   Switch,
+  Table,
+  TableBody,
+  TableCell,
+  TableRow,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -221,7 +225,7 @@ export default function Overlay({
           </Stack>
         </DialogContent>
       </Dialog>
-      <Stack spacing="8px">
+      <Stack gap="16px">
         <Stack
           direction="row"
           alignItems="center"
@@ -506,119 +510,137 @@ export default function Overlay({
             </Stack>
           </Stack>
         </Stack>
-        <Stack
-          direction="row"
-          alignItems="end"
-          justifyContent="center"
-          paddingTop="8px"
-          spacing="8px"
+        <Table
+          padding="none"
+          style={{
+            alignSelf: 'center',
+            border: 'none',
+            borderCollapse: 'separate',
+            borderSpacing: '8px',
+            width: 'initial',
+          }}
         >
-          <Stack direction="row" justifyContent="right" width="210px">
-            <ToggleButtonGroup
-              disabled={!enableMST || !resourcesPath}
-              aria-label="Best Of"
-              exclusive
-              size="small"
-              value={bestOf}
-              onChange={(event, value) => {
-                setBestOf(value);
-              }}
-            >
-              <ToggleButton value="Bo3">BO3</ToggleButton>
-              <ToggleButton value="Bo5">BO5</ToggleButton>
-            </ToggleButtonGroup>
-          </Stack>
-          <TextField
-            disabled={!enableMST || !resourcesPath}
-            variant="outlined"
-            size="small"
-            label="Current Round"
-            value={round}
-            onChange={(event) => {
-              setRound(event.target.value);
-            }}
-          />
-          <TextField
-            disabled={!enableMST || !resourcesPath}
-            variant="outlined"
-            size="small"
-            label="Tournament Name"
-            value={tournamentName}
-            onChange={(event) => {
-              setTournamentName(event.target.value);
-            }}
-          />
-        </Stack>
-        <Stack direction="row" spacing="8px" justifyContent="center">
-          <TextField
-            disabled={!enableMST || !resourcesPath}
-            variant="outlined"
-            size="small"
-            label="Caster 1 Name"
-            value={caster1Name}
-            onChange={(event) => {
-              setCaster1Name(event.target.value);
-            }}
-          />
-          <TextField
-            disabled={!enableMST || !resourcesPath}
-            variant="outlined"
-            size="small"
-            label="Caster 1 Twitter"
-            value={caster1Twitter}
-            onChange={(event) => {
-              setCaster1Twitch(event.target.value);
-            }}
-          />
-          <TextField
-            disabled={!enableMST || !resourcesPath}
-            variant="outlined"
-            size="small"
-            label="Caster 1 Twitch"
-            value={caster1Twitch}
-            onChange={(event) => {
-              setCaster1Twitch(event.target.value);
-            }}
-          />
-        </Stack>
-        <Stack direction="row" spacing="8px" justifyContent="center">
-          <TextField
-            disabled={!enableMST || !resourcesPath}
-            variant="outlined"
-            size="small"
-            label="Caster 2 Name"
-            value={caster2Name}
-            onChange={(event) => {
-              setCaster2Name(event.target.value);
-            }}
-          />
-          <TextField
-            disabled={!enableMST || !resourcesPath}
-            variant="outlined"
-            size="small"
-            label="Caster 2 Twitter"
-            value={caster2Twitter}
-            onChange={(event) => {
-              setCaster2Twitch(event.target.value);
-            }}
-          />
-          <TextField
-            disabled={!enableMST || !resourcesPath}
-            variant="outlined"
-            size="small"
-            label="Caster 2 Twitch"
-            value={caster2Twitch}
-            onChange={(event) => {
-              setCaster2Twitch(event.target.value);
-            }}
-          />
-        </Stack>
-        <Stack
-          direction="row"
-          justifyContent="center"
-          paddingTop="8px"
-          spacing="8px"
-        >
+          <TableBody>
+            <TableRow>
+              <TableCell style={{ border: 'none', textAlign: 'right' }}>
+                <ToggleButtonGroup
+                  disabled={!enableMST || !resourcesPath}
+                  aria-label="Best Of"
+                  exclusive
+                  size="small"
+                  value={bestOf}
+                  onChange={(event, value) => {
+                    setBestOf(value);
+                  }}
+                >
+                  <ToggleButton value="Bo3">BO3</ToggleButton>
+                  <ToggleButton value="Bo5">BO5</ToggleButton>
+                </ToggleButtonGroup>
+              </TableCell>
+              <TableCell style={{ border: 'none' }}>
+                <TextField
+                  disabled={!enableMST || !resourcesPath}
+                  variant="outlined"
+                  size="small"
+                  label="Current Round"
+                  value={round}
+                  onChange={(event) => {
+                    setRound(event.target.value);
+                  }}
+                />
+              </TableCell>
+              <TableCell style={{ border: 'none' }}>
+                <TextField
+                  disabled={!enableMST || !resourcesPath}
+                  variant="outlined"
+                  size="small"
+                  label="Tournament Name"
+                  value={tournamentName}
+                  onChange={(event) => {
+                    setTournamentName(event.target.value);
+                  }}
+                />
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell style={{ border: 'none' }}>
+                <TextField
+                  disabled={!enableMST || !resourcesPath}
+                  variant="outlined"
+                  size="small"
+                  label="Caster 1 Name"
+                  value={caster1Name}
+                  onChange={(event) => {
+                    setCaster1Name(event.target.value);
+                  }}
+                />
+              </TableCell>
+              <TableCell style={{ border: 'none' }}>
+                <TextField
+                  disabled={!enableMST || !resourcesPath}
+                  variant="outlined"
+                  size="small"
+                  label="Caster 1 Twitter"
+                  value={caster1Twitter}
+                  onChange={(event) => {
+                    setCaster1Twitch(event.target.value);
+                  }}
+                />
+              </TableCell>
+              <TableCell style={{ border: 'none' }}>
+                <TextField
+                  disabled={!enableMST || !resourcesPath}
+                  variant="outlined"
+                  size="small"
+                  label="Caster 1 Twitch"
+                  value={caster1Twitch}
+                  onChange={(event) => {
+                    setCaster1Twitch(event.target.value);
+                  }}
+                />
+              </TableCell>
+            </TableRow>
+            <TableRow>
+              <TableCell style={{ border: 'none' }}>
+                <TextField
+                  disabled={!enableMST || !resourcesPath}
+                  variant="outlined"
+                  size="small"
+                  label="Caster 2 Name"
+                  value={caster2Name}
+                  onChange={(event) => {
+                    setCaster2Name(event.target.value);
+                  }}
+                />
+              </TableCell>
+              <TableCell style={{ border: 'none' }}>
+                <TextField
+                  disabled={!enableMST || !resourcesPath}
+                  variant="outlined"
+                  size="small"
+                  label="Caster 2 Twitter"
+                  value={caster2Twitter}
+                  onChange={(event) => {
+                    setCaster2Twitch(event.target.value);
+                  }}
+                />
+              </TableCell>
+              <TableCell style={{ border: 'none' }}>
+                <TextField
+                  disabled={!enableMST || !resourcesPath}
+                  variant="outlined"
+                  size="small"
+                  label="Caster 2 Twitch"
+                  value={caster2Twitch}
+                  onChange={(event) => {
+                    setCaster2Twitch(event.target.value);
+                  }}
+                />
+              </TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+        <Stack direction="row" justifyContent="center" spacing="8px">
           <Button
             variant="contained"
             color="warning"
