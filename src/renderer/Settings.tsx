@@ -5,7 +5,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  Divider,
   IconButton,
   Stack,
   TextField,
@@ -201,9 +200,6 @@ export default function Settings({
               {startggApiKeyCopied ? 'Copied!' : 'Copy'}
             </Button>
           </Stack>
-          <Divider style={{ margin: '8px -24px' }}>
-            <Typography variant="button">Discord</Typography>
-          </Divider>
           <DialogContentText>
             Get your bot&apos;s application id from the “General Information”
             settings tab in the appropriate app found on{' '}
@@ -269,32 +265,34 @@ export default function Settings({
               {discordTokenCopied ? 'Copied!' : 'Copy'}
             </Button>
           </Stack>
-          <Stack>
-            <LabeledCheckbox
-              checked={discordCommandDq}
-              label="Enable Discord /dq command"
-              set={async (checked) => {
-                await window.electron.setDiscordCommandDq(checked);
-                setDiscordCommandDq(checked);
-              }}
-            />
-            <LabeledCheckbox
-              checked={discordCommandReport}
-              label="Enable Discord /reportset command"
-              set={async (checked) => {
-                await window.electron.setDiscordCommandReport(checked);
-                setDiscordCommandReport(checked);
-              }}
-            />
-            <LabeledCheckbox
-              checked={discordCommandReset}
-              label="Enable Discord /resetset command"
-              set={async (checked) => {
-                await window.electron.setDiscordCommandReset(checked);
-                setDiscordCommandReset(checked);
-              }}
-            />
-          </Stack>
+          {discordApplicationId && discordToken && (
+            <Stack>
+              <LabeledCheckbox
+                checked={discordCommandDq}
+                label="Enable Discord /dq command"
+                set={async (checked) => {
+                  await window.electron.setDiscordCommandDq(checked);
+                  setDiscordCommandDq(checked);
+                }}
+              />
+              <LabeledCheckbox
+                checked={discordCommandReport}
+                label="Enable Discord /reportset command"
+                set={async (checked) => {
+                  await window.electron.setDiscordCommandReport(checked);
+                  setDiscordCommandReport(checked);
+                }}
+              />
+              <LabeledCheckbox
+                checked={discordCommandReset}
+                label="Enable Discord /resetset command"
+                set={async (checked) => {
+                  await window.electron.setDiscordCommandReset(checked);
+                  setDiscordCommandReset(checked);
+                }}
+              />
+            </Stack>
+          )}
           {needUpdate && (
             <Alert severity="warning">
               Update available!{' '}
