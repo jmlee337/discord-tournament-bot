@@ -323,6 +323,7 @@ export default function Remote({
     () => getBroadcastsWithHighlights(broadcasts, searchSubstr),
     [broadcasts, searchSubstr],
   );
+  // TODO: refactor to be columns
 
   return (
     <Stack>

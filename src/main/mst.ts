@@ -76,6 +76,11 @@ export function setEnableSkinColor(newEnableSkinColor: boolean) {
   enableSkinColor = newEnableSkinColor;
 }
 
+let enableSggSponsors = false;
+export function setEnableSggSponsors(newEnableSggSponsors: boolean) {
+  enableSggSponsors = newEnableSggSponsors;
+}
+
 export function setTournamentName(newTournamentName: string) {
   scoreboardInfo.tournamentName = newTournamentName;
 }
@@ -146,16 +151,19 @@ export async function newFileUpdate(
   if (newFileScoreboardInfo.p1Name) {
     scoreboardInfo.p1Name = newFileScoreboardInfo.p1Name;
   }
-  // TODO: enable/disable sponsor tags from sgg
-  if (newFileScoreboardInfo.p1Team) {
-    scoreboardInfo.p1Team = newFileScoreboardInfo.p1Team;
-  }
   if (newFileScoreboardInfo.p2Name) {
     scoreboardInfo.p2Name = newFileScoreboardInfo.p2Name;
   }
-  // TODO: enable/disable sponsor tags from sgg
-  if (newFileScoreboardInfo.p2Team) {
-    scoreboardInfo.p2Team = newFileScoreboardInfo.p2Team;
+  if (enableSggSponsors) {
+    if (newFileScoreboardInfo.p1Team) {
+      scoreboardInfo.p1Team = newFileScoreboardInfo.p1Team;
+    }
+    if (newFileScoreboardInfo.p2Team) {
+      scoreboardInfo.p2Team = newFileScoreboardInfo.p2Team;
+    }
+  } else {
+    scoreboardInfo.p1Team = '';
+    scoreboardInfo.p2Team = '';
   }
 
   if (newFileScoreboardInfo.setData) {
@@ -204,19 +212,23 @@ async function pendingSetUpdate(
       ? set.entrant1Id === localP1EntrantId
       : set.entrant2Id === localP2EntrantId;
   scoreboardInfo.p1Name = p1IsEntrant1 ? set.entrant1Name : set.entrant2Name;
-  // TODO: enable/disable sponsor tags from sgg
-  scoreboardInfo.p1Team = p1IsEntrant1
-    ? set.entrant1Sponsor
-    : set.entrant2Sponsor;
   scoreboardInfo.p1WL =
     !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
   scoreboardInfo.p2Name = p1IsEntrant1 ? set.entrant2Name : set.entrant1Name;
-  // TODO: enable/disable sponsor tags from sgg
-  scoreboardInfo.p2Team = p1IsEntrant1
-    ? set.entrant2Sponsor
-    : set.entrant1Sponsor;
   scoreboardInfo.p2WL =
     p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
+
+  if (enableSggSponsors) {
+    scoreboardInfo.p1Team = p1IsEntrant1
+      ? set.entrant1Sponsor
+      : set.entrant2Sponsor;
+    scoreboardInfo.p2Team = p1IsEntrant1
+      ? set.entrant2Sponsor
+      : set.entrant1Sponsor;
+  } else {
+    scoreboardInfo.p1Team = '';
+    scoreboardInfo.p2Team = '';
+  }
 
   const newP1Score = p1IsEntrant1 ? set.entrant1Score : set.entrant2Score;
   if (setChanged || newP1Score > scoreboardInfo.p1Score) {

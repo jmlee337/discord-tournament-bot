@@ -26,22 +26,35 @@ import {
   SHEIK_SKIN_TO_ZELDA_SKIN,
   ZELDA_SKIN_TO_SHEIK_SKIN,
 } from '../common/mst';
+import LabeledCheckbox from './LabeledCheckbox';
 
 export default function Overlay({
   enableMST,
-  enableSkinColor,
   resourcesPath,
   gotSettings,
+  setEnableMST,
   setResourcesPath,
   showErrorDialog,
 }: {
   enableMST: boolean;
-  enableSkinColor: boolean;
   resourcesPath: string;
   gotSettings: boolean;
+  setEnableMST: (newEnableMST: boolean) => void;
   setResourcesPath: (newResourcesPath: string) => void;
   showErrorDialog: (errors: string[]) => void;
 }) {
+  const [enableSkinColor, setEnableSkinColor] = useState(false);
+  const [enableSggSponsors, setEnableSggSponsors] = useState(false);
+
+  useEffect(() => {
+    (async () => {
+      const enableSkinColorPromise = window.electron.getEnableSkinColor();
+      const enableSggSponsorsPromise = window.electron.getEnableSggSponsors();
+      setEnableSkinColor(await enableSkinColorPromise);
+      setEnableSggSponsors(await enableSggSponsorsPromise);
+    })();
+  }, []);
+
   const [p1Name, setP1Name] = useState('');
   const [p1Team, setP1Team] = useState('');
   const [p1Character, setP1Character] = useState(MSTCharacter.RANDOM);
@@ -111,7 +124,18 @@ export default function Overlay({
 
   return (
     <Stack>
-      <Stack direction="row" alignItems="center" marginRight="-8px">
+      <Stack alignItems="end">
+        <LabeledCheckbox
+          checked={enableMST}
+          label="Enable overlay"
+          labelPlacement="start"
+          set={async (checked) => {
+            await window.electron.setEnableMST(checked);
+            setEnableMST(checked);
+          }}
+        />
+      </Stack>
+      <Stack direction="row" alignItems="center" marginRight="-9px">
         <InputBase
           disabled
           size="small"
@@ -122,6 +146,7 @@ export default function Overlay({
           style={{ flexGrow: 1 }}
         />
         <Tooltip
+          placement="left"
           title={
             enableMST
               ? 'Set Melee Stream Tool/Melee Ghost Streamer Resources folder'
@@ -150,6 +175,28 @@ export default function Overlay({
             </IconButton>
           </div>
         </Tooltip>
+      </Stack>
+      <Stack alignItems="end">
+        <LabeledCheckbox
+          checked={enableSkinColor}
+          disabled={!enableMST}
+          label="Enable character colors"
+          labelPlacement="start"
+          set={async (checked) => {
+            await window.electron.setEnableSkinColor(checked);
+            setEnableSkinColor(checked);
+          }}
+        />
+        <LabeledCheckbox
+          checked={enableSggSponsors}
+          disabled={!enableMST}
+          label="Fetch sponsor tags from start.gg"
+          labelPlacement="start"
+          set={async (checked) => {
+            await window.electron.setEnableSggSponsors(checked);
+            setEnableSggSponsors(checked);
+          }}
+        />
       </Stack>
       {enableMST && resourcesPath && (
         <Stack spacing="8px">

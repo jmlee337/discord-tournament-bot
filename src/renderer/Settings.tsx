@@ -1,13 +1,11 @@
 import {
   Alert,
   Button,
-  Checkbox,
   Dialog,
   DialogContent,
   DialogContentText,
   DialogTitle,
   Divider,
-  FormControlLabel,
   IconButton,
   Stack,
   TextField,
@@ -15,45 +13,9 @@ import {
   Typography,
 } from '@mui/material';
 import { ContentCopy, Settings as SettingsIcon } from '@mui/icons-material';
-import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { AdminedTournament } from '../common/types';
-
-function LabeledCheckbox({
-  checked,
-  disabled,
-  label,
-  labelPlacement,
-  set,
-}: {
-  checked: boolean;
-  disabled?: boolean;
-  label: string;
-  labelPlacement?: 'end' | 'start' | 'top' | 'bottom';
-  set: (checked: boolean) => void;
-}) {
-  return (
-    <FormControlLabel
-      control={
-        <Checkbox
-          checked={checked}
-          onChange={(event: ChangeEvent<HTMLInputElement>) => {
-            set(event.target.checked);
-          }}
-        />
-      }
-      disabled={disabled}
-      disableTypography
-      label={label}
-      labelPlacement={labelPlacement}
-      sx={{ typography: 'caption' }}
-    />
-  );
-}
-
-LabeledCheckbox.defaultProps = {
-  disabled: false,
-  labelPlacement: 'end',
-};
+import LabeledCheckbox from './LabeledCheckbox';
 
 export default function Settings({
   showErrorDialog,
@@ -61,10 +23,6 @@ export default function Settings({
   setDiscordApplicationId,
   discordToken,
   setDiscordToken,
-  enableMST,
-  setEnableMST,
-  enableSkinColor,
-  setEnableSkinColor,
   setTournaments,
   latestAppVersion,
   gotSettings,
@@ -74,10 +32,6 @@ export default function Settings({
   setDiscordApplicationId: (discordApplicationId: string) => void;
   discordToken: string;
   setDiscordToken: (discordToken: string) => void;
-  enableMST: boolean;
-  setEnableMST: (enableMST: boolean) => void;
-  enableSkinColor: boolean;
-  setEnableSkinColor: (enableSkinColor: boolean) => void;
   setTournaments: (tournaments: AdminedTournament[]) => void;
   latestAppVersion: string;
   gotSettings: boolean;
@@ -338,28 +292,6 @@ export default function Settings({
               set={async (checked) => {
                 await window.electron.setDiscordCommandReset(checked);
                 setDiscordCommandReset(checked);
-              }}
-            />
-          </Stack>
-          <Divider style={{ marginLeft: '-24px', marginRight: '-24px' }}>
-            <Typography variant="button">Overlay</Typography>
-          </Divider>
-          <Stack>
-            <LabeledCheckbox
-              checked={enableMST}
-              label="Enable overlay"
-              set={async (checked) => {
-                await window.electron.setEnableMST(checked);
-                setEnableMST(checked);
-              }}
-            />
-            <LabeledCheckbox
-              checked={enableSkinColor}
-              disabled={!enableMST}
-              label="Enable character colors"
-              set={async (checked) => {
-                await window.electron.setEnableSkinColor(checked);
-                setEnableSkinColor(checked);
               }}
             />
           </Stack>

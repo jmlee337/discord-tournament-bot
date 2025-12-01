@@ -64,6 +64,10 @@ const electronHandler = {
     ipcRenderer.invoke('getEnableSkinColor'),
   setEnableSkinColor: (enableSkinColor: boolean): Promise<void> =>
     ipcRenderer.invoke('setEnableSkinColor', enableSkinColor),
+  getEnableSggSponsors: (): Promise<boolean> =>
+    ipcRenderer.invoke('getEnableSggSponsors'),
+  setEnableSggSponsors: (enableSggSponsors: boolean): Promise<void> =>
+    ipcRenderer.invoke('setEnableSggSponsors', enableSggSponsors),
   getScoreboardInfo: (): Promise<MSTScoreboardInfo> =>
     ipcRenderer.invoke('getScoreboardInfo'),
   setScoreboardInfo: (
