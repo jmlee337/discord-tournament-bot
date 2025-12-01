@@ -267,7 +267,7 @@ type GroupJSON = {
     entrants: {
       id: number;
       mutations: {
-        participants: { [key: string]: { gamerTag: string } };
+        participants: { [key: string]: { gamerTag: string; prefix: string } };
       };
     }[];
     sets: SetJSON[];
@@ -320,12 +320,19 @@ export async function getEventSets(event: StartggEvent): Promise<Sets> {
             `https://api.start.gg/phase_group/${group.id}?expand[]=sets&expand[]=entrants`,
           );
           const groupJson = (await groupResponse.json()) as GroupJSON;
-          const entrantIdToName = new Map<number, string>();
+          const entrantIdToNameAndSponsor = new Map<
+            number,
+            { name: string; sponsor: string }
+          >();
           groupJson.entities.entrants.forEach((entrant) => {
-            const name = Object.values(entrant.mutations.participants)
+            const participants = Object.values(entrant.mutations.participants);
+            const name = participants
               .map((participant) => participant.gamerTag)
               .join(' / ');
-            entrantIdToName.set(entrant.id, name);
+            const sponsor = participants
+              .map((participant) => participant.prefix)
+              .join(' / ');
+            entrantIdToNameAndSponsor.set(entrant.id, { name, sponsor });
           });
           const pendingSets: StartggSet[] = [];
           const completedSets: StartggSet[] = [];
@@ -342,16 +349,23 @@ export async function getEventSets(event: StartggEvent): Promise<Sets> {
                 return existingSet;
               }
 
+              const { name: entrant1Name, sponsor: entrant1Sponsor } =
+                entrantIdToNameAndSponsor.get(set.entrant1Id!)!;
+              const { name: entrant2Name, sponsor: entrant2Sponsor } =
+                entrantIdToNameAndSponsor.get(set.entrant2Id!)!;
+
               const newSet: StartggSet = {
                 id: set.id,
                 bestOf: set.bestOf,
                 completedAt: set.completedAt,
                 isDQ: set.entrant1Score === -1 || set.entrant2Score === -1,
                 entrant1Id: set.entrant1Id!,
-                entrant1Name: entrantIdToName.get(set.entrant1Id!)!,
+                entrant1Name,
+                entrant1Sponsor,
                 entrant1Score: set.entrant1Score || 0,
                 entrant2Id: set.entrant2Id!,
-                entrant2Name: entrantIdToName.get(set.entrant2Id!)!,
+                entrant2Name,
+                entrant2Sponsor,
                 entrant2Score: set.entrant2Score || 0,
                 fullRoundText: set.fullRoundText,
                 round: set.round,
@@ -457,6 +471,7 @@ const GQL_SET_INNER = `
       id
       participants {
         gamerTag
+        prefix
       }
     }
     standing {
@@ -483,6 +498,7 @@ type GqlSet = {
       id: number;
       participants: {
         gamerTag: string;
+        prefix: string;
       }[];
     } | null;
     standing: {
@@ -503,19 +519,27 @@ function gqlSetFilterPred(set: GqlSet) {
 }
 
 function gqlSetToStartggSet(set: GqlSet): StartggSet {
+  const entrant1Participants = set.slots[0].entrant!.participants;
+  const entrant2Participants = set.slots[1].entrant!.participants;
   return {
     id: set.id,
     bestOf: idToSet.get(set.id)!.bestOf,
     completedAt: set.completedAt,
     isDQ: set.displayScore === 'DQ',
     entrant1Id: set.slots[0].entrant!.id,
-    entrant1Name: set.slots[0]
-      .entrant!.participants.map((participant) => participant.gamerTag)
+    entrant1Name: entrant1Participants
+      .map((participant) => participant.gamerTag)
+      .join(' / '),
+    entrant1Sponsor: entrant1Participants
+      .map((participant) => participant.prefix)
       .join(' / '),
     entrant1Score: set.slots[0].standing?.stats.score.value || 0,
     entrant2Id: set.slots[1].entrant!.id,
-    entrant2Name: set.slots[1]
-      .entrant!.participants.map((participant) => participant.gamerTag)
+    entrant2Name: entrant2Participants
+      .map((participant) => participant.gamerTag)
+      .join(' / '),
+    entrant2Sponsor: entrant2Participants
+      .map((participant) => participant.prefix)
       .join(' / '),
     entrant2Score: set.slots[1].standing?.stats.score.value || 0,
     fullRoundText: set.fullRoundText,

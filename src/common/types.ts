@@ -24,10 +24,12 @@ export type StartggSet = {
   isDQ: boolean;
   entrant1Id: number;
   entrant1Name: string;
+  entrant1Sponsor: string;
   entrant1Score: number;
-  entrant2Score: number;
   entrant2Id: number;
   entrant2Name: string;
+  entrant2Sponsor: string;
+  entrant2Score: number;
   fullRoundText: string;
   round: number;
   startedAt: number | null;
