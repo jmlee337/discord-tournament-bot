@@ -323,10 +323,10 @@ export default function Remote({
     () => getBroadcastsWithHighlights(broadcasts, searchSubstr),
     [broadcasts, searchSubstr],
   );
-  // TODO: refactor to be columns
 
+  // TODO: filter by broadcasts corresponding to a pending set
   return (
-    <Stack>
+    <Stack direction="row" alignItems="start" height="100%">
       <style>
         {`
           @keyframes border-pulse {
@@ -336,14 +336,14 @@ export default function Remote({
           }
         `}
       </style>
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        spacing="8px"
-      >
-        <Status remoteState={remoteState} />
-        <Stack direction="row" alignItems="center" spacing="8px">
+      <Stack flexGrow={1}>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          spacing="8px"
+        >
+          <Status remoteState={remoteState} />
           <Tooltip
             placement="left"
             title={refreshing ? 'Refreshing' : 'Refresh'}
@@ -368,6 +368,20 @@ export default function Remote({
               </IconButton>
             </span>
           </Tooltip>
+        </Stack>
+        <List style={{ flexGrow: 1, marginRight: '8px' }}>
+          {broadcastsWithHighlights.map((bwh) => (
+            <BroadcastWithHighlightListItem
+              key={bwh.broadcast.id}
+              bwh={bwh}
+              selectedChipData={selectedChipData}
+              setSelectedChipData={setSelectedChipData}
+            />
+          ))}
+        </List>
+      </Stack>
+      <Stack alignItems="stretch">
+        <Stack direction="row" alignItems="center" spacing="8px">
           <TextField
             disabled={
               remoteState.status === RemoteStatus.CONNECTING ||
@@ -399,23 +413,10 @@ export default function Remote({
             Connect
           </Button>
         </Stack>
-      </Stack>
-      <Stack direction="row" alignItems="start" spacing="8px">
-        <List style={{ flexGrow: 1 }}>
-          {broadcastsWithHighlights.map((bwh) => (
-            <BroadcastWithHighlightListItem
-              key={bwh.broadcast.id}
-              bwh={bwh}
-              selectedChipData={selectedChipData}
-              setSelectedChipData={setSelectedChipData}
-            />
-          ))}
-        </List>
         <Stack spacing="8px" style={{ marginTop: '8px' }}>
           {spectating.map((spectate) => (
             <Card
               key={spectate.dolphinId}
-              style={{ width: '208px' }}
               sx={
                 spectate.spectating
                   ? undefined
