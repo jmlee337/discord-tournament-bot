@@ -56,6 +56,7 @@ function Status({ remoteState }: { remoteState: RemoteState }) {
   throw new Error('unreachable');
 }
 
+// TODO: handle broadcast with multiple sets
 function getBroadcastsWithHighlights(
   broadcasts: Broadcast[],
   requireSet: boolean,
@@ -68,7 +69,7 @@ function getBroadcastsWithHighlights(
   let remainingBroadcasts = [...broadcasts];
   if (requireSet) {
     remainingBroadcasts = remainingBroadcasts.filter(
-      (broadcast) => broadcast.set,
+      (broadcast) => broadcast.sets.length > 0,
     );
     if (!searchSubstr) {
       return remainingBroadcasts.map((broadcast) => ({ broadcast }));
@@ -107,8 +108,8 @@ function getBroadcastsWithHighlights(
           };
         }
       }
-      if (broadcast.set) {
-        const setNamesStart = broadcast.set.names
+      if (broadcast.sets.length === 1) {
+        const setNamesStart = broadcast.sets[0].names
           .toLowerCase()
           .indexOf(includeStr);
         if (setNamesStart >= 0) {
@@ -228,31 +229,31 @@ function BroadcastWithHighlightListItem({
                 borderRight: (theme) => `1px solid ${theme.palette.grey[400]}`,
               }}
             >
-              {bwh.broadcast.set &&
+              {bwh.broadcast.sets.length === 1 &&
                 (bwh.setNamesHighlight ? (
                   <>
                     <span>
-                      {bwh.broadcast.set.names.substring(
+                      {bwh.broadcast.sets[0].names.substring(
                         0,
                         bwh.setNamesHighlight.start,
                       )}
                     </span>
                     <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
-                      {bwh.broadcast.set.names.substring(
+                      {bwh.broadcast.sets[0].names.substring(
                         bwh.setNamesHighlight.start,
                         bwh.setNamesHighlight.end,
                       )}
                     </span>
                     <span>
-                      {bwh.broadcast.set.names.substring(
+                      {bwh.broadcast.sets[0].names.substring(
                         bwh.setNamesHighlight.end,
                       )}
                     </span>
                   </>
                 ) : (
-                  bwh.broadcast.set.names
+                  bwh.broadcast.sets[0].names
                 ))}
-              {bwh.broadcast.set === undefined &&
+              {bwh.broadcast.sets.length !== 1 &&
                 (bwh.gamerTagHighlight ? (
                   <>
                     <span>
@@ -311,6 +312,7 @@ export default function Remote({
     id: '',
     connectCode: '',
     slippiName: '',
+    sets: [],
   });
 
   useEffect(() => {
@@ -460,8 +462,9 @@ export default function Remote({
                   )}
                   {spectate.broadcast && (
                     <Typography variant="caption">
-                      {spectate.broadcast.set && spectate.broadcast.set.names}
-                      {spectate.broadcast.set === undefined &&
+                      {spectate.broadcast.sets.length === 1 &&
+                        spectate.broadcast.sets[0].names}
+                      {spectate.broadcast.sets.length !== undefined &&
                         (spectate.broadcast.gamerTag
                           ? spectate.broadcast.gamerTag
                           : `${spectate.broadcast.connectCode} (${spectate.broadcast.slippiName})`)}
@@ -489,6 +492,7 @@ export default function Remote({
                       id: '',
                       connectCode: '',
                       slippiName: '',
+                      sets: [],
                     });
                   }}
                 />

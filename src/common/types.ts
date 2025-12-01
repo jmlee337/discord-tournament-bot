@@ -120,10 +120,10 @@ export type Broadcast = {
   id: string;
   connectCode: string;
   gamerTag?: string;
-  set?: {
+  sets: {
     id: number;
     names: string;
-  };
+  }[];
   slippiName: string;
 };
 

@@ -152,13 +152,12 @@ function recalculateAndSendBroadcasts() {
       idToBroadcast.set(broadcastId, {
         ...broadcast,
         gamerTag: entrant.gamerTag,
-        set:
-          pendingSets && pendingSets.length === 1
-            ? {
-                id: pendingSets[0].id,
-                names: `${pendingSets[0].entrant1Name} vs ${pendingSets[0].entrant2Name}`,
-              }
-            : undefined,
+        sets: pendingSets
+          ? pendingSets.map((pendingSet) => ({
+              id: pendingSet.id,
+              names: `${pendingSet.entrant1Name} vs ${pendingSet.entrant2Name}`,
+            }))
+          : [],
       });
     }
   });
@@ -184,7 +183,7 @@ export function setEntrantIdToPendingSets(
   recalculateAndSendBroadcasts();
 }
 
-export async function processNewReplay(filePath: string, dolphinId: string) {
+export async function processNewReplay(filePath: string) {
   const gameStartInfos = await getGameStartInfos(filePath);
   const emptyInfos = gameStartInfos.filter(
     (gameStartInfo) => gameStartInfo.playerType === 3,
@@ -254,15 +253,13 @@ export async function processNewReplay(filePath: string, dolphinId: string) {
   let p2Name = mstInfos[1].participant?.gamerTag;
   let p2Team = mstInfos[1].participant?.prefix;
 
-  let set: StartggSet | undefined;
+  let setData: MSTSetData | undefined;
   const p1PendingSets = mstInfos[0].participant
     ? entrantIdToPendingSets.get(mstInfos[0].participant.entrantId)
     : undefined;
   const p2PendingSets = mstInfos[1].participant
     ? entrantIdToPendingSets.get(mstInfos[1].participant.entrantId)
     : undefined;
-
-  // TODO: require intersection
   if (
     p1PendingSets &&
     p1PendingSets.length > 0 &&
@@ -275,50 +272,25 @@ export async function processNewReplay(filePath: string, dolphinId: string) {
       ),
     );
     if (intersectionSets.length === 1) {
-      [set] = intersectionSets;
-    }
-  } else if (p1PendingSets && p1PendingSets.length > 0) {
-    if (p1PendingSets.length === 1) {
-      [set] = p1PendingSets;
-    }
-  } else if (p2PendingSets && p2PendingSets.length > 0) {
-    if (p2PendingSets.length === 1) {
-      [set] = p2PendingSets;
-    }
-  }
-
-  let setData: MSTSetData | undefined;
-  if (set) {
-    const p1IsEntrant1 = mstInfos[0].participant
-      ? set.entrant1Id === mstInfos[0].participant.entrantId
-      : set.entrant2Id === mstInfos[1].participant!.entrantId;
-    p1Name = p1IsEntrant1 ? set.entrant1Name : set.entrant2Name;
-    p1Team = p1IsEntrant1 ? set.entrant1Sponsor : set.entrant2Sponsor;
-    p2Name = p1IsEntrant1 ? set.entrant2Name : set.entrant1Name;
-    p2Team = p1IsEntrant1 ? set.entrant2Sponsor : set.entrant1Sponsor;
-    setData = {
-      setId: set.id,
-      bestOf: set.bestOf === 5 ? 'Bo5' : 'Bo3',
-      round: set.fullRoundText,
-      p1Score: p1IsEntrant1 ? set.entrant1Score : set.entrant2Score,
-      p1WL: !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada',
-      p2Score: p1IsEntrant1 ? set.entrant2Score : set.entrant1Score,
-      p2WL: p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada',
-    };
-
-    const spectating = dolphinIdToSpectating.get(dolphinId);
-    if (spectating) {
-      const broadcast = idToBroadcast.get(spectating.broadcastId);
-      if (broadcast) {
-        idToBroadcast.set(spectating.broadcastId, {
-          ...broadcast,
-          set: {
-            id: set.id,
-            names: `${set.entrant1Name} vs ${set.entrant2Name}`,
-          },
-        });
-        sendBroadcasts();
-      }
+      const [set] = intersectionSets;
+      const p1IsEntrant1 = mstInfos[0].participant
+        ? set.entrant1Id === mstInfos[0].participant.entrantId
+        : set.entrant2Id === mstInfos[1].participant!.entrantId;
+      p1Name = p1IsEntrant1 ? set.entrant1Name : set.entrant2Name;
+      p1Team = p1IsEntrant1 ? set.entrant1Sponsor : set.entrant2Sponsor;
+      p2Name = p1IsEntrant1 ? set.entrant2Name : set.entrant1Name;
+      p2Team = p1IsEntrant1 ? set.entrant2Sponsor : set.entrant1Sponsor;
+      setData = {
+        setId: set.id,
+        bestOf: set.bestOf === 5 ? 'Bo5' : 'Bo3',
+        round: set.fullRoundText,
+        p1Score: p1IsEntrant1 ? set.entrant1Score : set.entrant2Score,
+        p1WL:
+          !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada',
+        p2Score: p1IsEntrant1 ? set.entrant2Score : set.entrant1Score,
+        p2WL:
+          p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada',
+      };
     }
   }
 
@@ -382,7 +354,7 @@ export async function setOverlayDolphinId(newOverlayDolphinId: string) {
   if (changed) {
     const filePath = dolphinIdToFilePath.get(overlayDolphinId);
     if (filePath) {
-      await processNewReplay(filePath, overlayDolphinId);
+      await processNewReplay(filePath);
     }
   }
 }
@@ -476,11 +448,9 @@ export function connect(port: number) {
           case 'new-file-event':
             dolphinIdToFilePath.set(message.dolphinId, message.filePath);
             if (overlayDolphinId === message.dolphinId) {
-              processNewReplay(message.filePath, message.dolphinId).catch(
-                () => {
-                  // just catch
-                },
-              );
+              processNewReplay(message.filePath).catch(() => {
+                // just catch
+              });
             }
             if (!dolphinIdToSpectating.has(message.dolphinId)) {
               dolphinIdToSpectating.set(message.dolphinId, {
@@ -498,56 +468,67 @@ export function connect(port: number) {
               id: 'abc',
               connectCode: 'ANCO#203',
               slippiName: 'Anconoid',
+              sets: [],
             });
             idToBroadcast.set('bcd', {
               id: 'bcd',
               connectCode: 'LEFT#925',
               slippiName: 'dandrew',
+              sets: [],
             });
             idToBroadcast.set('cde', {
               id: 'cde',
               connectCode: 'BTW#894',
               slippiName: "I'm Michael BTW",
+              sets: [],
             });
             idToBroadcast.set('def', {
               id: 'def',
               connectCode: 'KING#870',
               slippiName: 'Kingpoyothefirst',
+              sets: [],
             });
             idToBroadcast.set('efg', {
               id: 'efg',
               connectCode: 'LOWH#158',
               slippiName: 'Lowercase hero',
+              sets: [],
             });
             idToBroadcast.set('fgh', {
               id: 'fgh',
               connectCode: 'PREG#16',
               slippiName: 'Pregnando',
+              sets: [],
             });
             idToBroadcast.set('ghi', {
               id: 'ghi',
               connectCode: 'RACK#181',
               slippiName: 'Rainey',
+              sets: [],
             });
             idToBroadcast.set('hij', {
               id: 'hij',
               connectCode: 'SLIM#667',
               slippiName: 'Slimy',
+              sets: [],
             });
             idToBroadcast.set('ijk', {
               id: 'ijk',
               connectCode: 'NICO#215',
               slippiName: 'Nico',
+              sets: [],
             });
             idToBroadcast.set('jkl', {
               id: 'jkl',
               connectCode: 'STNC#139',
               slippiName: 'st. nicolas',
+              sets: [],
             });
             idToBroadcast.set('klm', {
               id: 'klm',
               connectCode: 'LEE#337',
               slippiName: 'Nicolet',
+              sets: [],
             });
 
             (message.broadcasts as RemoteBroadcast[]).forEach((broadcast) => {
@@ -560,13 +541,12 @@ export function connect(port: number) {
                 id: broadcast.id,
                 connectCode,
                 gamerTag: entrant?.gamerTag,
-                set:
-                  pendingSets && pendingSets.length === 1
-                    ? {
-                        id: pendingSets[0].id,
-                        names: `${pendingSets[0].entrant1Name} vs ${pendingSets[0].entrant2Name}`,
-                      }
-                    : undefined,
+                sets: pendingSets
+                  ? pendingSets.map((pendingSet) => ({
+                      id: pendingSet.id,
+                      names: `${pendingSet.entrant1Name} vs ${pendingSet.entrant2Name}`,
+                    }))
+                  : [],
                 slippiName: broadcast.broadcaster.name,
               });
             });

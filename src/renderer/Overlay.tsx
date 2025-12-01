@@ -122,6 +122,7 @@ export default function Overlay({
   const [resetting, setResetting] = useState(false);
   const [updating, setUpdating] = useState(false);
 
+  // TODO: fix da settings LOL
   return (
     <Stack>
       <Stack alignItems="end">

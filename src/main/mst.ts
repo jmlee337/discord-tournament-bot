@@ -150,16 +150,24 @@ export async function newFileUpdate(
 
   if (newFileScoreboardInfo.p1Name) {
     scoreboardInfo.p1Name = newFileScoreboardInfo.p1Name;
+  } else if (setChanged || entrantsChanged) {
+    scoreboardInfo.p1Name = '';
   }
   if (newFileScoreboardInfo.p2Name) {
     scoreboardInfo.p2Name = newFileScoreboardInfo.p2Name;
+  } else if (setChanged || entrantsChanged) {
+    scoreboardInfo.p2Name = '';
   }
   if (enableSggSponsors) {
     if (newFileScoreboardInfo.p1Team) {
       scoreboardInfo.p1Team = newFileScoreboardInfo.p1Team;
+    } else if (setChanged || entrantsChanged) {
+      scoreboardInfo.p1Team = '';
     }
     if (newFileScoreboardInfo.p2Team) {
       scoreboardInfo.p2Team = newFileScoreboardInfo.p2Team;
+    } else if (setChanged || entrantsChanged) {
+      scoreboardInfo.p2Team = '';
     }
   } else {
     scoreboardInfo.p1Team = '';
@@ -186,7 +194,10 @@ export async function newFileUpdate(
   } else {
     if (setChanged || entrantsChanged) {
       scoreboardInfo.p1Score = 0;
+      scoreboardInfo.p1WL = 'Nada';
       scoreboardInfo.p2Score = 0;
+      scoreboardInfo.p2WL = 'Nada';
+      scoreboardInfo.round = '';
     }
     if (requestGetEventSets) {
       requestGetEventSets();
@@ -196,94 +207,72 @@ export async function newFileUpdate(
   await writeScoreboardInfo();
 }
 
-async function pendingSetUpdate(
-  set: StartggSet,
-  localP1EntrantId: number | undefined,
-  localP2EntrantId: number | undefined,
-) {
-  const setChanged = set.id !== setId;
-  setId = set.id;
-
-  scoreboardInfo.bestOf = set.bestOf === 5 ? 'Bo5' : 'Bo3';
-  scoreboardInfo.round = set.fullRoundText;
-
-  const p1IsEntrant1 =
-    localP1EntrantId !== undefined
-      ? set.entrant1Id === localP1EntrantId
-      : set.entrant2Id === localP2EntrantId;
-  scoreboardInfo.p1Name = p1IsEntrant1 ? set.entrant1Name : set.entrant2Name;
-  scoreboardInfo.p1WL =
-    !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
-  scoreboardInfo.p2Name = p1IsEntrant1 ? set.entrant2Name : set.entrant1Name;
-  scoreboardInfo.p2WL =
-    p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
-
-  if (enableSggSponsors) {
-    scoreboardInfo.p1Team = p1IsEntrant1
-      ? set.entrant1Sponsor
-      : set.entrant2Sponsor;
-    scoreboardInfo.p2Team = p1IsEntrant1
-      ? set.entrant2Sponsor
-      : set.entrant1Sponsor;
-  } else {
-    scoreboardInfo.p1Team = '';
-    scoreboardInfo.p2Team = '';
-  }
-
-  const newP1Score = p1IsEntrant1 ? set.entrant1Score : set.entrant2Score;
-  if (setChanged || newP1Score > scoreboardInfo.p1Score) {
-    scoreboardInfo.p1Score = newP1Score;
-  }
-  const newP2Score = p1IsEntrant1 ? set.entrant2Score : set.entrant1Score;
-  if (setChanged || newP2Score > scoreboardInfo.p2Score) {
-    scoreboardInfo.p2Score = newP2Score;
-  }
-
-  await writeScoreboardInfo();
-}
-
 export async function pendingSetsUpdate(
   entrantIdToPendingSets: Map<number, StartggSet[]>,
 ) {
-  if (p1EntrantId === undefined && p2EntrantId === undefined) {
+  if (p1EntrantId === undefined || p2EntrantId === undefined) {
     return;
   }
 
-  const idToPendingSet = new Map<number, StartggSet>();
+  const p1PendingSets = entrantIdToPendingSets.get(p1EntrantId);
+  const p2PendingSets = entrantIdToPendingSets.get(p2EntrantId);
+  if (
+    p1PendingSets &&
+    p1PendingSets.length > 0 &&
+    p2PendingSets &&
+    p2PendingSets.length > 0
+  ) {
+    const intersectionSets = p1PendingSets.filter((pendingSet) =>
+      p2PendingSets.find(
+        (otherPendingSet) => pendingSet.id === otherPendingSet.id,
+      ),
+    );
+    if (intersectionSets.length === 1) {
+      const [set] = intersectionSets;
+      const setChanged = set.id !== setId;
+      setId = set.id;
 
-  // TODO: require intersection
-  const idToIntersectionSet = new Map<number, StartggSet>();
-  [p1EntrantId, p2EntrantId]
-    .filter((entrantId) => entrantId !== undefined)
-    .forEach((entrantId) => {
-      const pendingSets = entrantIdToPendingSets.get(entrantId);
-      if (pendingSets) {
-        pendingSets.forEach((pendingSet) => {
-          if (idToPendingSet.has(pendingSet.id)) {
-            idToIntersectionSet.set(pendingSet.id, pendingSet);
-          } else {
-            idToPendingSet.set(pendingSet.id, pendingSet);
-          }
-        });
+      scoreboardInfo.bestOf = set.bestOf === 5 ? 'Bo5' : 'Bo3';
+      scoreboardInfo.round = set.fullRoundText;
+
+      const p1IsEntrant1 =
+        p1EntrantId !== undefined
+          ? set.entrant1Id === p1EntrantId
+          : set.entrant2Id === p2EntrantId;
+      scoreboardInfo.p1Name = p1IsEntrant1
+        ? set.entrant1Name
+        : set.entrant2Name;
+      scoreboardInfo.p1WL =
+        !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
+      scoreboardInfo.p2Name = p1IsEntrant1
+        ? set.entrant2Name
+        : set.entrant1Name;
+      scoreboardInfo.p2WL =
+        p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
+
+      if (enableSggSponsors) {
+        scoreboardInfo.p1Team = p1IsEntrant1
+          ? set.entrant1Sponsor
+          : set.entrant2Sponsor;
+        scoreboardInfo.p2Team = p1IsEntrant1
+          ? set.entrant2Sponsor
+          : set.entrant1Sponsor;
+      } else {
+        scoreboardInfo.p1Team = '';
+        scoreboardInfo.p2Team = '';
       }
-    });
 
-  if (idToIntersectionSet.size > 1) {
-    return;
-  }
+      const newP1Score = p1IsEntrant1 ? set.entrant1Score : set.entrant2Score;
+      if (setChanged || newP1Score > scoreboardInfo.p1Score) {
+        scoreboardInfo.p1Score = newP1Score;
+      }
+      const newP2Score = p1IsEntrant1 ? set.entrant2Score : set.entrant1Score;
+      if (setChanged || newP2Score > scoreboardInfo.p2Score) {
+        scoreboardInfo.p2Score = newP2Score;
+      }
 
-  if (idToIntersectionSet.size === 1) {
-    await pendingSetUpdate(
-      Array.from(idToIntersectionSet.values())[0],
-      p1EntrantId,
-      p2EntrantId,
-    );
-  } else if (idToPendingSet.size === 1) {
-    await pendingSetUpdate(
-      Array.from(idToPendingSet.values())[0],
-      p1EntrantId,
-      p2EntrantId,
-    );
+      await writeScoreboardInfo();
+    }
   }
 }
 
