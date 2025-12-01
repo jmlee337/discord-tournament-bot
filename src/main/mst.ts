@@ -81,7 +81,6 @@ export function setEnableSggSponsors(newEnableSggSponsors: boolean) {
   enableSggSponsors = newEnableSggSponsors;
 }
 
-// TODO: button to put sgg tournament name back if deleted
 export function setTournamentName(newTournamentName: string) {
   scoreboardInfo.tournamentName = newTournamentName;
 }

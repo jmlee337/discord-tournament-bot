@@ -40,6 +40,7 @@ export default function Overlay({
   enableMST,
   resourcesPath,
   gotSettings,
+  sggTournamentName,
   setEnableMST,
   setResourcesPath,
   showErrorDialog,
@@ -47,6 +48,7 @@ export default function Overlay({
   enableMST: boolean;
   resourcesPath: string;
   gotSettings: boolean;
+  sggTournamentName: string;
   setEnableMST: (newEnableMST: boolean) => void;
   setResourcesPath: (newResourcesPath: string) => void;
   showErrorDialog: (errors: string[]) => void;
@@ -549,7 +551,7 @@ export default function Overlay({
                   }}
                 />
               </TableCell>
-              <TableCell style={{ border: 'none' }}>
+              <TableCell style={{ border: 'none', position: 'relative' }}>
                 <TextField
                   disabled={!enableMST || !resourcesPath}
                   variant="outlined"
@@ -560,6 +562,20 @@ export default function Overlay({
                     setTournamentName(event.target.value);
                   }}
                 />
+                {sggTournamentName && tournamentName !== sggTournamentName && (
+                  <Tooltip
+                    title="Set to start.gg tournament name"
+                    style={{ position: 'absolute' }}
+                  >
+                    <IconButton
+                      onClick={() => {
+                        setTournamentName(sggTournamentName);
+                      }}
+                    >
+                      <Restore />
+                    </IconButton>
+                  </Tooltip>
+                )}
               </TableCell>
             </TableRow>
             <TableRow>

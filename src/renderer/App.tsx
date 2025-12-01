@@ -367,6 +367,7 @@ function Hello() {
           enableMST={enableMST}
           resourcesPath={resourcesPath}
           gotSettings={gotSettings}
+          sggTournamentName={tournament.name}
           setEnableMST={setEnableMST}
           setResourcesPath={setResourcesPath}
           showErrorDialog={showErrorDialog}
