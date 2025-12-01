@@ -30,6 +30,7 @@ import {
   Spectating,
 } from '../common/types';
 import { DraggableChip, DroppableChip } from './DragAndDrop';
+import LabeledCheckbox from './LabeledCheckbox';
 
 type BroadcastWithHighlight = {
   connectCodeHighlight?: Highlight;
@@ -57,75 +58,90 @@ function Status({ remoteState }: { remoteState: RemoteState }) {
 
 function getBroadcastsWithHighlights(
   broadcasts: Broadcast[],
+  requireSet: boolean,
   searchSubstr: string,
-) {
-  if (!searchSubstr) {
+): BroadcastWithHighlight[] {
+  if (!requireSet && !searchSubstr) {
     return broadcasts.map((broadcast) => ({ broadcast }));
   }
 
-  const broadcastsWithHighlights: BroadcastWithHighlight[] = [];
-  broadcasts.forEach((broadcast) => {
-    let connectCodeHighlight: Highlight | undefined;
-    let gamerTagHighlight: Highlight | undefined;
-    let setNamesHighlight: Highlight | undefined;
-    let slippiNameHighlight: Highlight | undefined;
-    let include = false;
-    const includeStr = searchSubstr.toLowerCase();
-    const connectCodeStart = broadcast.connectCode
-      .toLowerCase()
-      .indexOf(includeStr);
-    if (connectCodeStart >= 0) {
-      include = true;
-      connectCodeHighlight = {
-        start: connectCodeStart,
-        end: connectCodeStart + includeStr.length,
-      };
+  let remainingBroadcasts = [...broadcasts];
+  if (requireSet) {
+    remainingBroadcasts = remainingBroadcasts.filter(
+      (broadcast) => broadcast.set,
+    );
+    if (!searchSubstr) {
+      return remainingBroadcasts.map((broadcast) => ({ broadcast }));
     }
-    if (broadcast.gamerTag) {
-      const gamerTagStart = broadcast.gamerTag
+  }
+
+  if (searchSubstr) {
+    const broadcastsWithHighlights: BroadcastWithHighlight[] = [];
+    // eslint-disable-next-line no-restricted-syntax
+    for (const broadcast of remainingBroadcasts) {
+      let connectCodeHighlight: Highlight | undefined;
+      let gamerTagHighlight: Highlight | undefined;
+      let setNamesHighlight: Highlight | undefined;
+      let slippiNameHighlight: Highlight | undefined;
+      let include = false;
+      const includeStr = searchSubstr.toLowerCase();
+      const connectCodeStart = broadcast.connectCode
         .toLowerCase()
         .indexOf(includeStr);
-      if (gamerTagStart >= 0) {
+      if (connectCodeStart >= 0) {
         include = true;
-        gamerTagHighlight = {
-          start: gamerTagStart,
-          end: gamerTagStart + includeStr.length,
+        connectCodeHighlight = {
+          start: connectCodeStart,
+          end: connectCodeStart + includeStr.length,
         };
       }
-    }
-    if (broadcast.set) {
-      const setNamesStart = broadcast.set.names
+      if (broadcast.gamerTag) {
+        const gamerTagStart = broadcast.gamerTag
+          .toLowerCase()
+          .indexOf(includeStr);
+        if (gamerTagStart >= 0) {
+          include = true;
+          gamerTagHighlight = {
+            start: gamerTagStart,
+            end: gamerTagStart + includeStr.length,
+          };
+        }
+      }
+      if (broadcast.set) {
+        const setNamesStart = broadcast.set.names
+          .toLowerCase()
+          .indexOf(includeStr);
+        if (setNamesStart >= 0) {
+          include = true;
+          setNamesHighlight = {
+            start: setNamesStart,
+            end: setNamesStart + includeStr.length,
+          };
+        }
+      }
+      const slippiNameStart = broadcast.slippiName
         .toLowerCase()
         .indexOf(includeStr);
-      if (setNamesStart >= 0) {
+      if (slippiNameStart >= 0) {
         include = true;
-        setNamesHighlight = {
-          start: setNamesStart,
-          end: setNamesStart + includeStr.length,
+        slippiNameHighlight = {
+          start: slippiNameStart,
+          end: slippiNameStart + includeStr.length,
         };
       }
+      if (include) {
+        broadcastsWithHighlights.push({
+          connectCodeHighlight,
+          gamerTagHighlight,
+          setNamesHighlight,
+          slippiNameHighlight,
+          broadcast,
+        });
+      }
     }
-    const slippiNameStart = broadcast.slippiName
-      .toLowerCase()
-      .indexOf(includeStr);
-    if (slippiNameStart >= 0) {
-      include = true;
-      slippiNameHighlight = {
-        start: slippiNameStart,
-        end: slippiNameStart + includeStr.length,
-      };
-    }
-    if (include) {
-      broadcastsWithHighlights.push({
-        connectCodeHighlight,
-        gamerTagHighlight,
-        setNamesHighlight,
-        slippiNameHighlight,
-        broadcast,
-      });
-    }
-  });
-  return broadcastsWithHighlights;
+    return broadcastsWithHighlights;
+  }
+  throw new Error('unreachable');
 }
 
 function BroadcastWithHighlightListItem({
@@ -288,6 +304,7 @@ export default function Remote({
   const [port, setPort] = useState(0);
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [requireSet, setRequireSet] = useState(false);
   const [overlayDolphinId, setOverlayDolphinId] = useState('');
   const [spectating, setSpectating] = useState<Spectating[]>([]);
   const [selectedChipData, setSelectedChipData] = useState<ChipData>({
@@ -320,11 +337,10 @@ export default function Remote({
   }, []);
 
   const broadcastsWithHighlights = useMemo(
-    () => getBroadcastsWithHighlights(broadcasts, searchSubstr),
-    [broadcasts, searchSubstr],
+    () => getBroadcastsWithHighlights(broadcasts, requireSet, searchSubstr),
+    [broadcasts, requireSet, searchSubstr],
   );
 
-  // TODO: filter by broadcasts corresponding to a pending set
   return (
     <Stack direction="row" alignItems="start" height="100%">
       <style>
@@ -344,30 +360,40 @@ export default function Remote({
           spacing="8px"
         >
           <Status remoteState={remoteState} />
-          <Tooltip
-            placement="left"
-            title={refreshing ? 'Refreshing' : 'Refresh'}
-          >
-            <span>
-              <IconButton
-                disabled={
-                  refreshing || remoteState.status !== RemoteStatus.CONNECTED
-                }
-                onClick={async () => {
-                  try {
-                    setRefreshing(true);
-                    await window.electron.refreshBroadcasts();
-                  } catch (e: any) {
-                    const message = e instanceof Error ? e.message : e;
-                    showErrorDialog([message]);
-                    setRefreshing(false);
+          <Stack direction="row" alignItems="center">
+            <LabeledCheckbox
+              checked={requireSet}
+              label="Hide broadcasts without matching set"
+              labelPlacement="start"
+              set={async (checked) => {
+                setRequireSet(checked);
+              }}
+            />
+            <Tooltip
+              placement="left"
+              title={refreshing ? 'Refreshing' : 'Refresh'}
+            >
+              <span>
+                <IconButton
+                  disabled={
+                    refreshing || remoteState.status !== RemoteStatus.CONNECTED
                   }
-                }}
-              >
-                {refreshing ? <CircularProgress size="24px" /> : <Refresh />}
-              </IconButton>
-            </span>
-          </Tooltip>
+                  onClick={async () => {
+                    try {
+                      setRefreshing(true);
+                      await window.electron.refreshBroadcasts();
+                    } catch (e: any) {
+                      const message = e instanceof Error ? e.message : e;
+                      showErrorDialog([message]);
+                      setRefreshing(false);
+                    }
+                  }}
+                >
+                  {refreshing ? <CircularProgress size="24px" /> : <Refresh />}
+                </IconButton>
+              </span>
+            </Tooltip>
+          </Stack>
         </Stack>
         <List style={{ flexGrow: 1, marginRight: '8px' }}>
           {broadcastsWithHighlights.map((bwh) => (

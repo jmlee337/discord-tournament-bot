@@ -494,7 +494,6 @@ export function connect(port: number) {
           case 'list-broadcasts-response':
             idToBroadcast.clear();
             // some mock broadcasts for demo
-            /*
             idToBroadcast.set('abc', {
               id: 'abc',
               connectCode: 'ANCO#203',
@@ -545,7 +544,11 @@ export function connect(port: number) {
               connectCode: 'STNC#139',
               slippiName: 'st. nicolas',
             });
-            */
+            idToBroadcast.set('klm', {
+              id: 'klm',
+              connectCode: 'LEE#337',
+              slippiName: 'Nicolet',
+            });
 
             (message.broadcasts as RemoteBroadcast[]).forEach((broadcast) => {
               const connectCode = broadcast.name;
