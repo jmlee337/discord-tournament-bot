@@ -339,14 +339,12 @@ function Hello() {
             aria-controls="tabpanel-broadcasts"
             value={TabValue.BROADCASTS}
           />
-          {enableMST && (
-            <Tab
-              label="Overlay"
-              id="tab-overlay"
-              aria-controls="tabpanel-overlay"
-              value={TabValue.OVERLAY}
-            />
-          )}
+          <Tab
+            label="Overlay"
+            id="tab-overlay"
+            aria-controls="tabpanel-overlay"
+            value={TabValue.OVERLAY}
+          />
           <Tab
             label="Bracket"
             id="tab-bracket"
@@ -364,18 +362,16 @@ function Hello() {
           showErrorDialog={showErrorDialog}
         />
       </TabPanel>
-      {enableMST && (
-        <TabPanel value={tabValue} index={TabValue.OVERLAY}>
-          <Overlay
-            enableMST={enableMST}
-            resourcesPath={resourcesPath}
-            gotSettings={gotSettings}
-            setEnableMST={setEnableMST}
-            setResourcesPath={setResourcesPath}
-            showErrorDialog={showErrorDialog}
-          />
-        </TabPanel>
-      )}
+      <TabPanel value={tabValue} index={TabValue.OVERLAY}>
+        <Overlay
+          enableMST={enableMST}
+          resourcesPath={resourcesPath}
+          gotSettings={gotSettings}
+          setEnableMST={setEnableMST}
+          setResourcesPath={setResourcesPath}
+          showErrorDialog={showErrorDialog}
+        />
+      </TabPanel>
       <TabPanel value={tabValue} index={TabValue.BRACKET}>
         <Bracket discordStatus={discordStatus} searchSubstr={searchSubstr} />
       </TabPanel>

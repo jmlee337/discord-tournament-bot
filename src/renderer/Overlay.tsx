@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react';
 import {
   Button,
   CircularProgress,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   FormControl,
   IconButton,
   InputBase,
@@ -9,6 +12,7 @@ import {
   MenuItem,
   Select,
   Stack,
+  Switch,
   TextField,
   ToggleButton,
   ToggleButtonGroup,
@@ -118,530 +122,576 @@ export default function Overlay({
     });
   }, [setScoreboardInfo]);
 
+  const [open, setOpen] = useState(false);
   const [choosingResourcesPath, setChoosingResourcesPath] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [updating, setUpdating] = useState(false);
 
-  // TODO: fix da settings LOL
   return (
     <Stack>
-      <Stack alignItems="end">
-        <LabeledCheckbox
-          checked={enableMST}
-          label="Enable overlay"
-          labelPlacement="start"
-          set={async (checked) => {
-            await window.electron.setEnableMST(checked);
-            setEnableMST(checked);
-          }}
-        />
-      </Stack>
-      <Stack direction="row" alignItems="center" marginRight="-9px">
-        <InputBase
-          disabled
-          size="small"
-          value={
-            resourcesPath ||
-            'Set Melee Stream Tool/Melee Ghost Streamer Resources folder...'
-          }
-          style={{ flexGrow: 1 }}
-        />
-        <Tooltip
-          placement="left"
-          title={
-            enableMST
-              ? 'Set Melee Stream Tool/Melee Ghost Streamer Resources folder'
-              : 'Melee Stream Tool/Melee Ghost Streamer overlay disabled'
-          }
+      <Dialog
+        fullWidth
+        open={open}
+        onClose={() => {
+          setOpen(false);
+        }}
+      >
+        <Stack
+          alignItems="center"
+          direction="row"
+          justifyContent="space-between"
+          marginRight="14px"
         >
-          <div>
-            <IconButton
-              disabled={!enableMST || choosingResourcesPath}
-              onClick={async () => {
-                try {
-                  setChoosingResourcesPath(true);
-                  setResourcesPath(await window.electron.chooseResourcesPath());
-                } catch (e: any) {
-                  showErrorDialog([e instanceof Error ? e.message : e]);
-                } finally {
-                  setChoosingResourcesPath(false);
-                }
-              }}
-            >
-              {choosingResourcesPath ? (
-                <CircularProgress size="24px" />
-              ) : (
-                <DisplaySettings />
-              )}
-            </IconButton>
-          </div>
-        </Tooltip>
-      </Stack>
-      <Stack alignItems="end">
-        <LabeledCheckbox
-          checked={enableSkinColor}
-          disabled={!enableMST}
-          label="Enable character colors"
-          labelPlacement="start"
-          set={async (checked) => {
-            await window.electron.setEnableSkinColor(checked);
-            setEnableSkinColor(checked);
-          }}
-        />
-        <LabeledCheckbox
-          checked={enableSggSponsors}
-          disabled={!enableMST}
-          label="Fetch sponsor tags from start.gg"
-          labelPlacement="start"
-          set={async (checked) => {
-            await window.electron.setEnableSggSponsors(checked);
-            setEnableSggSponsors(checked);
-          }}
-        />
-      </Stack>
-      {enableMST && resourcesPath && (
-        <Stack spacing="8px">
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-          >
-            <Stack spacing="8px" paddingRight="16px">
-              <Stack direction="row" spacing="8px">
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  style={{ width: '100px' }}
-                  label="Sponsor"
-                  value={p1Team}
-                  onChange={(event) => {
-                    setP1Team(event.target.value);
-                  }}
-                />
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  label="Player 1"
-                  value={p1Name}
-                  onChange={(event) => {
-                    setP1Name(event.target.value);
-                  }}
-                />
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  slotProps={{
-                    htmlInput: { min: 0, max: bestOf === 'Bo5' ? 5 : 3 },
-                  }}
-                  type="number"
-                  label="Score"
-                  value={p1Score}
-                  onChange={(event) => {
-                    setP1Score(Number.parseInt(event.target.value, 10));
-                  }}
-                />
-                {matchesGrandFinal(round) && (
-                  <ToggleButton
-                    size="small"
-                    onChange={() => {
-                      setP1WL((prevP1WL) => {
-                        setP2WL(prevP1WL === 'L' ? 'L' : 'Nada');
-                        return prevP1WL === 'L' ? 'Nada' : 'L';
-                      });
-                    }}
-                    selected={p1WL === 'L'}
-                    value=""
-                  >
-                    [L]
-                  </ToggleButton>
-                )}
-              </Stack>
-              <Stack direction="row" spacing="8px">
-                <FormControl>
-                  <InputLabel id="p1-character-select-label">
-                    Character
-                  </InputLabel>
-                  <Select
-                    size="small"
-                    style={{ width: '177px' }}
-                    label="Character"
-                    labelId="p1-character-select-label"
-                    value={p1Character}
-                    onChange={(event) => {
-                      const oldCharacter = p1Character;
-                      const newCharacter = event.target.value;
-                      if (oldCharacter !== newCharacter) {
-                        setP1Character(newCharacter);
-                        if (
-                          oldCharacter === MSTCharacter.SHEIK &&
-                          newCharacter === MSTCharacter.ZELDA
-                        ) {
-                          setP1Skin((previousP1Skin) => {
-                            const zeldaSkin =
-                              SHEIK_SKIN_TO_ZELDA_SKIN.get(previousP1Skin);
-                            if (!zeldaSkin) {
-                              throw new Error('unreachable');
-                            }
-                            return zeldaSkin;
-                          });
-                        } else if (
-                          oldCharacter === MSTCharacter.ZELDA &&
-                          newCharacter === MSTCharacter.SHEIK
-                        ) {
-                          setP1Skin((previousP1Skin) => {
-                            const sheikSkin =
-                              ZELDA_SKIN_TO_SHEIK_SKIN.get(previousP1Skin);
-                            if (!sheikSkin) {
-                              throw new Error('unreachable');
-                            }
-                            return sheikSkin;
-                          });
-                        } else {
-                          setP1Skin(
-                            MSTCharacterToSkinColors.get(newCharacter)![0],
-                          );
-                        }
-                      }
-                    }}
-                  >
-                    {Object.values(MSTCharacter).map((character) => (
-                      <MenuItem key={character} value={character}>
-                        {character}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                {enableSkinColor && (
-                  <FormControl>
-                    <InputLabel id="p1-skin-select-label">Color</InputLabel>
-                    <Select
-                      size="small"
-                      style={{ width: '142px' }}
-                      label="Color"
-                      labelId="p1-skin-select-label"
-                      value={p1Skin}
-                      onChange={(event) => {
-                        setP1Skin(event.target.value);
-                      }}
-                    >
-                      {MSTCharacterToSkinColors.get(p1Character)?.map(
-                        (skinColor) => (
-                          <MenuItem key={skinColor} value={skinColor}>
-                            {skinColor}
-                          </MenuItem>
-                        ),
-                      )}
-                    </Select>
-                  </FormControl>
-                )}
-              </Stack>
-            </Stack>
-            <Stack
-              sx={{
-                borderRight: (theme) => `1px solid ${theme.palette.grey[400]}`,
-                height: '104px',
+          <DialogTitle>Melee Stream Tool Integration</DialogTitle>
+          <Tooltip placement="left" title="Enabled">
+            <Switch
+              checked={enableMST}
+              onChange={async (event, checked) => {
+                await window.electron.setEnableMST(checked);
+                setEnableMST(checked);
               }}
             />
-            <Stack spacing="8px" paddingLeft="16px">
-              <Stack direction="row" spacing="8px">
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  style={{ width: '100px' }}
-                  label="Sponsor"
-                  value={p2Team}
-                  onChange={(event) => {
-                    setP2Team(event.target.value);
-                  }}
-                />
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  label="Player 2"
-                  value={p2Name}
-                  onChange={(event) => {
-                    setP2Name(event.target.value);
-                  }}
-                />
-                <TextField
-                  variant="outlined"
-                  size="small"
-                  slotProps={{
-                    htmlInput: { min: 0, max: bestOf === 'Bo5' ? 5 : 3 },
-                  }}
-                  type="number"
-                  label="Score"
-                  value={p2Score}
-                  onChange={(event) => {
-                    setP2Score(Number.parseInt(event.target.value, 10));
-                  }}
-                />
-                {matchesGrandFinal(round) && (
-                  <ToggleButton
-                    size="small"
-                    onChange={() => {
-                      setP2WL((prevP2WL) => {
-                        setP1WL(prevP2WL === 'L' ? 'L' : 'Nada');
-                        return prevP2WL === 'L' ? 'Nada' : 'L';
-                      });
-                    }}
-                    selected={p2WL === 'L'}
-                    value=""
-                  >
-                    [L]
-                  </ToggleButton>
-                )}
-              </Stack>
-              <Stack direction="row" spacing="8px">
-                <FormControl>
-                  <InputLabel id="p2-character-select-label">
-                    Character
-                  </InputLabel>
-                  <Select
-                    size="small"
-                    style={{ width: '177px' }}
-                    label="Character"
-                    labelId="p2-character-select-label"
-                    value={p2Character}
-                    onChange={(event) => {
-                      const oldCharacter = p2Character;
-                      const newCharacter = event.target.value;
-                      if (oldCharacter !== newCharacter) {
-                        setP2Character(newCharacter);
-                        if (
-                          oldCharacter === MSTCharacter.SHEIK &&
-                          newCharacter === MSTCharacter.ZELDA
-                        ) {
-                          setP2Skin((previousP2Skin) => {
-                            const zeldaSkin =
-                              SHEIK_SKIN_TO_ZELDA_SKIN.get(previousP2Skin);
-                            if (!zeldaSkin) {
-                              throw new Error('unreachable');
-                            }
-                            return zeldaSkin;
-                          });
-                        } else if (
-                          oldCharacter === MSTCharacter.ZELDA &&
-                          newCharacter === MSTCharacter.SHEIK
-                        ) {
-                          setP2Skin((previousP2Skin) => {
-                            const sheikSkin =
-                              ZELDA_SKIN_TO_SHEIK_SKIN.get(previousP2Skin);
-                            if (!sheikSkin) {
-                              throw new Error('unreachable');
-                            }
-                            return sheikSkin;
-                          });
-                        } else {
-                          setP2Skin(
-                            MSTCharacterToSkinColors.get(newCharacter)![0],
-                          );
-                        }
-                      }
-                    }}
-                  >
-                    {Object.values(MSTCharacter).map((character) => (
-                      <MenuItem key={character} value={character}>
-                        {character}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-                {enableSkinColor && (
-                  <FormControl>
-                    <InputLabel id="p2-skin-select-label">Color</InputLabel>
-                    <Select
-                      size="small"
-                      style={{ width: '142px' }}
-                      label="Color"
-                      labelId="p2-skin-select-label"
-                      value={p2Skin}
-                      onChange={(event) => {
-                        setP2Skin(event.target.value);
-                      }}
-                    >
-                      {MSTCharacterToSkinColors.get(p2Character)?.map(
-                        (skinColor) => (
-                          <MenuItem key={skinColor} value={skinColor}>
-                            {skinColor}
-                          </MenuItem>
-                        ),
-                      )}
-                    </Select>
-                  </FormControl>
-                )}
-              </Stack>
-            </Stack>
-          </Stack>
-          <Stack
-            direction="row"
-            alignItems="end"
-            justifyContent="center"
-            paddingTop="8px"
-            spacing="8px"
-          >
-            <Stack direction="row" justifyContent="right" width="210px">
-              <ToggleButtonGroup
-                aria-label="Best Of"
-                exclusive
-                size="small"
-                value={bestOf}
-                onChange={(event, value) => {
-                  setBestOf(value);
-                }}
-              >
-                <ToggleButton value="Bo3">BO3</ToggleButton>
-                <ToggleButton value="Bo5">BO5</ToggleButton>
-              </ToggleButtonGroup>
-            </Stack>
-            <TextField
-              variant="outlined"
+          </Tooltip>
+        </Stack>
+        <DialogContent sx={{ pt: 0 }}>
+          <Stack direction="row" alignItems="center" marginRight="-9px">
+            <InputBase
+              disabled
               size="small"
-              label="Current Round"
-              value={round}
-              onChange={(event) => {
-                setRound(event.target.value);
-              }}
-            />
-            <TextField
-              variant="outlined"
-              size="small"
-              label="Tournament Name"
-              value={tournamentName}
-              onChange={(event) => {
-                setTournamentName(event.target.value);
-              }}
-            />
-          </Stack>
-          <Stack direction="row" spacing="8px" justifyContent="center">
-            <TextField
-              variant="outlined"
-              size="small"
-              label="Caster 1 Name"
-              value={caster1Name}
-              onChange={(event) => {
-                setCaster1Name(event.target.value);
-              }}
-            />
-            <TextField
-              variant="outlined"
-              size="small"
-              label="Caster 1 Twitter"
-              value={caster1Twitter}
-              onChange={(event) => {
-                setCaster1Twitch(event.target.value);
-              }}
-            />
-            <TextField
-              variant="outlined"
-              size="small"
-              label="Caster 1 Twitch"
-              value={caster1Twitch}
-              onChange={(event) => {
-                setCaster1Twitch(event.target.value);
-              }}
-            />
-          </Stack>
-          <Stack direction="row" spacing="8px" justifyContent="center">
-            <TextField
-              variant="outlined"
-              size="small"
-              label="Caster 2 Name"
-              value={caster2Name}
-              onChange={(event) => {
-                setCaster2Name(event.target.value);
-              }}
-            />
-            <TextField
-              variant="outlined"
-              size="small"
-              label="Caster 2 Twitter"
-              value={caster2Twitter}
-              onChange={(event) => {
-                setCaster2Twitch(event.target.value);
-              }}
-            />
-            <TextField
-              variant="outlined"
-              size="small"
-              label="Caster 2 Twitch"
-              value={caster2Twitch}
-              onChange={(event) => {
-                setCaster2Twitch(event.target.value);
-              }}
-            />
-          </Stack>
-          <Stack
-            direction="row"
-            justifyContent="center"
-            paddingTop="8px"
-            spacing="8px"
-          >
-            <Button
-              variant="contained"
-              color="warning"
-              disabled={resetting}
-              endIcon={resetting ? <CircularProgress size="20" /> : <Restore />}
-              style={{ width: '100px' }}
-              onClick={async () => {
-                try {
-                  setResetting(true);
-                  setScoreboardInfo(await window.electron.getScoreboardInfo());
-                } catch (e: any) {
-                  showErrorDialog([e instanceof Error ? e.message : e]);
-                } finally {
-                  setResetting(false);
-                }
-              }}
-            >
-              Reset
-            </Button>
-            <Button
-              variant="contained"
-              disabled={updating}
-              endIcon={
-                updating ? <CircularProgress size="20" /> : <OpenInBrowser />
+              value={
+                resourcesPath ||
+                'Set Melee Stream Tool/Melee Ghost Streamer Resources folder...'
               }
-              style={{ flexGrow: 4 }}
-              onClick={async () => {
-                try {
-                  setUpdating(true);
-                  await window.electron.setScoreboardInfo({
-                    p1Name,
-                    p1Team,
-                    p1Character,
-                    p1Skin,
-                    p1Score,
-                    p1WL,
-                    p2Name,
-                    p2Team,
-                    p2Character,
-                    p2Skin,
-                    p2Score,
-                    p2WL,
-                    bestOf,
-                    round,
-                    tournamentName,
-                    caster1Name,
-                    caster1Twitter,
-                    caster1Twitch,
-                    caster2Name,
-                    caster2Twitter,
-                    caster2Twitch,
-                  });
-                } catch (e: any) {
-                  showErrorDialog([e instanceof Error ? e.message : e]);
-                } finally {
-                  setUpdating(false);
-                }
-              }}
+              style={{ flexGrow: 1 }}
+            />
+            <Tooltip
+              placement="left"
+              title={
+                enableMST
+                  ? 'Set Melee Stream Tool/Melee Ghost Streamer Resources folder'
+                  : 'Melee Stream Tool/Melee Ghost Streamer overlay disabled'
+              }
             >
-              Update
-            </Button>
-            <Stack width="100px" />
+              <div>
+                <IconButton
+                  disabled={!enableMST || choosingResourcesPath}
+                  onClick={async () => {
+                    try {
+                      setChoosingResourcesPath(true);
+                      setResourcesPath(
+                        await window.electron.chooseResourcesPath(),
+                      );
+                    } catch (e: any) {
+                      showErrorDialog([e instanceof Error ? e.message : e]);
+                    } finally {
+                      setChoosingResourcesPath(false);
+                    }
+                  }}
+                >
+                  {choosingResourcesPath ? (
+                    <CircularProgress size="24px" />
+                  ) : (
+                    <DisplaySettings />
+                  )}
+                </IconButton>
+              </div>
+            </Tooltip>
+          </Stack>
+          <Stack alignItems="end">
+            <LabeledCheckbox
+              checked={enableSkinColor}
+              disabled={!enableMST || !resourcesPath}
+              label="Enable character colors"
+              labelPlacement="start"
+              set={async (checked) => {
+                await window.electron.setEnableSkinColor(checked);
+                setEnableSkinColor(checked);
+              }}
+            />
+            <LabeledCheckbox
+              checked={enableSggSponsors}
+              disabled={!enableMST || !resourcesPath}
+              label="Fetch sponsor tags from start.gg"
+              labelPlacement="start"
+              set={async (checked) => {
+                await window.electron.setEnableSggSponsors(checked);
+                setEnableSggSponsors(checked);
+              }}
+            />
+          </Stack>
+        </DialogContent>
+      </Dialog>
+      <Stack spacing="8px">
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          <Stack spacing="8px" paddingRight="16px">
+            <Stack direction="row" spacing="8px">
+              <TextField
+                disabled={!enableMST || !resourcesPath}
+                variant="outlined"
+                size="small"
+                style={{ width: '89px' }}
+                label="Sponsor"
+                value={p1Team}
+                onChange={(event) => {
+                  setP1Team(event.target.value);
+                }}
+              />
+              <TextField
+                disabled={!enableMST || !resourcesPath}
+                variant="outlined"
+                size="small"
+                label="Player 1"
+                value={p1Name}
+                onChange={(event) => {
+                  setP1Name(event.target.value);
+                }}
+              />
+              <TextField
+                disabled={!enableMST || !resourcesPath}
+                variant="outlined"
+                size="small"
+                slotProps={{
+                  htmlInput: { min: 0, max: bestOf === 'Bo5' ? 5 : 3 },
+                }}
+                type="number"
+                label="Score"
+                value={p1Score}
+                onChange={(event) => {
+                  setP1Score(Number.parseInt(event.target.value, 10));
+                }}
+              />
+              {matchesGrandFinal(round) && (
+                <ToggleButton
+                  disabled={!enableMST || !resourcesPath}
+                  size="small"
+                  onChange={() => {
+                    setP1WL((prevP1WL) => {
+                      setP2WL(prevP1WL === 'L' ? 'L' : 'Nada');
+                      return prevP1WL === 'L' ? 'Nada' : 'L';
+                    });
+                  }}
+                  selected={p1WL === 'L'}
+                  value=""
+                >
+                  [L]
+                </ToggleButton>
+              )}
+            </Stack>
+            <Stack direction="row" spacing="8px">
+              <FormControl>
+                <InputLabel id="p1-character-select-label">
+                  Character
+                </InputLabel>
+                <Select
+                  disabled={!enableMST || !resourcesPath}
+                  size="small"
+                  style={{ width: '177px' }}
+                  label="Character"
+                  labelId="p1-character-select-label"
+                  value={p1Character}
+                  onChange={(event) => {
+                    const oldCharacter = p1Character;
+                    const newCharacter = event.target.value;
+                    if (oldCharacter !== newCharacter) {
+                      setP1Character(newCharacter);
+                      if (
+                        oldCharacter === MSTCharacter.SHEIK &&
+                        newCharacter === MSTCharacter.ZELDA
+                      ) {
+                        setP1Skin((previousP1Skin) => {
+                          const zeldaSkin =
+                            SHEIK_SKIN_TO_ZELDA_SKIN.get(previousP1Skin);
+                          if (!zeldaSkin) {
+                            throw new Error('unreachable');
+                          }
+                          return zeldaSkin;
+                        });
+                      } else if (
+                        oldCharacter === MSTCharacter.ZELDA &&
+                        newCharacter === MSTCharacter.SHEIK
+                      ) {
+                        setP1Skin((previousP1Skin) => {
+                          const sheikSkin =
+                            ZELDA_SKIN_TO_SHEIK_SKIN.get(previousP1Skin);
+                          if (!sheikSkin) {
+                            throw new Error('unreachable');
+                          }
+                          return sheikSkin;
+                        });
+                      } else {
+                        setP1Skin(
+                          MSTCharacterToSkinColors.get(newCharacter)![0],
+                        );
+                      }
+                    }
+                  }}
+                >
+                  {Object.values(MSTCharacter).map((character) => (
+                    <MenuItem key={character} value={character}>
+                      {character}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              {enableSkinColor && (
+                <FormControl>
+                  <InputLabel id="p1-skin-select-label">Color</InputLabel>
+                  <Select
+                    disabled={!enableMST || !resourcesPath}
+                    size="small"
+                    style={{ width: '142px' }}
+                    label="Color"
+                    labelId="p1-skin-select-label"
+                    value={p1Skin}
+                    onChange={(event) => {
+                      setP1Skin(event.target.value);
+                    }}
+                  >
+                    {MSTCharacterToSkinColors.get(p1Character)?.map(
+                      (skinColor) => (
+                        <MenuItem key={skinColor} value={skinColor}>
+                          {skinColor}
+                        </MenuItem>
+                      ),
+                    )}
+                  </Select>
+                </FormControl>
+              )}
+            </Stack>
+          </Stack>
+          <Stack
+            sx={{
+              borderRight: (theme) => `1px solid ${theme.palette.grey[400]}`,
+              height: '104px',
+            }}
+          />
+          <Stack spacing="8px" paddingLeft="16px">
+            <Stack direction="row" spacing="8px">
+              <TextField
+                disabled={!enableMST || !resourcesPath}
+                variant="outlined"
+                size="small"
+                style={{ width: '89px' }}
+                label="Sponsor"
+                value={p2Team}
+                onChange={(event) => {
+                  setP2Team(event.target.value);
+                }}
+              />
+              <TextField
+                disabled={!enableMST || !resourcesPath}
+                variant="outlined"
+                size="small"
+                label="Player 2"
+                value={p2Name}
+                onChange={(event) => {
+                  setP2Name(event.target.value);
+                }}
+              />
+              <TextField
+                disabled={!enableMST || !resourcesPath}
+                variant="outlined"
+                size="small"
+                slotProps={{
+                  htmlInput: { min: 0, max: bestOf === 'Bo5' ? 5 : 3 },
+                }}
+                type="number"
+                label="Score"
+                value={p2Score}
+                onChange={(event) => {
+                  setP2Score(Number.parseInt(event.target.value, 10));
+                }}
+              />
+              {matchesGrandFinal(round) && (
+                <ToggleButton
+                  disabled={!enableMST || !resourcesPath}
+                  size="small"
+                  onChange={() => {
+                    setP2WL((prevP2WL) => {
+                      setP1WL(prevP2WL === 'L' ? 'L' : 'Nada');
+                      return prevP2WL === 'L' ? 'Nada' : 'L';
+                    });
+                  }}
+                  selected={p2WL === 'L'}
+                  value=""
+                >
+                  [L]
+                </ToggleButton>
+              )}
+            </Stack>
+            <Stack direction="row" spacing="8px">
+              <FormControl>
+                <InputLabel id="p2-character-select-label">
+                  Character
+                </InputLabel>
+                <Select
+                  disabled={!enableMST || !resourcesPath}
+                  size="small"
+                  style={{ width: '177px' }}
+                  label="Character"
+                  labelId="p2-character-select-label"
+                  value={p2Character}
+                  onChange={(event) => {
+                    const oldCharacter = p2Character;
+                    const newCharacter = event.target.value;
+                    if (oldCharacter !== newCharacter) {
+                      setP2Character(newCharacter);
+                      if (
+                        oldCharacter === MSTCharacter.SHEIK &&
+                        newCharacter === MSTCharacter.ZELDA
+                      ) {
+                        setP2Skin((previousP2Skin) => {
+                          const zeldaSkin =
+                            SHEIK_SKIN_TO_ZELDA_SKIN.get(previousP2Skin);
+                          if (!zeldaSkin) {
+                            throw new Error('unreachable');
+                          }
+                          return zeldaSkin;
+                        });
+                      } else if (
+                        oldCharacter === MSTCharacter.ZELDA &&
+                        newCharacter === MSTCharacter.SHEIK
+                      ) {
+                        setP2Skin((previousP2Skin) => {
+                          const sheikSkin =
+                            ZELDA_SKIN_TO_SHEIK_SKIN.get(previousP2Skin);
+                          if (!sheikSkin) {
+                            throw new Error('unreachable');
+                          }
+                          return sheikSkin;
+                        });
+                      } else {
+                        setP2Skin(
+                          MSTCharacterToSkinColors.get(newCharacter)![0],
+                        );
+                      }
+                    }
+                  }}
+                >
+                  {Object.values(MSTCharacter).map((character) => (
+                    <MenuItem key={character} value={character}>
+                      {character}
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+              {enableSkinColor && (
+                <FormControl>
+                  <InputLabel id="p2-skin-select-label">Color</InputLabel>
+                  <Select
+                    disabled={!enableMST || !resourcesPath}
+                    size="small"
+                    style={{ width: '142px' }}
+                    label="Color"
+                    labelId="p2-skin-select-label"
+                    value={p2Skin}
+                    onChange={(event) => {
+                      setP2Skin(event.target.value);
+                    }}
+                  >
+                    {MSTCharacterToSkinColors.get(p2Character)?.map(
+                      (skinColor) => (
+                        <MenuItem key={skinColor} value={skinColor}>
+                          {skinColor}
+                        </MenuItem>
+                      ),
+                    )}
+                  </Select>
+                </FormControl>
+              )}
+            </Stack>
           </Stack>
         </Stack>
-      )}
+        <Stack
+          direction="row"
+          alignItems="end"
+          justifyContent="center"
+          paddingTop="8px"
+          spacing="8px"
+        >
+          <Stack direction="row" justifyContent="right" width="210px">
+            <ToggleButtonGroup
+              disabled={!enableMST || !resourcesPath}
+              aria-label="Best Of"
+              exclusive
+              size="small"
+              value={bestOf}
+              onChange={(event, value) => {
+                setBestOf(value);
+              }}
+            >
+              <ToggleButton value="Bo3">BO3</ToggleButton>
+              <ToggleButton value="Bo5">BO5</ToggleButton>
+            </ToggleButtonGroup>
+          </Stack>
+          <TextField
+            disabled={!enableMST || !resourcesPath}
+            variant="outlined"
+            size="small"
+            label="Current Round"
+            value={round}
+            onChange={(event) => {
+              setRound(event.target.value);
+            }}
+          />
+          <TextField
+            disabled={!enableMST || !resourcesPath}
+            variant="outlined"
+            size="small"
+            label="Tournament Name"
+            value={tournamentName}
+            onChange={(event) => {
+              setTournamentName(event.target.value);
+            }}
+          />
+        </Stack>
+        <Stack direction="row" spacing="8px" justifyContent="center">
+          <TextField
+            disabled={!enableMST || !resourcesPath}
+            variant="outlined"
+            size="small"
+            label="Caster 1 Name"
+            value={caster1Name}
+            onChange={(event) => {
+              setCaster1Name(event.target.value);
+            }}
+          />
+          <TextField
+            disabled={!enableMST || !resourcesPath}
+            variant="outlined"
+            size="small"
+            label="Caster 1 Twitter"
+            value={caster1Twitter}
+            onChange={(event) => {
+              setCaster1Twitch(event.target.value);
+            }}
+          />
+          <TextField
+            disabled={!enableMST || !resourcesPath}
+            variant="outlined"
+            size="small"
+            label="Caster 1 Twitch"
+            value={caster1Twitch}
+            onChange={(event) => {
+              setCaster1Twitch(event.target.value);
+            }}
+          />
+        </Stack>
+        <Stack direction="row" spacing="8px" justifyContent="center">
+          <TextField
+            disabled={!enableMST || !resourcesPath}
+            variant="outlined"
+            size="small"
+            label="Caster 2 Name"
+            value={caster2Name}
+            onChange={(event) => {
+              setCaster2Name(event.target.value);
+            }}
+          />
+          <TextField
+            disabled={!enableMST || !resourcesPath}
+            variant="outlined"
+            size="small"
+            label="Caster 2 Twitter"
+            value={caster2Twitter}
+            onChange={(event) => {
+              setCaster2Twitch(event.target.value);
+            }}
+          />
+          <TextField
+            disabled={!enableMST || !resourcesPath}
+            variant="outlined"
+            size="small"
+            label="Caster 2 Twitch"
+            value={caster2Twitch}
+            onChange={(event) => {
+              setCaster2Twitch(event.target.value);
+            }}
+          />
+        </Stack>
+        <Stack
+          direction="row"
+          justifyContent="center"
+          paddingTop="8px"
+          spacing="8px"
+        >
+          <Button
+            variant="contained"
+            color="warning"
+            disabled={resetting || !(enableMST && resourcesPath)}
+            endIcon={resetting ? <CircularProgress size="20" /> : <Restore />}
+            style={{ width: '119px' }}
+            onClick={async () => {
+              try {
+                setResetting(true);
+                setScoreboardInfo(await window.electron.getScoreboardInfo());
+              } catch (e: any) {
+                showErrorDialog([e instanceof Error ? e.message : e]);
+              } finally {
+                setResetting(false);
+              }
+            }}
+          >
+            Restore
+          </Button>
+          <Button
+            variant="contained"
+            color="success"
+            disabled={updating || !(enableMST && resourcesPath)}
+            endIcon={
+              updating ? <CircularProgress size="20" /> : <OpenInBrowser />
+            }
+            style={{ flexGrow: 4 }}
+            onClick={async () => {
+              try {
+                setUpdating(true);
+                await window.electron.setScoreboardInfo({
+                  p1Name,
+                  p1Team,
+                  p1Character,
+                  p1Skin,
+                  p1Score,
+                  p1WL,
+                  p2Name,
+                  p2Team,
+                  p2Character,
+                  p2Skin,
+                  p2Score,
+                  p2WL,
+                  bestOf,
+                  round,
+                  tournamentName,
+                  caster1Name,
+                  caster1Twitter,
+                  caster1Twitch,
+                  caster2Name,
+                  caster2Twitter,
+                  caster2Twitch,
+                });
+              } catch (e: any) {
+                showErrorDialog([e instanceof Error ? e.message : e]);
+              } finally {
+                setUpdating(false);
+              }
+            }}
+          >
+            Update
+          </Button>
+          <Button
+            variant="contained"
+            style={{ width: '119px' }}
+            onClick={() => {
+              setOpen(true);
+            }}
+          >
+            Settings
+          </Button>
+        </Stack>
+      </Stack>
     </Stack>
   );
 }
