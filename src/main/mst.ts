@@ -49,6 +49,19 @@ export async function readScoreboardInfo() {
     encoding: 'utf8',
   });
   scoreboardInfo = JSON.parse(json);
+
+  if (
+    scoreboardInfo.p1Character === MSTCharacter.ZELDA &&
+    scoreboardInfo.p1Skin.startsWith('Sheik')
+  ) {
+    scoreboardInfo.p1Character = MSTCharacter.SHEIK;
+  }
+  if (
+    scoreboardInfo.p2Character === MSTCharacter.ZELDA &&
+    scoreboardInfo.p2Skin.startsWith('Sheik')
+  ) {
+    scoreboardInfo.p2Character = MSTCharacter.SHEIK;
+  }
   return scoreboardInfo;
 }
 

@@ -360,7 +360,7 @@ export default function Overlay({
                     {MSTCharacterToSkinColors.get(p1Character)?.map(
                       (skinColor) => (
                         <MenuItem key={skinColor} value={skinColor}>
-                          {skinColor}
+                          {skinColor.replace('Sheik ', '')}
                         </MenuItem>
                       ),
                     )}
