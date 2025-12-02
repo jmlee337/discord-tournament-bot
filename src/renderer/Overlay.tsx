@@ -7,10 +7,12 @@ import {
   DialogTitle,
   Divider,
   FormControl,
+  FormControlLabel,
   IconButton,
   InputBase,
   InputLabel,
   MenuItem,
+  Rating,
   Select,
   Stack,
   Switch,
@@ -23,8 +25,15 @@ import {
   ToggleButtonGroup,
   Tooltip,
 } from '@mui/material';
-import { DisplaySettings, OpenInBrowser, Restore } from '@mui/icons-material';
+import {
+  CheckBox,
+  CheckBoxOutlineBlank,
+  DisplaySettings,
+  OpenInBrowser,
+  Restore,
+} from '@mui/icons-material';
 import { blue, green, grey, red, yellow } from '@mui/material/colors';
+import styled from '@emotion/styled';
 import {
   matchesGrandFinal,
   MSTBestOf,
@@ -38,6 +47,15 @@ import {
   ZELDA_SKIN_TO_SHEIK_SKIN,
 } from '../common/mst';
 import LabeledCheckbox from './LabeledCheckbox';
+
+const StyledRating = styled(Rating)({
+  '& .MuiRating-iconFilled': {
+    color: blue[700],
+  },
+  '& .MuiRating-iconHover': {
+    color: blue[700],
+  },
+});
 
 export default function Overlay({
   enableMST,
@@ -321,20 +339,23 @@ export default function Overlay({
               </Tooltip>
             </Stack>
             <Stack direction="row" spacing="8px">
-              <TextField
+              <FormControlLabel
                 disabled={!enableMST || !resourcesPath}
-                variant="outlined"
-                size="small"
-                slotProps={{
-                  htmlInput: { min: 0, max: bestOf === 'Bo5' ? 3 : 2 },
-                }}
-                style={{ width: '56px' }}
-                type="number"
-                label="Score"
-                value={p1Score}
-                onChange={(event) => {
-                  setP1Score(Number.parseInt(event.target.value, 10));
-                }}
+                label="Wins"
+                labelPlacement="start"
+                slotProps={{ typography: { style: { marginRight: '4px' } } }}
+                style={{ height: '40px' }}
+                control={
+                  <StyledRating
+                    max={bestOf === 'Bo5' ? 3 : 2}
+                    icon={<CheckBox fontSize="inherit" />}
+                    emptyIcon={<CheckBoxOutlineBlank fontSize="inherit" />}
+                    value={p1Score}
+                    onChange={(event, newP1Score) => {
+                      setP1Score(newP1Score ?? 0);
+                    }}
+                  />
+                }
               />
               {matchesGrandFinal(round) && (
                 <ToggleButton
@@ -510,20 +531,23 @@ export default function Overlay({
               </Tooltip>
             </Stack>
             <Stack direction="row" spacing="8px">
-              <TextField
+              <FormControlLabel
                 disabled={!enableMST || !resourcesPath}
-                variant="outlined"
-                size="small"
-                slotProps={{
-                  htmlInput: { min: 0, max: bestOf === 'Bo5' ? 3 : 2 },
-                }}
-                style={{ width: '56px' }}
-                type="number"
-                label="Score"
-                value={p2Score}
-                onChange={(event) => {
-                  setP2Score(Number.parseInt(event.target.value, 10));
-                }}
+                label="Wins"
+                labelPlacement="start"
+                slotProps={{ typography: { style: { marginRight: '4px' } } }}
+                style={{ height: '40px' }}
+                control={
+                  <StyledRating
+                    max={bestOf === 'Bo5' ? 3 : 2}
+                    icon={<CheckBox fontSize="inherit" />}
+                    emptyIcon={<CheckBoxOutlineBlank fontSize="inherit" />}
+                    value={p2Score}
+                    onChange={(event, newP2Score) => {
+                      setP2Score(newP2Score ?? 0);
+                    }}
+                  />
+                }
               />
               {matchesGrandFinal(round) && (
                 <ToggleButton
