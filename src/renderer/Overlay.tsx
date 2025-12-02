@@ -158,6 +158,66 @@ export default function Overlay({
   const [resetting, setResetting] = useState(false);
   const [updating, setUpdating] = useState(false);
 
+  const updateFunc = useCallback(async () => {
+    try {
+      setUpdating(true);
+      await window.electron.setScoreboardInfo({
+        p1Name,
+        p1Team,
+        p1Character,
+        p1Skin,
+        p1Color,
+        p1Score,
+        p1WL,
+        p2Name,
+        p2Team,
+        p2Character,
+        p2Skin,
+        p2Color,
+        p2Score,
+        p2WL,
+        bestOf,
+        round,
+        tournamentName,
+        caster1Name,
+        caster1Twitter,
+        caster1Twitch,
+        caster2Name,
+        caster2Twitter,
+        caster2Twitch,
+      });
+    } catch (e: any) {
+      showErrorDialog([e instanceof Error ? e.message : e]);
+    } finally {
+      setUpdating(false);
+    }
+  }, [
+    p1Name,
+    p1Team,
+    p1Character,
+    p1Skin,
+    p1Color,
+    p1Score,
+    p1WL,
+    p2Name,
+    p2Team,
+    p2Character,
+    p2Skin,
+    p2Color,
+    p2Score,
+    p2WL,
+    bestOf,
+    round,
+    tournamentName,
+    caster1Name,
+    caster1Twitter,
+    caster1Twitch,
+    caster2Name,
+    caster2Twitter,
+    caster2Twitch,
+    showErrorDialog,
+  ]);
+
   return (
     <Stack>
       <Dialog
@@ -276,6 +336,13 @@ export default function Overlay({
                 onChange={(event) => {
                   setP1Team(event.target.value);
                 }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    updateFunc();
+                  }
+                }}
               />
               <TextField
                 disabled={!enableMST || !resourcesPath}
@@ -285,6 +352,13 @@ export default function Overlay({
                 value={p1Name}
                 onChange={(event) => {
                   setP1Name(event.target.value);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    updateFunc();
+                  }
                 }}
               />
               <Tooltip placement="top" title="Port Color">
@@ -468,6 +542,13 @@ export default function Overlay({
                 onChange={(event) => {
                   setP2Team(event.target.value);
                 }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    updateFunc();
+                  }
+                }}
               />
               <TextField
                 disabled={!enableMST || !resourcesPath}
@@ -477,6 +558,13 @@ export default function Overlay({
                 value={p2Name}
                 onChange={(event) => {
                   setP2Name(event.target.value);
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    updateFunc();
+                  }
                 }}
               />
               <Tooltip placement="top" title="Port Color">
@@ -686,6 +774,13 @@ export default function Overlay({
                   onChange={(event) => {
                     setRound(event.target.value);
                   }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      updateFunc();
+                    }
+                  }}
                 />
               </TableCell>
               <TableCell style={{ border: 'none', position: 'relative' }}>
@@ -697,6 +792,13 @@ export default function Overlay({
                   value={tournamentName}
                   onChange={(event) => {
                     setTournamentName(event.target.value);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      updateFunc();
+                    }
                   }}
                 />
                 {sggTournamentName && tournamentName !== sggTournamentName && (
@@ -726,6 +828,13 @@ export default function Overlay({
                   onChange={(event) => {
                     setCaster1Name(event.target.value);
                   }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      updateFunc();
+                    }
+                  }}
                 />
               </TableCell>
               <TableCell style={{ border: 'none' }}>
@@ -738,6 +847,13 @@ export default function Overlay({
                   onChange={(event) => {
                     setCaster1Twitch(event.target.value);
                   }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      updateFunc();
+                    }
+                  }}
                 />
               </TableCell>
               <TableCell style={{ border: 'none' }}>
@@ -749,6 +865,13 @@ export default function Overlay({
                   value={caster1Twitch}
                   onChange={(event) => {
                     setCaster1Twitch(event.target.value);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      updateFunc();
+                    }
                   }}
                 />
               </TableCell>
@@ -776,6 +899,13 @@ export default function Overlay({
                   onChange={(event) => {
                     setCaster2Twitch(event.target.value);
                   }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      updateFunc();
+                    }
+                  }}
                 />
               </TableCell>
               <TableCell style={{ border: 'none' }}>
@@ -787,6 +917,13 @@ export default function Overlay({
                   value={caster2Twitch}
                   onChange={(event) => {
                     setCaster2Twitch(event.target.value);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') {
+                      event.preventDefault();
+                      event.stopPropagation();
+                      updateFunc();
+                    }
                   }}
                 />
               </TableCell>
@@ -821,40 +958,7 @@ export default function Overlay({
               updating ? <CircularProgress size="20" /> : <OpenInBrowser />
             }
             style={{ flexGrow: 4 }}
-            onClick={async () => {
-              try {
-                setUpdating(true);
-                await window.electron.setScoreboardInfo({
-                  p1Name,
-                  p1Team,
-                  p1Character,
-                  p1Skin,
-                  p1Color,
-                  p1Score,
-                  p1WL,
-                  p2Name,
-                  p2Team,
-                  p2Character,
-                  p2Skin,
-                  p2Color,
-                  p2Score,
-                  p2WL,
-                  bestOf,
-                  round,
-                  tournamentName,
-                  caster1Name,
-                  caster1Twitter,
-                  caster1Twitch,
-                  caster2Name,
-                  caster2Twitter,
-                  caster2Twitch,
-                });
-              } catch (e: any) {
-                showErrorDialog([e instanceof Error ? e.message : e]);
-              } finally {
-                setUpdating(false);
-              }
-            }}
+            onClick={updateFunc}
           >
             Update
           </Button>
