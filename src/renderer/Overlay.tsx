@@ -936,7 +936,7 @@ export default function Overlay({
             color="warning"
             disabled={resetting || !(enableMST && resourcesPath)}
             endIcon={resetting ? <CircularProgress size="20" /> : <Restore />}
-            style={{ width: '119px' }}
+            style={{ width: '109px' }}
             onClick={async () => {
               try {
                 setResetting(true);
@@ -948,7 +948,7 @@ export default function Overlay({
               }
             }}
           >
-            Restore
+            Revert
           </Button>
           <Button
             variant="contained"
@@ -957,14 +957,14 @@ export default function Overlay({
             endIcon={
               updating ? <CircularProgress size="20" /> : <OpenInBrowser />
             }
-            style={{ flexGrow: 4 }}
+            style={{ flexGrow: 1 }}
             onClick={updateFunc}
           >
             Update
           </Button>
           <Button
             variant="contained"
-            style={{ width: '119px' }}
+            style={{ width: '109px' }}
             onClick={() => {
               setOpen(true);
             }}
