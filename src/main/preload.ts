@@ -60,6 +60,10 @@ const electronHandler = {
     ipcRenderer.invoke('getResourcesPath'),
   chooseResourcesPath: (): Promise<string> =>
     ipcRenderer.invoke('chooseResourcesPath'),
+  getUpdateAutomatically: (): Promise<boolean> =>
+    ipcRenderer.invoke('getUpdateAutomatically'),
+  setUpdateAutomatically: (updateAutomatically: boolean): Promise<void> =>
+    ipcRenderer.invoke('setUpdateAutomatically', updateAutomatically),
   getEnableSkinColor: (): Promise<boolean> =>
     ipcRenderer.invoke('getEnableSkinColor'),
   setEnableSkinColor: (enableSkinColor: boolean): Promise<void> =>

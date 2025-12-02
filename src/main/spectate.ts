@@ -75,6 +75,10 @@ let enableOverlay = false;
 export function setEnableOverlay(newEnableOverlay: boolean) {
   enableOverlay = newEnableOverlay;
 }
+let updateAutomatically = false;
+export function setUpdateAutomatically(newUpdateAutomatically: boolean) {
+  updateAutomatically = newUpdateAutomatically;
+}
 
 export function getRemoteState() {
   const remoteState: RemoteState = {
@@ -359,7 +363,7 @@ export function getOverlayDolphinId() {
 export async function setOverlayDolphinId(newOverlayDolphinId: string) {
   const changed = newOverlayDolphinId !== overlayDolphinId;
   overlayDolphinId = newOverlayDolphinId;
-  if (enableOverlay && changed) {
+  if (enableOverlay && updateAutomatically && changed) {
     const filePath = dolphinIdToFilePath.get(overlayDolphinId);
     if (filePath) {
       await processNewReplay(filePath);
@@ -436,6 +440,7 @@ export function connect(port: number) {
           case 'game-end-event':
             if (
               enableOverlay &&
+              updateAutomatically &&
               overlayDolphinId === message.dolphinId &&
               dolphinIdToFilePath.has(message.dolphinId)
             ) {
@@ -456,7 +461,11 @@ export function connect(port: number) {
             return;
           case 'new-file-event':
             dolphinIdToFilePath.set(message.dolphinId, message.filePath);
-            if (enableOverlay && overlayDolphinId === message.dolphinId) {
+            if (
+              enableOverlay &&
+              updateAutomatically &&
+              overlayDolphinId === message.dolphinId
+            ) {
               processNewReplay(message.filePath).catch(() => {
                 // just catch
               });

@@ -71,6 +71,7 @@ import {
   setEnableOverlay,
   setEntrantIdToPendingSets,
   setOverlayDolphinId,
+  setUpdateAutomatically,
   startSpectating,
 } from './spectate';
 import {
@@ -184,6 +185,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     remotePort: number;
     resourcesPath: string;
     startggApiKey: string;
+    updateAutomatically: boolean;
   }>();
   let discordConfig = store.get('discordConfig', {
     applicationId: '',
@@ -199,9 +201,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let remotePort = store.get('remotePort', 49809);
   let resourcesPath = store.get('resourcesPath', '');
   let startggApiKey = store.get('startggApiKey', '');
+  let updateAutomatically = store.get('updateAutomatically', true);
 
   // spectate
   setEnableOverlay(enableMST);
+  setUpdateAutomatically(updateAutomatically);
 
   // mst
   setEnableMST(enableMST, false);
@@ -266,7 +270,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       });
     });
     setEntrantIdToPendingSets(entrantIdToPendingSets);
-    if (enableMST) {
+    if (enableMST && updateAutomatically) {
       pendingSetsUpdate(entrantIdToPendingSets);
     }
     mainWindow.webContents.send('sets', newSets);
@@ -971,6 +975,19 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     }
     return resourcesPath;
   });
+
+  ipcMain.removeHandler('getUpdateAutomatically');
+  ipcMain.handle('getUpdateAutomatically', () => updateAutomatically);
+
+  ipcMain.removeHandler('setUpdateAutomatically');
+  ipcMain.handle(
+    'setUpdateAutomatically',
+    (event: IpcMainInvokeEvent, newUpdateAutomatically: boolean) => {
+      store.set('updateAutomatically', newUpdateAutomatically);
+      updateAutomatically = newUpdateAutomatically;
+      setUpdateAutomatically(updateAutomatically);
+    },
+  );
 
   ipcMain.removeHandler('getEnableSkinColor');
   ipcMain.handle('getEnableSkinColor', () => enableSkinColor);

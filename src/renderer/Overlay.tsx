@@ -74,13 +74,17 @@ export default function Overlay({
   setResourcesPath: (newResourcesPath: string) => void;
   showErrorDialog: (errors: string[]) => void;
 }) {
+  const [updateAutomatically, setUpdateAutomatically] = useState(false);
   const [enableSkinColor, setEnableSkinColor] = useState(false);
   const [enableSggSponsors, setEnableSggSponsors] = useState(false);
 
   useEffect(() => {
     (async () => {
+      const updateAutomaticallyPromise =
+        window.electron.getUpdateAutomatically();
       const enableSkinColorPromise = window.electron.getEnableSkinColor();
       const enableSggSponsorsPromise = window.electron.getEnableSggSponsors();
+      setUpdateAutomatically(await updateAutomaticallyPromise);
       setEnableSkinColor(await enableSkinColorPromise);
       setEnableSggSponsors(await enableSggSponsorsPromise);
     })();
@@ -290,6 +294,16 @@ export default function Overlay({
           </Stack>
           <Stack alignItems="end">
             <LabeledCheckbox
+              checked={updateAutomatically}
+              disabled={!enableMST || !resourcesPath}
+              label="Update automatically from Slippi/start.gg"
+              labelPlacement="start"
+              set={async (checked) => {
+                await window.electron.setUpdateAutomatically(checked);
+                setUpdateAutomatically(checked);
+              }}
+            />
+            <LabeledCheckbox
               checked={enableSkinColor}
               disabled={!enableMST || !resourcesPath}
               label="Enable character colors"
@@ -302,7 +316,7 @@ export default function Overlay({
             <LabeledCheckbox
               checked={enableSggSponsors}
               disabled={!enableMST || !resourcesPath}
-              label="Fetch sponsor tags from start.gg"
+              label="Use sponsor tags from start.gg"
               labelPlacement="start"
               set={async (checked) => {
                 await window.electron.setEnableSggSponsors(checked);
