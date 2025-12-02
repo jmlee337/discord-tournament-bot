@@ -5,6 +5,7 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  Divider,
   FormControl,
   IconButton,
   InputBase,
@@ -23,11 +24,13 @@ import {
   Tooltip,
 } from '@mui/material';
 import { DisplaySettings, OpenInBrowser, Restore } from '@mui/icons-material';
+import { blue, green, grey, red, yellow } from '@mui/material/colors';
 import {
   matchesGrandFinal,
   MSTBestOf,
   MSTCharacter,
   MSTCharacterToSkinColors,
+  MSTPortColor,
   MSTScoreboardInfo,
   MSTSkinColor,
   MSTWL,
@@ -69,12 +72,14 @@ export default function Overlay({
   const [p1Team, setP1Team] = useState('');
   const [p1Character, setP1Character] = useState(MSTCharacter.RANDOM);
   const [p1Skin, setP1Skin] = useState<MSTSkinColor>('Default');
+  const [p1Color, setP1Color] = useState<MSTPortColor>('Red');
   const [p1Score, setP1Score] = useState(0);
   const [p1WL, setP1WL] = useState<MSTWL>('Nada');
   const [p2Name, setP2Name] = useState('');
   const [p2Team, setP2Team] = useState('');
   const [p2Character, setP2Character] = useState(MSTCharacter.RANDOM);
   const [p2Skin, setP2Skin] = useState<MSTSkinColor>('Default');
+  const [p2Color, setP2Color] = useState<MSTPortColor>('Blue');
   const [p2Score, setP2Score] = useState(0);
   const [p2WL, setP2WL] = useState<MSTWL>('Nada');
   const [bestOf, setBestOf] = useState<MSTBestOf>('Bo3');
@@ -93,12 +98,14 @@ export default function Overlay({
       setP1Team(newScoreboardInfo.p1Team);
       setP1Character(newScoreboardInfo.p1Character);
       setP1Skin(newScoreboardInfo.p1Skin);
+      setP1Color(newScoreboardInfo.p1Color);
       setP1Score(newScoreboardInfo.p1Score);
       setP1WL(newScoreboardInfo.p1WL);
       setP2Name(newScoreboardInfo.p2Name);
       setP2Team(newScoreboardInfo.p2Team);
       setP2Character(newScoreboardInfo.p2Character);
       setP2Skin(newScoreboardInfo.p2Skin);
+      setP2Color(newScoreboardInfo.p2Color);
       setP2Score(newScoreboardInfo.p2Score);
       setP2WL(newScoreboardInfo.p2WL);
       setBestOf(newScoreboardInfo.bestOf);
@@ -231,9 +238,15 @@ export default function Overlay({
         <Stack
           direction="row"
           alignItems="center"
-          justifyContent="space-between"
+          divider={
+            <Divider
+              flexItem
+              orientation="vertical"
+              style={{ height: '152px', margin: '0 16px' }}
+            />
+          }
         >
-          <Stack spacing="8px" paddingRight="16px">
+          <Stack flexBasis="50%" spacing="8px">
             <Stack direction="row" spacing="8px">
               <TextField
                 disabled={!enableMST || !resourcesPath}
@@ -256,6 +269,58 @@ export default function Overlay({
                   setP1Name(event.target.value);
                 }}
               />
+              <Tooltip placement="top" title="Port Color">
+                <Select
+                  disabled={!enableMST || !resourcesPath}
+                  size="small"
+                  value={p1Color}
+                  onChange={(event) => {
+                    setP1Color(event.target.value);
+                  }}
+                  sx={{
+                    backgroundColor: () => {
+                      switch (p1Color) {
+                        case 'Red':
+                          return red[400];
+                        case 'Blue':
+                          return blue[400];
+                        case 'Yellow':
+                          return yellow[400];
+                        case 'Green':
+                          return green[400];
+                        case 'CPU':
+                          return grey[400];
+                        default:
+                          throw new Error('unreachable');
+                      }
+                    },
+                  }}
+                >
+                  <MenuItem value="Red" style={{ backgroundColor: red[400] }}>
+                    Red
+                  </MenuItem>
+                  <MenuItem value="Blue" style={{ backgroundColor: blue[400] }}>
+                    Blue
+                  </MenuItem>
+                  <MenuItem
+                    value="Yellow"
+                    style={{ backgroundColor: yellow[400] }}
+                  >
+                    Yellow
+                  </MenuItem>
+                  <MenuItem
+                    value="Green"
+                    style={{ backgroundColor: green[400] }}
+                  >
+                    Green
+                  </MenuItem>
+                  <MenuItem value="CPU" style={{ backgroundColor: grey[400] }}>
+                    CPU
+                  </MenuItem>
+                </Select>
+              </Tooltip>
+            </Stack>
+            <Stack direction="row" spacing="8px">
               <TextField
                 disabled={!enableMST || !resourcesPath}
                 variant="outlined"
@@ -263,6 +328,7 @@ export default function Overlay({
                 slotProps={{
                   htmlInput: { min: 0, max: bestOf === 'Bo5' ? 3 : 2 },
                 }}
+                style={{ width: '56px' }}
                 type="number"
                 label="Score"
                 value={p1Score}
@@ -369,13 +435,7 @@ export default function Overlay({
               )}
             </Stack>
           </Stack>
-          <Stack
-            sx={{
-              borderRight: (theme) => `1px solid ${theme.palette.grey[400]}`,
-              height: '104px',
-            }}
-          />
-          <Stack spacing="8px" paddingLeft="16px">
+          <Stack flexBasis="50%" spacing="8px">
             <Stack direction="row" spacing="8px">
               <TextField
                 disabled={!enableMST || !resourcesPath}
@@ -398,6 +458,58 @@ export default function Overlay({
                   setP2Name(event.target.value);
                 }}
               />
+              <Tooltip placement="top" title="Port Color">
+                <Select
+                  disabled={!enableMST || !resourcesPath}
+                  size="small"
+                  value={p2Color}
+                  onChange={(event) => {
+                    setP2Color(event.target.value);
+                  }}
+                  sx={{
+                    backgroundColor: () => {
+                      switch (p2Color) {
+                        case 'Red':
+                          return red[400];
+                        case 'Blue':
+                          return blue[400];
+                        case 'Yellow':
+                          return yellow[400];
+                        case 'Green':
+                          return green[400];
+                        case 'CPU':
+                          return grey[400];
+                        default:
+                          throw new Error('unreachable');
+                      }
+                    },
+                  }}
+                >
+                  <MenuItem value="Red" style={{ backgroundColor: red[400] }}>
+                    Red
+                  </MenuItem>
+                  <MenuItem value="Blue" style={{ backgroundColor: blue[400] }}>
+                    Blue
+                  </MenuItem>
+                  <MenuItem
+                    value="Yellow"
+                    style={{ backgroundColor: yellow[400] }}
+                  >
+                    Yellow
+                  </MenuItem>
+                  <MenuItem
+                    value="Green"
+                    style={{ backgroundColor: green[400] }}
+                  >
+                    Green
+                  </MenuItem>
+                  <MenuItem value="CPU" style={{ backgroundColor: grey[400] }}>
+                    CPU
+                  </MenuItem>
+                </Select>
+              </Tooltip>
+            </Stack>
+            <Stack direction="row" spacing="8px">
               <TextField
                 disabled={!enableMST || !resourcesPath}
                 variant="outlined"
@@ -405,6 +517,7 @@ export default function Overlay({
                 slotProps={{
                   htmlInput: { min: 0, max: bestOf === 'Bo5' ? 3 : 2 },
                 }}
+                style={{ width: '56px' }}
                 type="number"
                 label="Score"
                 value={p2Score}
@@ -692,12 +805,14 @@ export default function Overlay({
                   p1Team,
                   p1Character,
                   p1Skin,
+                  p1Color,
                   p1Score,
                   p1WL,
                   p2Name,
                   p2Team,
                   p2Character,
                   p2Skin,
+                  p2Color,
                   p2Score,
                   p2WL,
                   bestOf,

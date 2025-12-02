@@ -320,12 +320,14 @@ export async function manualUpdate(
   scoreboardInfo.p1Team = manualUpdateScoreboardInfo.p1Team;
   scoreboardInfo.p1Character = manualUpdateScoreboardInfo.p1Character;
   scoreboardInfo.p1Skin = manualUpdateScoreboardInfo.p1Skin;
+  scoreboardInfo.p1Color = manualUpdateScoreboardInfo.p1Color;
   scoreboardInfo.p1Score = manualUpdateScoreboardInfo.p1Score;
   scoreboardInfo.p1WL = manualUpdateScoreboardInfo.p1WL;
   scoreboardInfo.p2Name = manualUpdateScoreboardInfo.p2Name;
   scoreboardInfo.p2Team = manualUpdateScoreboardInfo.p2Team;
   scoreboardInfo.p2Character = manualUpdateScoreboardInfo.p2Character;
   scoreboardInfo.p2Skin = manualUpdateScoreboardInfo.p2Skin;
+  scoreboardInfo.p2Color = manualUpdateScoreboardInfo.p2Color;
   scoreboardInfo.p2Score = manualUpdateScoreboardInfo.p2Score;
   scoreboardInfo.p2WL = manualUpdateScoreboardInfo.p2WL;
   scoreboardInfo.bestOf = manualUpdateScoreboardInfo.bestOf;
