@@ -14,7 +14,6 @@ import {
   MSTCharacter,
   MSTGameEndScoreboardInfo,
   MSTNewFileScoreboardInfo,
-  MSTPortColor,
   MSTSetData,
   MSTSkinColor,
 } from '../common/mst';
@@ -210,34 +209,14 @@ export async function processNewReplay(filePath: string) {
   const mstInfos = playerInfos.map(
     (
       gameStartInfo,
-      i,
     ): {
-      portColor: MSTPortColor;
       character: MSTCharacter;
       skinColor: MSTSkinColor;
       participant?: { entrantId: number; gamerTag: string; prefix: string };
     } => {
-      let portColor: MSTPortColor = 'CPU';
-      switch (i) {
-        case 0:
-          portColor = 'Red';
-          break;
-        case 1:
-          portColor = 'Blue';
-          break;
-        case 2:
-          portColor = 'Yellow';
-          break;
-        case 3:
-          portColor = 'Green';
-          break;
-        default:
-          throw new Error('unreachable');
-      }
       const mst = characterIdToMST.get(gameStartInfo.characterId);
       if (!mst) {
         return {
-          portColor,
           character: MSTCharacter.RANDOM,
           skinColor: 'Default',
           participant: gameStartInfo.connectCode
@@ -251,7 +230,6 @@ export async function processNewReplay(filePath: string) {
         [skinColor] = mst.skinColors;
       }
       return {
-        portColor,
         character: mst.character,
         skinColor,
         participant: gameStartInfo.connectCode
@@ -313,12 +291,10 @@ export async function processNewReplay(filePath: string) {
     p1Team,
     p1Character: mstInfos[0].character,
     p1Skin: mstInfos[0].skinColor,
-    p1Color: mstInfos[0].portColor,
     p2Name,
     p2Team,
     p2Character: mstInfos[1].character,
     p2Skin: mstInfos[1].skinColor,
-    p2Color: mstInfos[1].portColor,
     setData,
   };
   await newFileUpdate(newFileScoreboardInfo);

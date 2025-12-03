@@ -168,10 +168,8 @@ export async function newFileUpdate(
 
   scoreboardInfo.p1Character = newFileScoreboardInfo.p1Character;
   scoreboardInfo.p1Skin = newFileScoreboardInfo.p1Skin;
-  scoreboardInfo.p1Color = newFileScoreboardInfo.p1Color;
   scoreboardInfo.p2Character = newFileScoreboardInfo.p2Character;
   scoreboardInfo.p2Skin = newFileScoreboardInfo.p2Skin;
-  scoreboardInfo.p2Color = newFileScoreboardInfo.p2Color;
 
   if (newFileScoreboardInfo.p1Name) {
     scoreboardInfo.p1Name = newFileScoreboardInfo.p1Name;
