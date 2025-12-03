@@ -16,6 +16,7 @@ import {
   MSTNewFileScoreboardInfo,
   MSTSetData,
   MSTSkinColor,
+  MSTWL,
 } from '../common/mst';
 import { gameEndUpdate, newFileUpdate } from './mst';
 
@@ -270,16 +271,24 @@ export async function processNewReplay(filePath: string) {
       p1Team = p1IsEntrant1 ? set.entrant1Sponsor : set.entrant2Sponsor;
       p2Name = p1IsEntrant1 ? set.entrant2Name : set.entrant1Name;
       p2Team = p1IsEntrant1 ? set.entrant2Sponsor : set.entrant1Sponsor;
+
+      let p1WL: MSTWL | undefined;
+      let p2WL: MSTWL | undefined;
+      if (set.fullRoundText === 'Grand Final Reset') {
+        p1WL = 'L';
+        p2WL = 'L';
+      } else if (set.fullRoundText === 'Grand Final') {
+        p1WL = !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'W';
+        p2WL = p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'W';
+      }
       setData = {
         setId: set.id,
         bestOf: set.bestOf === 5 ? 'Bo5' : 'Bo3',
         round: set.fullRoundText,
         p1Score: p1IsEntrant1 ? set.entrant1Score : set.entrant2Score,
-        p1WL:
-          !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada',
+        p1WL,
         p2Score: p1IsEntrant1 ? set.entrant2Score : set.entrant1Score,
-        p2WL:
-          p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada',
+        p2WL,
       };
     }
   }

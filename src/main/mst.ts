@@ -3,14 +3,12 @@ import { BrowserWindow } from 'electron';
 import path from 'path';
 import {
   EMPTY_SCOREBOARD_INFO,
-  matchesGrandFinal,
   MSTCharacter,
   MSTCharacterToSkinColors,
   MSTGameEndScoreboardInfo,
   MSTManualUpdateScoreboardInfo,
   MSTNewFileScoreboardInfo,
   MSTScoreboardInfo,
-  MSTWL,
 } from '../common/mst';
 import { StartggSet } from '../common/types';
 
@@ -132,19 +130,10 @@ async function writeScoreboardInfo() {
     high,
   );
 
-  let p1WL: MSTWL = 'Nada';
-  let p2WL: MSTWL = 'Nada';
-  if (matchesGrandFinal(scoreboardInfo.round)) {
-    ({ p1WL } = scoreboardInfo);
-    ({ p2WL } = scoreboardInfo);
-  }
-
   const writtenScoreboardInfo: MSTScoreboardInfo = {
     ...scoreboardInfo,
     p1Character,
-    p1WL,
     p2Character,
-    p2WL,
   };
 
   await writeFile(
@@ -198,10 +187,14 @@ export async function newFileUpdate(
   }
 
   if (newFileScoreboardInfo.setData) {
-    scoreboardInfo.p1WL = newFileScoreboardInfo.setData.p1WL;
-    scoreboardInfo.p2WL = newFileScoreboardInfo.setData.p2WL;
     scoreboardInfo.bestOf = newFileScoreboardInfo.setData.bestOf;
     scoreboardInfo.round = newFileScoreboardInfo.setData.round;
+    if (newFileScoreboardInfo.setData.p1WL) {
+      scoreboardInfo.p1WL = newFileScoreboardInfo.setData.p1WL;
+    }
+    if (newFileScoreboardInfo.setData.p2WL) {
+      scoreboardInfo.p2WL = newFileScoreboardInfo.setData.p2WL;
+    }
     if (
       setChanged ||
       newFileScoreboardInfo.setData.p1Score > scoreboardInfo.p1Score
@@ -217,9 +210,7 @@ export async function newFileUpdate(
   } else {
     if (setChanged || entrantsChanged) {
       scoreboardInfo.p1Score = 0;
-      scoreboardInfo.p1WL = 'Nada';
       scoreboardInfo.p2Score = 0;
-      scoreboardInfo.p2WL = 'Nada';
       scoreboardInfo.round = '';
     }
     if (requestGetEventSets) {
@@ -265,13 +256,19 @@ export async function pendingSetsUpdate(
       scoreboardInfo.p1Name = p1IsEntrant1
         ? set.entrant1Name
         : set.entrant2Name;
-      scoreboardInfo.p1WL =
-        !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
       scoreboardInfo.p2Name = p1IsEntrant1
         ? set.entrant2Name
         : set.entrant1Name;
-      scoreboardInfo.p2WL =
-        p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'Nada';
+
+      if (set.fullRoundText === 'Grand Final Reset') {
+        scoreboardInfo.p1WL = 'L';
+        scoreboardInfo.p2WL = 'L';
+      } else if (set.fullRoundText === 'Grand Final') {
+        scoreboardInfo.p1WL =
+          !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'W';
+        scoreboardInfo.p2WL =
+          p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'W';
+      }
 
       if (enableSggSponsors) {
         scoreboardInfo.p1Team = p1IsEntrant1

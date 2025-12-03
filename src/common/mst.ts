@@ -55,9 +55,9 @@ export type MSTBestOf = 'Bo3' | 'Bo5';
 export type MSTSetData = {
   setId: number;
   p1Score: number;
-  p1WL: MSTWL;
+  p1WL?: MSTWL;
   p2Score: number;
-  p2WL: MSTWL;
+  p2WL?: MSTWL;
   bestOf: MSTBestOf;
   round: string;
 };
@@ -358,7 +358,3 @@ export const ZELDA_SKIN_TO_SHEIK_SKIN = new Map<MSTSkinColor, MSTSkinColor>([
   ['Green', 'Sheik Green'],
   ['Purple', 'Sheik Purple'],
 ]);
-
-export function matchesGrandFinal(round: string) {
-  return /^grand(.?|\s+)finals?$/i.test(round);
-}

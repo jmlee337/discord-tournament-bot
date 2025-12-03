@@ -35,7 +35,6 @@ import {
 import { blue, green, grey, red, yellow } from '@mui/material/colors';
 import styled from '@emotion/styled';
 import {
-  matchesGrandFinal,
   MSTBestOf,
   MSTCharacter,
   MSTCharacterToSkinColors,
@@ -445,22 +444,24 @@ export default function Overlay({
                   />
                 }
               />
-              {matchesGrandFinal(round) && (
-                <ToggleButton
-                  disabled={!enableMST || !resourcesPath}
-                  size="small"
-                  onChange={() => {
-                    setP1WL((prevP1WL) => {
-                      setP2WL(prevP1WL === 'L' ? 'L' : 'Nada');
-                      return prevP1WL === 'L' ? 'Nada' : 'L';
-                    });
-                  }}
-                  selected={p1WL === 'L'}
-                  value=""
-                >
+              <ToggleButtonGroup
+                disabled={!enableMST || !resourcesPath}
+                aria-label="Winners/Losers"
+                exclusive
+                size="small"
+                style={{ paddingLeft: '4px' }}
+                value={p1WL}
+                onChange={(event, value) => {
+                  setP1WL(value ?? 'Nada');
+                }}
+              >
+                <ToggleButton style={{ width: '36px' }} value="W">
+                  [W]
+                </ToggleButton>
+                <ToggleButton style={{ width: '36px' }} value="L">
                   [L]
                 </ToggleButton>
-              )}
+              </ToggleButtonGroup>
             </Stack>
             <Stack direction="row" spacing="8px">
               <FormControl>
@@ -651,22 +652,24 @@ export default function Overlay({
                   />
                 }
               />
-              {matchesGrandFinal(round) && (
-                <ToggleButton
-                  disabled={!enableMST || !resourcesPath}
-                  size="small"
-                  onChange={() => {
-                    setP2WL((prevP2WL) => {
-                      setP1WL(prevP2WL === 'L' ? 'L' : 'Nada');
-                      return prevP2WL === 'L' ? 'Nada' : 'L';
-                    });
-                  }}
-                  selected={p2WL === 'L'}
-                  value=""
-                >
+              <ToggleButtonGroup
+                disabled={!enableMST || !resourcesPath}
+                aria-label="Winners/Losers"
+                exclusive
+                size="small"
+                style={{ paddingLeft: '4px' }}
+                value={p2WL}
+                onChange={(event, value) => {
+                  setP2WL(value ?? 'Nada');
+                }}
+              >
+                <ToggleButton style={{ width: '36px' }} value="W">
+                  [W]
+                </ToggleButton>
+                <ToggleButton style={{ width: '36px' }} value="L">
                   [L]
                 </ToggleButton>
-              )}
+              </ToggleButtonGroup>
             </Stack>
             <Stack direction="row" spacing="8px">
               <FormControl>
