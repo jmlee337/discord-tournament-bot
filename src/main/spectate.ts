@@ -42,6 +42,7 @@ type SpectatingInternal = {
 
 const idToBroadcast = new Map<string, Broadcast>();
 const dolphinIdToSpectating = new Map<string, SpectatingInternal>();
+const spectatingBroadcastIdToDolphinId = new Map<string, string>();
 let remoteErr = '';
 let remoteStatus = RemoteStatus.DISCONNECTED;
 let webSocketClient: WebSocket | null = null;
@@ -64,6 +65,7 @@ export function initSpectate(newMainWindow: BrowserWindow) {
   }
   idToBroadcast.clear();
   dolphinIdToSpectating.clear();
+  spectatingBroadcastIdToDolphinId.clear();
   connectCodeMisses.clear();
   connectCodeToParticipant.clear();
   dolphinIdToFilePath.clear();
@@ -375,6 +377,7 @@ export function connect(port: number) {
       sendBroadcasts();
 
       dolphinIdToSpectating.clear();
+      spectatingBroadcastIdToDolphinId.clear();
       sendSpectating();
 
       remoteErr = error.message;
@@ -389,6 +392,7 @@ export function connect(port: number) {
       sendBroadcasts();
 
       dolphinIdToSpectating.clear();
+      spectatingBroadcastIdToDolphinId.clear();
       sendSpectating();
 
       remoteErr = '';
@@ -413,15 +417,26 @@ export function connect(port: number) {
                   broadcastId: spectate.broadcastId,
                   spectating: true,
                 });
+                spectatingBroadcastIdToDolphinId.set(
+                  spectate.broadcastId,
+                  spectate.dolphinId,
+                );
               },
             );
             sendSpectating();
             return;
-          case 'dolphin-closed-event':
+          case 'dolphin-closed-event': {
             dolphinIdToFilePath.delete(message.dolphinId);
+
+            const broadcastId = dolphinIdToSpectating.get(message.dolphinId)
+              ?.broadcastId;
+            if (broadcastId) {
+              spectatingBroadcastIdToDolphinId.delete(broadcastId);
+            }
             dolphinIdToSpectating.delete(message.dolphinId);
             sendSpectating();
             return;
+          }
           case 'game-end-event':
             if (
               enableOverlay &&
@@ -441,6 +456,10 @@ export function connect(port: number) {
                 broadcastId: message.broadcastId,
                 spectating: true,
               });
+              spectatingBroadcastIdToDolphinId.set(
+                message.broadcastId,
+                message.dolphinId,
+              );
               sendSpectating();
             }
             return;
@@ -461,6 +480,10 @@ export function connect(port: number) {
                 broadcastId: message.broadcastId,
                 spectating: true,
               });
+              spectatingBroadcastIdToDolphinId.set(
+                message.broadcastId,
+                message.dolphinId,
+              );
               sendSpectating();
             }
             return;
@@ -566,8 +589,23 @@ export function connect(port: number) {
               broadcastId: message.broadcastId,
               spectating: true,
             });
+            spectatingBroadcastIdToDolphinId.set(
+              message.broadcastId,
+              message.dolphinId,
+            );
+            sendSpectating();
+            return;
+          case 'stop-broadcast-response': {
+            const dolphinId = spectatingBroadcastIdToDolphinId.get(
+              message.broadcastId,
+            );
+            if (dolphinId) {
+              dolphinIdToSpectating.delete(dolphinId);
+            }
+            spectatingBroadcastIdToDolphinId.delete(message.broadcastId);
             sendSpectating();
             break;
+          }
           default:
           // nothing
         }
@@ -599,5 +637,15 @@ export function startSpectating(broadcastId: string, dolphinId: string) {
       broadcastId,
       dolphinId,
     }),
+  );
+}
+
+export function stopSpectating(broadcastId: string) {
+  if (!webSocketClient || remoteStatus !== RemoteStatus.CONNECTED) {
+    throw new Error('not connected');
+  }
+
+  webSocketClient.send(
+    JSON.stringify({ op: 'stop-broadcast-request', broadcastId }),
   );
 }

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  Box,
   Button,
   Card,
   CardActions,
@@ -19,7 +18,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { Refresh } from '@mui/icons-material';
+import { Refresh, Stop } from '@mui/icons-material';
 import {
   Broadcast,
   Highlight,
@@ -484,62 +483,36 @@ export default function Remote({
               }
             >
               <CardHeader title={spectate.dolphinId} />
-              {spectate.spectating && (
-                <CardContent style={{ paddingTop: 0, paddingBottom: 0 }}>
-                  {spectate.broadcast === undefined && (
-                    <Typography variant="caption">unknown broadcast</Typography>
-                  )}
-                  {spectate.broadcast && (
-                    <Typography variant="caption">
-                      {spectate.broadcast.sets.length > 0 &&
-                        `${
-                          spectate.broadcast.gamerTag
-                        } vs ${spectate.broadcast.sets
-                          .map((set) => set.opponentName)
-                          .join(', ')}`}
-                      {spectate.broadcast.sets.length === 0 &&
-                        (spectate.broadcast.gamerTag
-                          ? spectate.broadcast.gamerTag
-                          : `${spectate.broadcast.connectCode} (${spectate.broadcast.slippiName})`)}
-                    </Typography>
-                  )}
-                </CardContent>
-              )}
-              <CardActions
-                disableSpacing
+              <CardContent
                 style={{
-                  justifyContent: 'space-between',
-                  position: 'relative',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  paddingTop: 0,
+                  paddingBottom: 0,
                 }}
               >
-                <DroppableChip
-                  selectedChipBroadcastId={selectedChipBroadcastId}
-                  onClickOrDrop={async (broadcastId) => {
-                    if (broadcastId !== spectate.broadcast?.id) {
-                      await window.electron.startSpectating(
-                        broadcastId,
-                        spectate.dolphinId,
-                      );
-                    }
-                    setSelectedChipBroadcastId('');
-                  }}
-                />
                 {spectate.spectating && (
-                  <Box
-                    height="40px"
-                    width="40px"
-                    sx={{
-                      animation:
-                        'border-pulse 1.5s cubic-bezier(.75, 0, .25, 1) infinite',
-                      borderRadius: '20px',
-                      borderStyle: 'solid',
-                      borderWidth: '4px',
-                      boxSizing: 'border-box',
-                      position: 'absolute',
-                      left: '4px',
-                      zIndex: 1,
-                    }}
-                  />
+                  <>
+                    {spectate.broadcast === undefined && (
+                      <Typography variant="caption">
+                        unknown broadcast
+                      </Typography>
+                    )}
+                    {spectate.broadcast && (
+                      <Typography variant="caption">
+                        {spectate.broadcast.sets.length > 0 &&
+                          `${
+                            spectate.broadcast.gamerTag
+                          } vs ${spectate.broadcast.sets
+                            .map((set) => set.opponentName)
+                            .join(', ')}`}
+                        {spectate.broadcast.sets.length === 0 &&
+                          (spectate.broadcast.gamerTag
+                            ? spectate.broadcast.gamerTag
+                            : `${spectate.broadcast.connectCode} (${spectate.broadcast.slippiName})`)}
+                      </Typography>
+                    )}
+                  </>
                 )}
                 {overlayEnabled && (
                   <FormControlLabel
@@ -560,6 +533,46 @@ export default function Remote({
                       />
                     }
                   />
+                )}
+              </CardContent>
+              <CardActions
+                disableSpacing
+                style={{
+                  justifyContent: 'space-between',
+                  position: 'relative',
+                }}
+              >
+                <DroppableChip
+                  selectedChipBroadcastId={selectedChipBroadcastId}
+                  onClickOrDrop={async (broadcastId) => {
+                    if (broadcastId !== spectate.broadcast?.id) {
+                      await window.electron.startSpectating(
+                        broadcastId,
+                        spectate.dolphinId,
+                      );
+                    }
+                    setSelectedChipBroadcastId('');
+                  }}
+                />
+                {spectate.spectating && (
+                  <>
+                    <Tooltip title="Stop" style={{ zIndex: 2 }}>
+                      <IconButton
+                        onClick={async () => {
+                          await window.electron.stopSpectating(
+                            spectate.broadcast!.id,
+                          );
+                        }}
+                      >
+                        <Stop />
+                      </IconButton>
+                    </Tooltip>
+                    <CircularProgress
+                      enableTrackSlot
+                      color="success"
+                      style={{ position: 'absolute', right: '8px' }}
+                    />
+                  </>
                 )}
               </CardActions>
             </Card>

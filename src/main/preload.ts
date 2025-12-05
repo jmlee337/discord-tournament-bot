@@ -49,6 +49,8 @@ const electronHandler = {
     ipcRenderer.invoke('refreshBroadcasts'),
   startSpectating: (broadcastId: string, dolphinId: string): Promise<void> =>
     ipcRenderer.invoke('startSpectating', broadcastId, dolphinId),
+  stopSpectating: (broadcastId: string): Promise<void> =>
+    ipcRenderer.invoke('stopSpectating', broadcastId),
   getOverlayDolphinId: (): Promise<string> =>
     ipcRenderer.invoke('getOverlayDolphinId'),
   setOverlayDolphinId: (overlayDolphinId: string): Promise<void> =>

@@ -73,6 +73,7 @@ import {
   setOverlayDolphinId,
   setUpdateAutomatically,
   startSpectating,
+  stopSpectating,
 } from './spectate';
 import {
   getScoreboardInfoJSONPath,
@@ -918,6 +919,14 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     'startSpectating',
     (event: IpcMainInvokeEvent, broadcastId: string, dolphinId: string) => {
       startSpectating(broadcastId, dolphinId);
+    },
+  );
+
+  ipcMain.removeHandler('stopSpectating');
+  ipcMain.handle(
+    'stopSpectating',
+    (event: IpcMainInvokeEvent, broadcastId: string) => {
+      stopSpectating(broadcastId);
     },
   );
 

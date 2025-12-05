@@ -38,8 +38,7 @@ export function DraggableChip({
           MuiChip: {
             styleOverrides: {
               icon: {
-                marginLeft: '3px',
-                marginRight: '3px',
+                margin: 0,
               },
               label: {
                 padding: 0,
@@ -79,6 +78,11 @@ export function DraggableChip({
               }
             }}
             onDragStart={dragStart}
+            sx={{
+              borderRadius: '20px',
+              height: '40px',
+              width: '40px',
+            }}
             variant={isSelected ? 'filled' : 'outlined'}
           />
         </span>
@@ -117,8 +121,7 @@ export function DroppableChip({
           MuiChip: {
             styleOverrides: {
               icon: {
-                marginLeft: '3px',
-                marginRight: '3px',
+                margin: 0,
               },
               label: {
                 padding: 0,
@@ -137,7 +140,7 @@ export function DroppableChip({
       })}
     >
       <Tooltip
-        placement="top"
+        placement="right"
         title={hasSelectedChip ? `Click to spectate` : `Drop here to spectate`}
       >
         <Chip
@@ -156,7 +159,9 @@ export function DroppableChip({
           onDragOver={dragEnterOver}
           sx={{
             backgroundColor: (theme) => theme.palette.background.default,
-            zIndex: 2,
+            borderRadius: '20px',
+            height: '40px',
+            width: '40px',
           }}
           variant="outlined"
         />
