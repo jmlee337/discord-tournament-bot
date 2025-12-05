@@ -1,5 +1,6 @@
 import WebSocket from 'ws';
 import { BrowserWindow } from 'electron';
+import AsyncLock from 'async-lock';
 import {
   Broadcast,
   ConnectCode,
@@ -20,6 +21,8 @@ import {
 } from '../common/mst';
 import { gameEndUpdate, newFileUpdate } from './mst';
 import { REFRESH_CADENCE_MS } from '../common/constants';
+
+const lock = new AsyncLock();
 
 type RemoteBroadcast = {
   id: string;
@@ -473,17 +476,26 @@ export function connect(port: number) {
             sendSpectating();
             return;
           }
-          case 'game-end-event':
+          case 'game-end-event': {
             if (
               enableOverlay &&
               updateAutomatically &&
-              overlayDolphinId === message.dolphinId &&
-              dolphinIdToFilePath.has(message.dolphinId)
+              overlayDolphinId === message.dolphinId
             ) {
-              processFinishedReplay(
-                dolphinIdToFilePath.get(message.dolphinId)!,
-              ).catch(() => {
-                // just catch
+              lock.acquire(message.dolphinId, async (release) => {
+                const filePath = dolphinIdToFilePath.get(message.dolphinId);
+                if (filePath) {
+                  try {
+                    await processFinishedReplay(filePath);
+                    dolphinIdToFilePath.delete(message.dolphinId);
+                  } catch {
+                    // just catch
+                  } finally {
+                    release();
+                  }
+                } else {
+                  release();
+                }
               });
             }
             if (!dolphinIdToSpectating.has(message.dolphinId)) {
@@ -499,6 +511,7 @@ export function connect(port: number) {
               sendSpectating();
             }
             return;
+          }
           case 'new-file-event':
             dolphinIdToFilePath.set(message.dolphinId, message.filePath);
             if (
