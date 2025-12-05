@@ -76,6 +76,7 @@ export default function Overlay({
   const [updateAutomatically, setUpdateAutomatically] = useState(false);
   const [enableSkinColor, setEnableSkinColor] = useState(false);
   const [enableSggSponsors, setEnableSggSponsors] = useState(false);
+  const [enableSggRound, setEnableSggRound] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -83,9 +84,11 @@ export default function Overlay({
         window.electron.getUpdateAutomatically();
       const enableSkinColorPromise = window.electron.getEnableSkinColor();
       const enableSggSponsorsPromise = window.electron.getEnableSggSponsors();
+      const enableSggRoundPromise = window.electron.getEnableSggRound();
       setUpdateAutomatically(await updateAutomaticallyPromise);
       setEnableSkinColor(await enableSkinColorPromise);
       setEnableSggSponsors(await enableSggSponsorsPromise);
+      setEnableSggRound(await enableSggRoundPromise);
     })();
   }, []);
 
@@ -766,20 +769,52 @@ export default function Overlay({
         >
           <TableBody>
             <TableRow>
-              <TableCell style={{ border: 'none', textAlign: 'right' }}>
-                <ToggleButtonGroup
-                  disabled={!enableMST || !resourcesPath}
-                  aria-label="Best Of"
-                  exclusive
-                  size="small"
-                  value={bestOf}
-                  onChange={(event, value) => {
-                    setBestOf(value);
-                  }}
+              <TableCell style={{ border: 'none' }}>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  height="40px"
                 >
-                  <ToggleButton value="Bo3">BO3</ToggleButton>
-                  <ToggleButton value="Bo5">BO5</ToggleButton>
-                </ToggleButtonGroup>
+                  <ToggleButtonGroup
+                    disabled={!enableMST || !resourcesPath}
+                    aria-label="Best Of"
+                    exclusive
+                    size="small"
+                    value={bestOf}
+                    onChange={(event, value) => {
+                      setBestOf(value);
+                    }}
+                  >
+                    <ToggleButton value="Bo3">BO3</ToggleButton>
+                    <ToggleButton value="Bo5">BO5</ToggleButton>
+                  </ToggleButtonGroup>
+                  <ToggleButtonGroup
+                    disabled={!enableMST || !resourcesPath}
+                    aria-label="Auto Round"
+                    exclusive
+                    size="small"
+                    style={{
+                      marginRight: '-8px',
+                    }}
+                    value={enableSggRound}
+                    onChange={async (event, value) => {
+                      await window.electron.setEnableSggRound(value);
+                      setEnableSggRound(value);
+                    }}
+                  >
+                    <ToggleButton value={false}>Manual</ToggleButton>
+                    <ToggleButton
+                      value
+                      style={{
+                        borderTopRightRadius: 0,
+                        borderBottomRightRadius: 0,
+                        borderRight: 'none',
+                      }}
+                    >
+                      Auto
+                    </ToggleButton>
+                  </ToggleButtonGroup>
+                </Stack>
               </TableCell>
               <TableCell style={{ border: 'none' }}>
                 <TextField
@@ -797,6 +832,14 @@ export default function Overlay({
                       event.stopPropagation();
                       updateFunc();
                     }
+                  }}
+                  slotProps={{
+                    input: {
+                      style: {
+                        borderBottomLeftRadius: 0,
+                        borderTopLeftRadius: 0,
+                      },
+                    },
                   }}
                 />
               </TableCell>

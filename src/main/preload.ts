@@ -74,6 +74,10 @@ const electronHandler = {
     ipcRenderer.invoke('getEnableSggSponsors'),
   setEnableSggSponsors: (enableSggSponsors: boolean): Promise<void> =>
     ipcRenderer.invoke('setEnableSggSponsors', enableSggSponsors),
+  getEnableSggRound: (): Promise<boolean> =>
+    ipcRenderer.invoke('getEnableSggRound'),
+  setEnableSggRound: (enableSggRound: boolean): Promise<void> =>
+    ipcRenderer.invoke('setEnableSggRound', enableSggRound),
   getScoreboardInfo: (): Promise<MSTScoreboardInfo> =>
     ipcRenderer.invoke('getScoreboardInfo'),
   setScoreboardInfo: (

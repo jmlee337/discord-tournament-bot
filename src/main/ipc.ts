@@ -82,6 +82,7 @@ import {
   pendingSetsUpdate,
   readScoreboardInfo,
   setEnableMST,
+  setEnableSggRound,
   setEnableSggSponsors,
   setEnableSkinColor,
   setRequestGetEventSets,
@@ -200,6 +201,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let enableMST = store.get('enableMST', false);
   let enableSkinColor = store.get('enableSkinColor', true);
   let enableSggSponsors = store.get('enableSggSponsors', true);
+  let enableSggRound = store.get('enableSggRound', true);
   let remotePort = store.get('remotePort', 49809);
   let resourcesPath = store.get('resourcesPath', '');
   let startggApiKey = store.get('startggApiKey', '');
@@ -214,6 +216,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   setResourcesPath(resourcesPath, false);
   setEnableSkinColor(enableSkinColor);
   setEnableSggSponsors(enableSggSponsors);
+  setEnableSggRound(enableSggRound);
 
   /**
    * Needed for both Discord and start.gg
@@ -1022,6 +1025,19 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       store.set('enableSggSponsors', newEnableSggSponsors);
       enableSggSponsors = newEnableSggSponsors;
       setEnableSggSponsors(enableSggSponsors);
+    },
+  );
+
+  ipcMain.removeHandler('getEnableSggRound');
+  ipcMain.handle('getEnableSggRound', () => enableSggRound);
+
+  ipcMain.removeHandler('setEnableSggRound');
+  ipcMain.handle(
+    'setEnableSggRound',
+    (event: IpcMainInvokeEvent, newEnableSggRound: boolean) => {
+      store.set('enableSggRound', newEnableSggRound);
+      enableSggRound = newEnableSggRound;
+      setEnableSggRound(enableSggRound);
     },
   );
 

@@ -92,6 +92,11 @@ export function setEnableSggSponsors(newEnableSggSponsors: boolean) {
   enableSggSponsors = newEnableSggSponsors;
 }
 
+let enableSggRound = false;
+export function setEnableSggRound(newEnableSggRound: boolean) {
+  enableSggRound = newEnableSggRound;
+}
+
 export function setTournamentName(newTournamentName: string) {
   scoreboardInfo.tournamentName = newTournamentName;
 }
@@ -188,7 +193,9 @@ export async function newFileUpdate(
 
   if (newFileScoreboardInfo.setData) {
     scoreboardInfo.bestOf = newFileScoreboardInfo.setData.bestOf;
-    scoreboardInfo.round = newFileScoreboardInfo.setData.round;
+    if (enableSggRound) {
+      scoreboardInfo.round = newFileScoreboardInfo.setData.round;
+    }
     if (newFileScoreboardInfo.setData.p1WL) {
       scoreboardInfo.p1WL = newFileScoreboardInfo.setData.p1WL;
     }
@@ -211,7 +218,9 @@ export async function newFileUpdate(
     if (setChanged || entrantsChanged) {
       scoreboardInfo.p1Score = 0;
       scoreboardInfo.p2Score = 0;
-      scoreboardInfo.round = '';
+      if (enableSggRound) {
+        scoreboardInfo.round = '';
+      }
     }
     if (requestGetEventSets) {
       requestGetEventSets();
@@ -247,7 +256,9 @@ export async function pendingSetsUpdate(
       setId = set.id;
 
       scoreboardInfo.bestOf = set.bestOf === 5 ? 'Bo5' : 'Bo3';
-      scoreboardInfo.round = set.fullRoundText;
+      if (enableSggRound) {
+        scoreboardInfo.round = set.fullRoundText;
+      }
 
       const p1IsEntrant1 =
         p1EntrantId !== undefined
