@@ -155,10 +155,12 @@ function getBroadcastsWithHighlights(
 
 function BroadcastWithHighlightListItem({
   bwh,
+  spectatingBroadcastIds,
   selectedChipBroadcastId,
   setSelectedChipBroadcastId,
 }: {
   bwh: BroadcastWithHighlight;
+  spectatingBroadcastIds: Set<string>;
   selectedChipBroadcastId: string;
   setSelectedChipBroadcastId: (broadcastId: string) => void;
 }) {
@@ -304,6 +306,7 @@ function BroadcastWithHighlightListItem({
       </Stack>
       <DraggableChip
         broadcast={bwh.broadcast}
+        disabled={spectatingBroadcastIds.has(bwh.broadcast.id)}
         selectedChipBroadcastId={selectedChipBroadcastId}
         setSelectedChipBroadcastId={setSelectedChipBroadcastId}
       />
@@ -356,6 +359,16 @@ export default function Remote({
   const broadcastsWithHighlights = useMemo(
     () => getBroadcastsWithHighlights(broadcasts, requireSet, searchSubstr),
     [broadcasts, requireSet, searchSubstr],
+  );
+
+  const spectatingBroadcastIds = useMemo(
+    () =>
+      new Set(
+        spectating
+          .map((spectate) => spectate.broadcast?.id)
+          .filter((broadcastId) => broadcastId !== undefined),
+      ),
+    [spectating],
   );
 
   return (
@@ -417,6 +430,7 @@ export default function Remote({
             <BroadcastWithHighlightListItem
               key={bwh.broadcast.id}
               bwh={bwh}
+              spectatingBroadcastIds={spectatingBroadcastIds}
               selectedChipBroadcastId={selectedChipBroadcastId}
               setSelectedChipBroadcastId={setSelectedChipBroadcastId}
             />

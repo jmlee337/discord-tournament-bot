@@ -12,10 +12,12 @@ function dragStart(event: DragEvent<HTMLDivElement>) {
 
 export function DraggableChip({
   broadcast,
+  disabled,
   selectedChipBroadcastId,
   setSelectedChipBroadcastId,
 }: {
   broadcast: Broadcast;
+  disabled: boolean;
   selectedChipBroadcastId: string;
   setSelectedChipBroadcastId: (broadcastId: string) => void;
 }) {
@@ -58,21 +60,29 @@ export function DraggableChip({
         },
       })}
     >
-      <Chip
-        color={isSelected ? 'primary' : undefined}
-        data-broadcast-id={broadcast.id}
-        draggable
-        icon={<PlayArrow />}
-        onClick={() => {
-          if (isSelected) {
-            setSelectedChipBroadcastId('');
-          } else {
-            setSelectedChipBroadcastId(broadcast.id);
-          }
-        }}
-        onDragStart={dragStart}
-        variant={isSelected ? 'filled' : 'outlined'}
-      />
+      <Tooltip
+        placement="left"
+        title={disabled ? 'Spectating...' : 'Click or drag to spectate'}
+      >
+        <span>
+          <Chip
+            color={isSelected ? 'primary' : undefined}
+            data-broadcast-id={broadcast.id}
+            disabled={disabled}
+            draggable
+            icon={<PlayArrow />}
+            onClick={() => {
+              if (isSelected) {
+                setSelectedChipBroadcastId('');
+              } else {
+                setSelectedChipBroadcastId(broadcast.id);
+              }
+            }}
+            onDragStart={dragStart}
+            variant={isSelected ? 'filled' : 'outlined'}
+          />
+        </span>
+      </Tooltip>
     </ThemeProvider>
   );
 }
