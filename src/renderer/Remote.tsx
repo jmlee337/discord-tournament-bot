@@ -348,7 +348,9 @@ export default function Remote({
   useEffect(() => {
     window.electron.onBroadcasts((event, newBroadcasts) => {
       setBroadcasts(newBroadcasts);
-      setRefreshing(false);
+    });
+    window.electron.onRefreshingBroadcasts((event, newRefreshing) => {
+      setRefreshing(newRefreshing);
     });
     window.electron.onSpectating((event, newSpectating) => {
       setSpectating(newSpectating);
@@ -409,12 +411,10 @@ export default function Remote({
                   }
                   onClick={async () => {
                     try {
-                      setRefreshing(true);
                       await window.electron.refreshBroadcasts();
                     } catch (e: any) {
                       const message = e instanceof Error ? e.message : e;
                       showErrorDialog([message]);
-                      setRefreshing(false);
                     }
                   }}
                 >

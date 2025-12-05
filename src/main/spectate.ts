@@ -19,6 +19,7 @@ import {
   MSTWL,
 } from '../common/mst';
 import { gameEndUpdate, newFileUpdate } from './mst';
+import { REFRESH_CADENCE_MS } from '../common/constants';
 
 type RemoteBroadcast = {
   id: string;
@@ -40,6 +41,7 @@ type SpectatingInternal = {
   spectating: boolean;
 };
 
+let timeoutId: NodeJS.Timeout | undefined;
 const idToBroadcast = new Map<string, Broadcast>();
 const dolphinIdToSpectating = new Map<string, SpectatingInternal>();
 const spectatingBroadcastIdToDolphinId = new Map<string, string>();
@@ -63,6 +65,9 @@ export function initSpectate(newMainWindow: BrowserWindow) {
     webSocketClient.close();
     webSocketClient = null;
   }
+  clearTimeout(timeoutId);
+  timeoutId = undefined;
+
   idToBroadcast.clear();
   dolphinIdToSpectating.clear();
   spectatingBroadcastIdToDolphinId.clear();
@@ -358,6 +363,26 @@ export async function setOverlayDolphinId(newOverlayDolphinId: string) {
   }
 }
 
+function refreshBroadcastsInternal() {
+  if (!webSocketClient || remoteStatus !== RemoteStatus.CONNECTED) {
+    throw new Error('not connected');
+  }
+
+  mainWindow?.webContents.send('refreshingBroadcasts', true);
+  webSocketClient.send(JSON.stringify({ op: 'list-broadcasts-request' }));
+}
+
+function setRefreshBroadcastsTimeout() {
+  timeoutId = setTimeout(() => {
+    try {
+      refreshBroadcastsInternal();
+      setRefreshBroadcastsTimeout();
+    } catch {
+      // just catch
+    }
+  }, REFRESH_CADENCE_MS);
+}
+
 export function connect(port: number) {
   if (webSocketClient) {
     return;
@@ -368,8 +393,13 @@ export function connect(port: number) {
       remoteErr = '';
       remoteStatus = RemoteStatus.CONNECTED;
       sendState();
+      refreshBroadcastsInternal();
+      setRefreshBroadcastsTimeout();
     })
     .on('error', (error) => {
+      clearTimeout(timeoutId);
+      timeoutId = undefined;
+
       webSocketClient?.removeAllListeners();
       webSocketClient = null;
 
@@ -385,6 +415,9 @@ export function connect(port: number) {
       sendState();
     })
     .on('close', () => {
+      clearTimeout(timeoutId);
+      timeoutId = undefined;
+
       webSocketClient?.removeAllListeners();
       webSocketClient = null;
 
@@ -406,6 +439,9 @@ export function connect(port: number) {
           return;
         }
         if (typeof message.err === 'string') {
+          if (message.op === 'list-broadcasts-response') {
+            mainWindow?.webContents.send('refreshingBroadcasts', false);
+          }
           return;
         }
         switch (message.op) {
@@ -582,6 +618,7 @@ export function connect(port: number) {
               });
             });
             sendBroadcasts();
+            mainWindow?.webContents.send('refreshingBroadcasts', false);
             return;
           case 'spectate-broadcast-response':
             dolphinIdToSpectating.set(message.dolphinId, {
@@ -619,11 +656,13 @@ export function connect(port: number) {
 }
 
 export function refreshBroadcasts() {
+  clearTimeout(timeoutId);
   if (!webSocketClient || remoteStatus !== RemoteStatus.CONNECTED) {
     throw new Error('not connected');
   }
 
-  webSocketClient.send(JSON.stringify({ op: 'list-broadcasts-request' }));
+  refreshBroadcastsInternal();
+  setRefreshBroadcastsTimeout();
 }
 
 export function startSpectating(broadcastId: string, dolphinId: string) {

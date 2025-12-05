@@ -134,6 +134,12 @@ const electronHandler = {
     ipcRenderer.removeAllListeners('gettingSets');
     ipcRenderer.on('gettingSets', callback);
   },
+  onRefreshingBroadcasts: (
+    callback: (event: IpcRendererEvent, listing: boolean) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('refreshingBroadcasts');
+    ipcRenderer.on('refreshingBroadcasts', callback);
+  },
   onSets: (callback: (event: IpcRendererEvent, sets: Sets) => void) => {
     ipcRenderer.removeAllListeners('sets');
     ipcRenderer.on('sets', callback);

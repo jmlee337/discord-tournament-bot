@@ -89,6 +89,7 @@ import {
   setTournamentName,
 } from './mst';
 import { MSTManualUpdateScoreboardInfo } from '../common/mst';
+import { REFRESH_CADENCE_MS } from '../common/constants';
 
 const CONFIRMATION_TIMEOUT_MS = 30000;
 const STARTGG_BLACK = '#031221';
@@ -311,7 +312,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         mainWindow.webContents.send('gettingSets', false);
       }
       setGetEventSetsTimeout();
-    }, 30000);
+    }, REFRESH_CADENCE_MS);
   };
   const preemptGetEventSets = async () => {
     clearTimeout(timeoutId);
