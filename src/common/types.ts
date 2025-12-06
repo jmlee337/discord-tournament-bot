@@ -133,9 +133,17 @@ export type Spectating = {
   spectating: boolean;
 };
 
+export type DiscordServer = {
+  id: string;
+  name: string;
+  iconUrl: string | null;
+};
+
 export type StartingState = {
   connectCodes: ConnectCode[];
   discordStatus: DiscordStatus;
+  discordServerId: string;
+  discordServers: DiscordServer[];
   discordUsernames: DiscordUsername[];
   eventName: string;
   remoteState: RemoteState;

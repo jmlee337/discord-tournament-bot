@@ -14,6 +14,10 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
   Stack,
   SvgIcon,
   Tab,
@@ -29,6 +33,7 @@ import {
   ConnectCode,
   RemoteStatus,
   RemoteState,
+  DiscordServer,
 } from '../common/types';
 import DiscordUsernames from './DiscordUsernames';
 import SearchBar from './SearchBar';
@@ -101,6 +106,8 @@ function Hello() {
   // starting state
   const [connectCodes, setConnectCodes] = useState<ConnectCode[]>([]);
   const [discordStatus, setDiscordStatus] = useState(DiscordStatus.NONE);
+  const [discordServers, setDiscordServers] = useState<DiscordServer[]>([]);
+  const [discordServerId, setDiscordServerId] = useState('');
   const [eventDescription, setEventDescription] = useState('');
   const [discordUsernames, setDiscordUsernames] = useState<DiscordUsername[]>(
     [],
@@ -136,6 +143,8 @@ function Hello() {
       setDiscordToken((await discordConfigPromise).token);
       setConnectCodes((await startingStatePromise).connectCodes);
       setDiscordStatus((await startingStatePromise).discordStatus);
+      setDiscordServers((await startingStatePromise).discordServers);
+      setDiscordServerId((await startingStatePromise).discordServerId);
       setDiscordUsernames((await startingStatePromise).discordUsernames);
       const tournamentName = (await startingStatePromise).tournament.name;
       const { eventName } = await startingStatePromise;
@@ -180,6 +189,14 @@ function Hello() {
     window.electron.onDiscordStatus((event, newDiscordStatus) => {
       setDiscordStatus(newDiscordStatus);
     });
+    window.electron.onDiscordServers((event, newDiscordServers) => {
+      if (newDiscordServers.length === 1) {
+        setDiscordServerId(newDiscordServers[0].id);
+      } else {
+        setDiscordServerId('');
+      }
+      setDiscordServers(newDiscordServers);
+    });
     window.electron.onGettingSets((event, getting) => {
       setRefreshing(getting);
     });
@@ -192,31 +209,23 @@ function Hello() {
   if (discordStatus === DiscordStatus.NONE) {
     if (!discordApplicationId) {
       discordNotStartedExplanation = (
-        <Alert severity="warning" style={{ flexGrow: 1 }}>
-          Please set Discord application id
-        </Alert>
+        <Alert severity="warning">Please set Discord application id</Alert>
       );
     } else if (!discordToken) {
       discordNotStartedExplanation = (
-        <Alert severity="warning" style={{ flexGrow: 1 }}>
-          Please set Discord token
-        </Alert>
+        <Alert severity="warning">Please set Discord token</Alert>
       );
     } else if (tournament.events.length === 0) {
       discordNotStartedExplanation = (
-        <Alert severity="warning" style={{ flexGrow: 1 }}>
-          Please select tournament and event
-        </Alert>
+        <Alert severity="warning">Please select tournament and event</Alert>
       );
     } else if (!eventDescription) {
       discordNotStartedExplanation = (
-        <Alert severity="warning" style={{ flexGrow: 1 }}>
-          Please select event
-        </Alert>
+        <Alert severity="warning">Please select event</Alert>
       );
     } else {
       discordNotStartedExplanation = (
-        <Alert severity="warning" style={{ flexGrow: 1 }}>
+        <Alert severity="warning">
           Selected event has no entrants with Discord connected
         </Alert>
       );
@@ -252,29 +261,79 @@ function Hello() {
           alignItems="center"
           justifyContent="space-between"
         >
-          <Stack direction="row">
+          <Stack direction="row" alignItems="center" gap="8px">
             {discordStatus === DiscordStatus.NONE &&
               discordNotStartedExplanation}
             {discordStatus === DiscordStatus.BAD_TOKEN && (
-              <Alert severity="error" style={{ flexGrow: 1 }}>
-                Discord Bot Token Error!
-              </Alert>
+              <Alert severity="error">Discord bot token error!</Alert>
             )}
             {discordStatus === DiscordStatus.BAD_APPLICATION_ID && (
-              <Alert severity="error" style={{ flexGrow: 1 }}>
-                Discord Bot Application Id Error!
-              </Alert>
+              <Alert severity="error">Discord bot application id error!</Alert>
             )}
             {discordStatus === DiscordStatus.STARTING && (
-              <Alert severity="info" style={{ flexGrow: 1 }}>
-                Discord Bot Starting...
-              </Alert>
+              <Alert severity="info">Discord bot starting...</Alert>
             )}
-            {discordStatus === DiscordStatus.READY && (
-              <Alert severity="success" style={{ flexGrow: 1 }}>
-                Discord Bot Running
-              </Alert>
-            )}
+            {discordStatus === DiscordStatus.READY &&
+              discordServers.length === 0 && (
+                <Alert severity="warning">
+                  Discord bot is not in any servers
+                </Alert>
+              )}
+            {discordStatus === DiscordStatus.READY &&
+              discordServers.length > 0 && (
+                <>
+                  <Alert severity={discordServerId ? 'success' : 'warning'}>
+                    {discordServerId
+                      ? 'Discord bot running'
+                      : 'Select a server'}
+                  </Alert>
+                  <FormControl>
+                    <InputLabel id="discord-server-select-id" size="small">
+                      Server
+                    </InputLabel>
+                    <Select
+                      label="Server"
+                      labelId="discord-server-select-id"
+                      size="small"
+                      style={{ width: '210px' }}
+                      value={discordServerId}
+                      onChange={async (event) => {
+                        const newDiscordServerId = event.target.value;
+                        await window.electron.setDiscordServerId(
+                          newDiscordServerId,
+                        );
+                        setDiscordServerId(newDiscordServerId);
+                      }}
+                    >
+                      {discordServers.map((discordServer) => (
+                        <MenuItem
+                          key={discordServer.id}
+                          value={discordServer.id}
+                        >
+                          <Stack direction="row" alignItems="center">
+                            {discordServer.iconUrl ? (
+                              <img
+                                src={discordServer.iconUrl}
+                                alt={`${discordServer.name} icon`}
+                                height="24px"
+                                width="24px"
+                                style={{
+                                  borderRadius: '6px',
+                                  marginLeft: '-8px',
+                                  marginRight: '8px',
+                                }}
+                              />
+                            ) : (
+                              <Stack width="24px" />
+                            )}
+                            {discordServer.name}
+                          </Stack>
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </>
+              )}
           </Stack>
           <Stack direction="row" alignItems="center" justifyContent="end">
             <Settings
@@ -374,7 +433,10 @@ function Hello() {
         />
       </TabPanel>
       <TabPanel value={tabValue} index={TabValue.BRACKET}>
-        <Bracket discordStatus={discordStatus} searchSubstr={searchSubstr} />
+        <Bracket
+          discordServerId={discordServerId}
+          searchSubstr={searchSubstr}
+        />
       </TabPanel>
       <Dialog
         open={errorDialogOpen}

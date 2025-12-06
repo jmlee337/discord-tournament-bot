@@ -31,7 +31,6 @@ import {
   Sets,
   DiscordChannel,
   Discord,
-  DiscordStatus,
 } from '../common/types';
 import DiscordIcon from './DiscordIcon';
 
@@ -241,10 +240,10 @@ function getCompletedPhases(
 }
 
 export default function Bracket({
-  discordStatus,
+  discordServerId,
   searchSubstr,
 }: {
-  discordStatus: DiscordStatus;
+  discordServerId: string;
   searchSubstr: string;
 }) {
   const [sets, setSets] = useState<Sets>({ pending: [], completed: [] });
@@ -319,10 +318,7 @@ export default function Bracket({
             <Typography variant="h5">Pending</Typography>
             <Button
               color="warning"
-              disabled={
-                discordStatus !== DiscordStatus.READY ||
-                gettingDiscordCheckinPings
-              }
+              disabled={!discordServerId || gettingDiscordCheckinPings}
               endIcon={
                 gettingDiscordCheckinPings ? (
                   <CircularProgress size="24px" />
@@ -359,14 +355,14 @@ export default function Bracket({
                   </Alert>
                 ) : (
                   <FormControl fullWidth style={{ marginTop: '8px' }}>
-                    <InputLabel id="discord-channel-select-label">
+                    <InputLabel id="discord-channel-select-label" size="small">
                       Channel
                     </InputLabel>
                     <Select
-                      labelId="discord-channel-select-label"
-                      id="discord-channel-select"
-                      value={discordChannelId}
                       label="Channel"
+                      labelId="discord-channel-select-label"
+                      value={discordChannelId}
+                      size="small"
                       onChange={(event) => {
                         setDiscordChannelId(event.target.value);
                       }}

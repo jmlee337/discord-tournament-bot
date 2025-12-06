@@ -468,7 +468,7 @@ export default function Overlay({
             </Stack>
             <Stack direction="row" spacing="8px">
               <FormControl>
-                <InputLabel id="p1-character-select-label">
+                <InputLabel id="p1-character-select-label" size="small">
                   Character
                 </InputLabel>
                 <Select
@@ -524,7 +524,9 @@ export default function Overlay({
               </FormControl>
               {enableSkinColor && (
                 <FormControl>
-                  <InputLabel id="p1-skin-select-label">Color</InputLabel>
+                  <InputLabel id="p1-skin-select-label" size="small">
+                    Color
+                  </InputLabel>
                   <Select
                     disabled={!enableMST || !resourcesPath}
                     size="small"
@@ -676,7 +678,7 @@ export default function Overlay({
             </Stack>
             <Stack direction="row" spacing="8px">
               <FormControl>
-                <InputLabel id="p2-character-select-label">
+                <InputLabel id="p2-character-select-label" size="small">
                   Character
                 </InputLabel>
                 <Select
@@ -732,7 +734,9 @@ export default function Overlay({
               </FormControl>
               {enableSkinColor && (
                 <FormControl>
-                  <InputLabel id="p2-skin-select-label">Color</InputLabel>
+                  <InputLabel id="p2-skin-select-label" size="small">
+                    Color
+                  </InputLabel>
                   <Select
                     disabled={!enableMST || !resourcesPath}
                     size="small"
@@ -764,6 +768,7 @@ export default function Overlay({
             border: 'none',
             borderCollapse: 'separate',
             borderSpacing: '8px',
+            tableLayout: 'fixed',
             width: 'initial',
           }}
         >
@@ -773,6 +778,7 @@ export default function Overlay({
                 <Stack
                   direction="row"
                   justifyContent="space-between"
+                  gap="8px"
                   height="40px"
                 >
                   <ToggleButtonGroup
@@ -821,6 +827,7 @@ export default function Overlay({
                   disabled={!enableMST || !resourcesPath}
                   variant="outlined"
                   size="small"
+                  style={{ minWidth: '210px' }}
                   label="Current Round"
                   value={round}
                   onChange={(event) => {
@@ -848,6 +855,7 @@ export default function Overlay({
                   disabled={!enableMST || !resourcesPath}
                   variant="outlined"
                   size="small"
+                  style={{ minWidth: '210px' }}
                   label="Tournament Name"
                   value={tournamentName}
                   onChange={(event) => {
@@ -883,6 +891,7 @@ export default function Overlay({
                   disabled={!enableMST || !resourcesPath}
                   variant="outlined"
                   size="small"
+                  style={{ minWidth: '210px' }}
                   label="Caster 1 Name"
                   value={caster1Name}
                   onChange={(event) => {
@@ -902,6 +911,7 @@ export default function Overlay({
                   disabled={!enableMST || !resourcesPath}
                   variant="outlined"
                   size="small"
+                  style={{ minWidth: '210px' }}
                   label="Caster 1 Twitter"
                   value={caster1Twitter}
                   onChange={(event) => {
@@ -921,6 +931,7 @@ export default function Overlay({
                   disabled={!enableMST || !resourcesPath}
                   variant="outlined"
                   size="small"
+                  style={{ minWidth: '210px' }}
                   label="Caster 1 Twitch"
                   value={caster1Twitch}
                   onChange={(event) => {
@@ -942,6 +953,7 @@ export default function Overlay({
                   disabled={!enableMST || !resourcesPath}
                   variant="outlined"
                   size="small"
+                  style={{ minWidth: '210px' }}
                   label="Caster 2 Name"
                   value={caster2Name}
                   onChange={(event) => {
@@ -954,6 +966,7 @@ export default function Overlay({
                   disabled={!enableMST || !resourcesPath}
                   variant="outlined"
                   size="small"
+                  style={{ minWidth: '210px' }}
                   label="Caster 2 Twitter"
                   value={caster2Twitter}
                   onChange={(event) => {
@@ -973,6 +986,7 @@ export default function Overlay({
                   disabled={!enableMST || !resourcesPath}
                   variant="outlined"
                   size="small"
+                  style={{ minWidth: '210px' }}
                   label="Caster 2 Twitch"
                   value={caster2Twitch}
                   onChange={(event) => {

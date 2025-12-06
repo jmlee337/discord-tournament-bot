@@ -7,6 +7,7 @@ import {
   Discord,
   DiscordChannel,
   DiscordConfig,
+  DiscordServer,
   DiscordStatus,
   ParticipantConnections,
   RemoteState,
@@ -102,6 +103,8 @@ const electronHandler = {
     ipcRenderer.invoke('resetSet', setId),
   swapWinner: (set: StartggSet): Promise<void> =>
     ipcRenderer.invoke('swapWinner', set),
+  setDiscordServerId: (discordServerId: string): Promise<void> =>
+    ipcRenderer.invoke('setDiscordServerId', discordServerId),
   getDiscordCheckinPings: (): Promise<{
     channels: DiscordChannel[];
     discords: Discord[];
@@ -125,6 +128,15 @@ const electronHandler = {
   ) => {
     ipcRenderer.removeAllListeners('broadcasts');
     ipcRenderer.on('broadcasts', callback);
+  },
+  onDiscordServers: (
+    callback: (
+      event: IpcRendererEvent,
+      discordServers: DiscordServer[],
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('discordServers');
+    ipcRenderer.on('discordServers', callback);
   },
   onDiscordStatus: (
     callback: (event: IpcRendererEvent, discordStatus: DiscordStatus) => void,
