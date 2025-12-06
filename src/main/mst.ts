@@ -97,10 +97,6 @@ export function setEnableSggRound(newEnableSggRound: boolean) {
   enableSggRound = newEnableSggRound;
 }
 
-export function setTournamentName(newTournamentName: string) {
-  scoreboardInfo.tournamentName = newTournamentName;
-}
-
 async function writeScoreboardInfo() {
   if (!enable || !resourcesPath) {
     return;
@@ -146,6 +142,11 @@ async function writeScoreboardInfo() {
     JSON.stringify(writtenScoreboardInfo, undefined, 2),
   );
   mainWindow?.webContents.send('scoreboardInfo', scoreboardInfo);
+}
+
+export async function tournamentNameUpdate(newTournamentName: string) {
+  scoreboardInfo.tournamentName = newTournamentName;
+  await writeScoreboardInfo();
 }
 
 export async function newFileUpdate(

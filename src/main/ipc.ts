@@ -90,7 +90,7 @@ import {
   setEnableSkinColor,
   setRequestGetEventSets,
   setResourcesPath,
-  setTournamentName,
+  tournamentNameUpdate,
 } from './mst';
 import { MSTManualUpdateScoreboardInfo } from '../common/mst';
 import { REFRESH_CADENCE_MS } from '../common/constants';
@@ -1130,7 +1130,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     'getTournament',
     async (event: IpcMainInvokeEvent, slug: string) => {
       tournament = await getTournament(slug);
-      setTournamentName(tournament.name);
+      await tournamentNameUpdate(tournament.name);
       return tournament;
     },
   );
