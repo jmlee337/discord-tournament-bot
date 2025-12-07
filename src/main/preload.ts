@@ -103,6 +103,8 @@ const electronHandler = {
     ipcRenderer.invoke('resetSet', setId),
   swapWinner: (set: StartggSet): Promise<void> =>
     ipcRenderer.invoke('swapWinner', set),
+  getDiscordServers: (): Promise<DiscordServer[]> =>
+    ipcRenderer.invoke('getDiscordServers'),
   setDiscordServerId: (discordServerId: string): Promise<void> =>
     ipcRenderer.invoke('setDiscordServerId', discordServerId),
   getDiscordCheckinPings: (): Promise<{
@@ -128,6 +130,12 @@ const electronHandler = {
   ) => {
     ipcRenderer.removeAllListeners('broadcasts');
     ipcRenderer.on('broadcasts', callback);
+  },
+  onDiscordServerId: (
+    callback: (event: IpcRendererEvent, discordServerId: string) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('discordServerId');
+    ipcRenderer.on('discordServerId', callback);
   },
   onDiscordServers: (
     callback: (

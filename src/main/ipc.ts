@@ -387,7 +387,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       return [];
     }
 
-    return client.guilds
+    const guilds = client.guilds
       .valueOf()
       .filter((guild) => {
         const userId = client?.user?.id;
@@ -419,6 +419,18 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           iconUrl: guild.iconURL() ?? '',
         }),
       );
+    if (guilds.length === 1) {
+      discordServerId = guilds[0].id;
+      mainWindow.webContents.send('discordServerId', discordServerId);
+    } else if (
+      discordServerId &&
+      !guilds.some((guild) => guild.id === discordServerId)
+    ) {
+      discordServerId = '';
+      mainWindow.webContents.send('discordServerId', discordServerId);
+    }
+
+    return guilds;
   };
   const getEntrantId = (
     interaction: ChatInputCommandInteraction<CacheType>,
@@ -526,11 +538,6 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           updateDiscordStatus(DiscordStatus.READY);
         }
         const discordServers = getGuilds();
-        if (discordServers.length === 1) {
-          discordServerId = discordServers[0].id;
-        } else {
-          discordServerId = '';
-        }
         mainWindow.webContents.send('discordServers', discordServers);
       });
       client.on(Events.InteractionCreate, async (interaction) => {
@@ -1302,11 +1309,15 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
+  ipcMain.removeHandler('getDiscordServers');
+  ipcMain.handle('getDiscordServers', () => getGuilds());
+
   ipcMain.removeHandler('setDiscordServerId');
   ipcMain.handle(
     'setDiscordServerId',
     (event: IpcMainInvokeEvent, newDiscordServerId: string) => {
       discordServerId = newDiscordServerId;
+      mainWindow.webContents.send('discordServerId', discordServerId);
     },
   );
 
@@ -1431,7 +1442,6 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     (): StartingState => ({
       connectCodes,
       discordStatus,
-      discordServers: getGuilds(),
       discordServerId,
       discordUsernames,
       eventName: startggEvent.name,

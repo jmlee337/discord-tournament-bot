@@ -15,6 +15,7 @@ import {
   DialogContentText,
   DialogTitle,
   FormControl,
+  IconButton,
   InputLabel,
   MenuItem,
   Select,
@@ -22,8 +23,10 @@ import {
   SvgIcon,
   Tab,
   Tabs,
+  Tooltip,
 } from '@mui/material';
 import { GlobalHotKeys } from 'react-hotkeys';
+import { Refresh } from '@mui/icons-material';
 import Settings from './Settings';
 import {
   AdminedTournament,
@@ -131,6 +134,7 @@ function Hello() {
   useEffect(() => {
     const inner = async () => {
       const discordConfigPromise = window.electron.getDiscordConfig();
+      const discordServersPromise = window.electron.getDiscordServers();
       const startingStatePromise = window.electron.getStartingState();
       const enableMSTPromise = window.electron.getEnableMST();
       const resourcesPathPromise = window.electron.getResourcesPath();
@@ -141,9 +145,9 @@ function Hello() {
 
       setDiscordApplicationId((await discordConfigPromise).applicationId);
       setDiscordToken((await discordConfigPromise).token);
+      setDiscordServers(await discordServersPromise);
       setConnectCodes((await startingStatePromise).connectCodes);
       setDiscordStatus((await startingStatePromise).discordStatus);
-      setDiscordServers((await startingStatePromise).discordServers);
       setDiscordServerId((await startingStatePromise).discordServerId);
       setDiscordUsernames((await startingStatePromise).discordUsernames);
       const tournamentName = (await startingStatePromise).tournament.name;
@@ -189,12 +193,10 @@ function Hello() {
     window.electron.onDiscordStatus((event, newDiscordStatus) => {
       setDiscordStatus(newDiscordStatus);
     });
+    window.electron.onDiscordServerId((event, newDiscordServerId) => {
+      setDiscordServerId(newDiscordServerId);
+    });
     window.electron.onDiscordServers((event, newDiscordServers) => {
-      if (newDiscordServers.length === 1) {
-        setDiscordServerId(newDiscordServers[0].id);
-      } else {
-        setDiscordServerId('');
-      }
       setDiscordServers(newDiscordServers);
     });
     window.electron.onGettingSets((event, getting) => {
@@ -209,24 +211,24 @@ function Hello() {
   if (discordStatus === DiscordStatus.NONE) {
     if (!discordApplicationId) {
       discordNotStartedExplanation = (
-        <Alert severity="warning">Please set Discord application id</Alert>
+        <Alert severity="warning">Set Discord application id</Alert>
       );
     } else if (!discordToken) {
       discordNotStartedExplanation = (
-        <Alert severity="warning">Please set Discord token</Alert>
+        <Alert severity="warning">Set Discord token</Alert>
       );
     } else if (tournament.events.length === 0) {
       discordNotStartedExplanation = (
-        <Alert severity="warning">Please select tournament and event</Alert>
+        <Alert severity="warning">Select tournament</Alert>
       );
     } else if (!eventDescription) {
       discordNotStartedExplanation = (
-        <Alert severity="warning">Please select event</Alert>
+        <Alert severity="warning">Select event</Alert>
       );
     } else {
       discordNotStartedExplanation = (
         <Alert severity="warning">
-          Selected event has no entrants with Discord connected
+          Event has no entrants with Discord connected
         </Alert>
       );
     }
@@ -242,6 +244,9 @@ function Hello() {
       setSearchSubstr('');
     });
   }, []);
+
+  const [refreshingDiscordServers, setRefreshingDiscordServers] =
+    useState(false);
 
   return (
     <>
@@ -260,6 +265,7 @@ function Hello() {
           direction="row"
           alignItems="center"
           justifyContent="space-between"
+          height="57px"
         >
           <Stack direction="row" alignItems="center" gap="8px">
             {discordStatus === DiscordStatus.NONE &&
@@ -273,67 +279,86 @@ function Hello() {
             {discordStatus === DiscordStatus.STARTING && (
               <Alert severity="info">Discord bot starting...</Alert>
             )}
-            {discordStatus === DiscordStatus.READY &&
-              discordServers.length === 0 && (
-                <Alert severity="warning">
-                  Discord bot is not in any servers
-                </Alert>
-              )}
-            {discordStatus === DiscordStatus.READY &&
-              discordServers.length > 0 && (
-                <>
-                  <Alert severity={discordServerId ? 'success' : 'warning'}>
+            {discordStatus === DiscordStatus.READY && (
+              <Alert
+                severity={discordServerId ? 'success' : 'warning'}
+                style={{ paddingTop: 0, paddingRight: '8px', paddingBottom: 0 }}
+                slotProps={{ icon: { style: { alignItems: 'center' } } }}
+              >
+                <FormControl>
+                  <InputLabel id="discord-server-select-id" size="small">
                     {discordServerId
-                      ? 'Discord bot running'
-                      : 'Select a server'}
-                  </Alert>
-                  <FormControl>
-                    <InputLabel id="discord-server-select-id" size="small">
-                      Server
-                    </InputLabel>
-                    <Select
-                      label="Server"
-                      labelId="discord-server-select-id"
-                      size="small"
-                      style={{ width: '210px' }}
-                      value={discordServerId}
-                      onChange={async (event) => {
-                        const newDiscordServerId = event.target.value;
-                        await window.electron.setDiscordServerId(
-                          newDiscordServerId,
+                      ? 'Discord Server'
+                      : 'Select Discord Server...'}
+                  </InputLabel>
+                  <Select
+                    disabled={refreshingDiscordServers}
+                    label={
+                      discordServerId
+                        ? 'Discord Server'
+                        : 'Select Discord Server...'
+                    }
+                    labelId="discord-server-select-id"
+                    size="small"
+                    style={{ width: '210px' }}
+                    value={discordServerId}
+                    onChange={async (event) => {
+                      await window.electron.setDiscordServerId(
+                        event.target.value,
+                      );
+                    }}
+                  >
+                    {discordServers.map((discordServer) => (
+                      <MenuItem key={discordServer.id} value={discordServer.id}>
+                        <Stack direction="row" alignItems="center">
+                          {discordServer.iconUrl ? (
+                            <img
+                              src={discordServer.iconUrl}
+                              alt={`${discordServer.name} icon`}
+                              height="24px"
+                              width="24px"
+                              style={{
+                                borderRadius: '6px',
+                                marginLeft: '-8px',
+                                marginRight: '8px',
+                              }}
+                            />
+                          ) : (
+                            <Stack width="24px" />
+                          )}
+                          {discordServer.name}
+                        </Stack>
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+                <Tooltip
+                  placement="top"
+                  title="Refresh"
+                  style={{ marginLeft: '4px' }}
+                >
+                  <IconButton
+                    disabled={refreshingDiscordServers}
+                    onClick={async () => {
+                      try {
+                        setRefreshingDiscordServers(true);
+                        setDiscordServers(
+                          await window.electron.getDiscordServers(),
                         );
-                        setDiscordServerId(newDiscordServerId);
-                      }}
-                    >
-                      {discordServers.map((discordServer) => (
-                        <MenuItem
-                          key={discordServer.id}
-                          value={discordServer.id}
-                        >
-                          <Stack direction="row" alignItems="center">
-                            {discordServer.iconUrl ? (
-                              <img
-                                src={discordServer.iconUrl}
-                                alt={`${discordServer.name} icon`}
-                                height="24px"
-                                width="24px"
-                                style={{
-                                  borderRadius: '6px',
-                                  marginLeft: '-8px',
-                                  marginRight: '8px',
-                                }}
-                              />
-                            ) : (
-                              <Stack width="24px" />
-                            )}
-                            {discordServer.name}
-                          </Stack>
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </>
-              )}
+                      } finally {
+                        setRefreshingDiscordServers(false);
+                      }
+                    }}
+                  >
+                    {refreshingDiscordServers ? (
+                      <CircularProgress size="24px" />
+                    ) : (
+                      <Refresh />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              </Alert>
+            )}
           </Stack>
           <Stack direction="row" alignItems="center" justifyContent="end">
             <Settings
@@ -368,6 +393,7 @@ function Hello() {
               startIcon={
                 refreshing ? <CircularProgress size="20px" /> : <StartggIcon />
               }
+              style={{ marginLeft: '4px' }}
               onClick={async () => {
                 try {
                   setRefreshing(true);
@@ -412,7 +438,7 @@ function Hello() {
           />
         </Tabs>
       </AppBar>
-      <div style={{ marginTop: '168px' }} />
+      <div style={{ marginTop: '169px' }} />
       <TabPanel value={tabValue} index={TabValue.BROADCASTS}>
         <Remote
           overlayEnabled={enableMST && Boolean(resourcesPath)}

@@ -143,7 +143,6 @@ export type StartingState = {
   connectCodes: ConnectCode[];
   discordStatus: DiscordStatus;
   discordServerId: string;
-  discordServers: DiscordServer[];
   discordUsernames: DiscordUsername[];
   eventName: string;
   remoteState: RemoteState;
