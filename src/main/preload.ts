@@ -19,9 +19,7 @@ import {
   StartingState,
 } from '../common/types';
 import {
-  MSTGameEndScoreboardInfo,
   MSTManualUpdateScoreboardInfo,
-  MSTNewFileScoreboardInfo,
   MSTScoreboardInfo,
 } from '../common/mst';
 
@@ -79,6 +77,18 @@ const electronHandler = {
     ipcRenderer.invoke('getEnableSggRound'),
   setEnableSggRound: (enableSggRound: boolean): Promise<void> =>
     ipcRenderer.invoke('setEnableSggRound', enableSggRound),
+  getSimpleTextPathA: (): Promise<string> =>
+    ipcRenderer.invoke('getSimpleTextPathA'),
+  chooseSimpleTextPathA: (): Promise<string> =>
+    ipcRenderer.invoke('chooseSimpleTextPathA'),
+  getSimpleTextPathB: (): Promise<string> =>
+    ipcRenderer.invoke('getSimpleTextPathB'),
+  chooseSimpleTextPathB: (): Promise<string> =>
+    ipcRenderer.invoke('chooseSimpleTextPathB'),
+  getSimpleTextPathC: (): Promise<string> =>
+    ipcRenderer.invoke('getSimpleTextPathC'),
+  chooseSimpleTextPathC: (): Promise<string> =>
+    ipcRenderer.invoke('chooseSimpleTextPathC'),
   getScoreboardInfo: (): Promise<MSTScoreboardInfo> =>
     ipcRenderer.invoke('getScoreboardInfo'),
   setScoreboardInfo: (
@@ -193,14 +203,6 @@ const electronHandler = {
   // exposed for dev only
   registerSlashCommands: (): Promise<void> =>
     ipcRenderer.invoke('registerSlashCommands'),
-  processNewReplay: (
-    filePath: string,
-  ): Promise<MSTNewFileScoreboardInfo | null> =>
-    ipcRenderer.invoke('processNewReplay', filePath),
-  processFinishedReplay: (
-    filePath: string,
-  ): Promise<MSTGameEndScoreboardInfo | null> =>
-    ipcRenderer.invoke('processFinishedReplay', filePath),
 };
 
 contextBridge.exposeInMainWorld('electron', electronHandler);

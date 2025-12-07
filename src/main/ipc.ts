@@ -67,13 +67,14 @@ import {
   getRemoteState,
   getSpectating,
   initSpectate,
-  processFinishedReplay,
-  processNewReplay,
   refreshBroadcasts,
   setConnectCodes,
   setEnableOverlay,
   setEntrantIdToPendingSets,
   setOverlayDolphinId,
+  setSimpleTextPathA,
+  setSimpleTextPathB,
+  setSimpleTextPathC,
   setUpdateAutomatically,
   startSpectating,
   stopSpectating,
@@ -190,6 +191,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     enableSggSponsors: boolean;
     remotePort: number;
     resourcesPath: string;
+    simpleTextPathA: string;
+    simpleTextPathB: string;
+    simpleTextPathC: string;
     startggApiKey: string;
     updateAutomatically: boolean;
   }>();
@@ -207,11 +211,17 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let enableSggRound = store.get('enableSggRound', true);
   let remotePort = store.get('remotePort', 49809);
   let resourcesPath = store.get('resourcesPath', '');
+  let simpleTextPathA = store.get('simpleTextPathA', '');
+  let simpleTextPathB = store.get('simpleTextPathB', '');
+  let simpleTextPathC = store.get('simpleTextPathC', '');
   let startggApiKey = store.get('startggApiKey', '');
   let updateAutomatically = store.get('updateAutomatically', true);
 
   // spectate
   setEnableOverlay(enableMST);
+  setSimpleTextPathA(simpleTextPathA);
+  setSimpleTextPathB(simpleTextPathB);
+  setSimpleTextPathC(simpleTextPathC);
   setUpdateAutomatically(updateAutomatically);
 
   // mst
@@ -1100,6 +1110,70 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
+  ipcMain.removeHandler('getSimpleTextPathA');
+  ipcMain.handle('getSimpleTextPathA', () => simpleTextPathA);
+
+  ipcMain.removeHandler('chooseSimpleTextPathA');
+  ipcMain.handle('chooseSimpleTextPathA', async () => {
+    const openDialogRes = await dialog.showOpenDialog({
+      filters: [{ name: 'Text File', extensions: ['txt'] }],
+      properties: ['openFile'],
+    });
+    if (openDialogRes.canceled) {
+      return simpleTextPathA;
+    }
+
+    const [simpleTextPath] = openDialogRes.filePaths;
+
+    store.set('simpleTextPathA', simpleTextPath);
+    simpleTextPathA = simpleTextPath;
+    setSimpleTextPathA(simpleTextPath);
+    return simpleTextPathA;
+  });
+
+  ipcMain.removeHandler('getSimpleTextPathB');
+  ipcMain.handle('getSimpleTextPathB', () => simpleTextPathB);
+
+  ipcMain.removeHandler('chooseSimpleTextPathB');
+  ipcMain.handle('chooseSimpleTextPathB', async () => {
+    const openDialogRes = await dialog.showOpenDialog({
+      filters: [{ name: 'Text File', extensions: ['txt'] }],
+      properties: ['openFile'],
+    });
+    if (openDialogRes.canceled) {
+      return simpleTextPathB;
+    }
+
+    const [simpleTextPath] = openDialogRes.filePaths;
+
+    store.set('simpleTextPathB', simpleTextPath);
+    simpleTextPathB = simpleTextPath;
+    setSimpleTextPathB(simpleTextPath);
+    return simpleTextPathB;
+  });
+
+  ipcMain.removeHandler('getSimpleTextPathC');
+  ipcMain.handle('getSimpleTextPathC', () => simpleTextPathC);
+
+  ipcMain.removeHandler('chooseSimpleTextPathC');
+  ipcMain.removeHandler('setSimpleTextPathC');
+  ipcMain.handle('chooseSimpleTextPathC', async () => {
+    const openDialogRes = await dialog.showOpenDialog({
+      filters: [{ name: 'Text File', extensions: ['txt'] }],
+      properties: ['openFile'],
+    });
+    if (openDialogRes.canceled) {
+      return simpleTextPathC;
+    }
+
+    const [simpleTextPath] = openDialogRes.filePaths;
+
+    store.set('simpleTextPathC', simpleTextPath);
+    simpleTextPathC = simpleTextPath;
+    setSimpleTextPathC(simpleTextPath);
+    return simpleTextPathC;
+  });
+
   ipcMain.removeHandler('getScoreboardInfo');
   ipcMain.handle('getScoreboardInfo', () => readScoreboardInfo());
 
@@ -1471,18 +1545,5 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     (event: IpcMainInvokeEvent, text: string) => {
       clipboard.writeText(text);
     },
-  );
-
-  ipcMain.removeHandler('processNewReplay');
-  ipcMain.handle(
-    'processNewReplay',
-    (event: IpcMainInvokeEvent, filePath: string) => processNewReplay(filePath),
-  );
-
-  ipcMain.removeHandler('processFinishedReplay');
-  ipcMain.handle(
-    'processFinishedReplay',
-    (event: IpcMainInvokeEvent, filePath: string) =>
-      processFinishedReplay(filePath),
   );
 }

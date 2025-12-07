@@ -31,6 +31,7 @@ import {
   DisplaySettings,
   OpenInBrowser,
   Restore,
+  TextSnippet,
 } from '@mui/icons-material';
 import { blue, green, grey, red, yellow } from '@mui/material/colors';
 import styled from '@emotion/styled';
@@ -73,22 +74,31 @@ export default function Overlay({
   setResourcesPath: (newResourcesPath: string) => void;
   showErrorDialog: (errors: string[]) => void;
 }) {
-  const [updateAutomatically, setUpdateAutomatically] = useState(false);
   const [enableSkinColor, setEnableSkinColor] = useState(false);
   const [enableSggSponsors, setEnableSggSponsors] = useState(false);
   const [enableSggRound, setEnableSggRound] = useState(false);
+  const [simpleTextPathA, setSimpleTextPathA] = useState('');
+  const [simpleTextPathB, setSimpleTextPathB] = useState('');
+  const [simpleTextPathC, setSimpleTextPathC] = useState('');
+  const [updateAutomatically, setUpdateAutomatically] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const updateAutomaticallyPromise =
-        window.electron.getUpdateAutomatically();
       const enableSkinColorPromise = window.electron.getEnableSkinColor();
       const enableSggSponsorsPromise = window.electron.getEnableSggSponsors();
       const enableSggRoundPromise = window.electron.getEnableSggRound();
-      setUpdateAutomatically(await updateAutomaticallyPromise);
+      const simpleTextPathAPromise = window.electron.getSimpleTextPathA();
+      const simpleTextPathBPromise = window.electron.getSimpleTextPathB();
+      const simpleTextPathCPromise = window.electron.getSimpleTextPathC();
+      const updateAutomaticallyPromise =
+        window.electron.getUpdateAutomatically();
       setEnableSkinColor(await enableSkinColorPromise);
       setEnableSggSponsors(await enableSggSponsorsPromise);
       setEnableSggRound(await enableSggRoundPromise);
+      setSimpleTextPathA(await simpleTextPathAPromise);
+      setSimpleTextPathB(await simpleTextPathBPromise);
+      setSimpleTextPathC(await simpleTextPathCPromise);
+      setUpdateAutomatically(await updateAutomaticallyPromise);
     })();
   }, []);
 
@@ -161,6 +171,9 @@ export default function Overlay({
 
   const [open, setOpen] = useState(false);
   const [choosingResourcesPath, setChoosingResourcesPath] = useState(false);
+  const [choosingSimpleTextPathA, setChoosingSimpleTextPathA] = useState(false);
+  const [choosingSimpleTextPathB, setChoosingSimpleTextPathB] = useState(false);
+  const [choosingSimpleTextPathC, setChoosingSimpleTextPathC] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [updating, setUpdating] = useState(false);
 
@@ -325,6 +338,126 @@ export default function Overlay({
                 setEnableSggSponsors(checked);
               }}
             />
+          </Stack>
+          <Stack direction="row" alignItems="center" marginRight="-9px">
+            <InputBase
+              disabled
+              size="small"
+              value={simpleTextPathA || 'Set simple text file A...'}
+              style={{ flexGrow: 1 }}
+            />
+            <Tooltip
+              placement="left"
+              title={
+                enableMST
+                  ? 'Set simple text file A'
+                  : 'Melee Stream Tool/Melee Ghost Streamer overlay disabled'
+              }
+            >
+              <div>
+                <IconButton
+                  disabled={!enableMST || choosingSimpleTextPathA}
+                  onClick={async () => {
+                    try {
+                      setChoosingSimpleTextPathA(true);
+                      setSimpleTextPathA(
+                        await window.electron.chooseSimpleTextPathA(),
+                      );
+                    } catch (e: any) {
+                      showErrorDialog([e instanceof Error ? e.message : e]);
+                    } finally {
+                      setChoosingSimpleTextPathA(false);
+                    }
+                  }}
+                >
+                  {choosingSimpleTextPathA ? (
+                    <CircularProgress size="24px" />
+                  ) : (
+                    <TextSnippet />
+                  )}
+                </IconButton>
+              </div>
+            </Tooltip>
+          </Stack>
+          <Stack direction="row" alignItems="center" marginRight="-9px">
+            <InputBase
+              disabled
+              size="small"
+              value={simpleTextPathB || 'Set simple text file B...'}
+              style={{ flexGrow: 1 }}
+            />
+            <Tooltip
+              placement="left"
+              title={
+                enableMST
+                  ? 'Set simple text file B'
+                  : 'Melee Stream Tool/Melee Ghost Streamer overlay disabled'
+              }
+            >
+              <div>
+                <IconButton
+                  disabled={!enableMST || choosingSimpleTextPathB}
+                  onClick={async () => {
+                    try {
+                      setChoosingSimpleTextPathB(true);
+                      setSimpleTextPathB(
+                        await window.electron.chooseSimpleTextPathB(),
+                      );
+                    } catch (e: any) {
+                      showErrorDialog([e instanceof Error ? e.message : e]);
+                    } finally {
+                      setChoosingSimpleTextPathB(false);
+                    }
+                  }}
+                >
+                  {choosingSimpleTextPathB ? (
+                    <CircularProgress size="24px" />
+                  ) : (
+                    <TextSnippet />
+                  )}
+                </IconButton>
+              </div>
+            </Tooltip>
+          </Stack>
+          <Stack direction="row" alignItems="center" marginRight="-9px">
+            <InputBase
+              disabled
+              size="small"
+              value={simpleTextPathC || 'Set simple text file C...'}
+              style={{ flexGrow: 1 }}
+            />
+            <Tooltip
+              placement="left"
+              title={
+                enableMST
+                  ? 'Set simple text file C'
+                  : 'Melee Stream Tool/Melee Ghost Streamer overlay disabled'
+              }
+            >
+              <div>
+                <IconButton
+                  disabled={!enableMST || choosingSimpleTextPathC}
+                  onClick={async () => {
+                    try {
+                      setChoosingSimpleTextPathC(true);
+                      setSimpleTextPathC(
+                        await window.electron.chooseSimpleTextPathC(),
+                      );
+                    } catch (e: any) {
+                      showErrorDialog([e instanceof Error ? e.message : e]);
+                    } finally {
+                      setChoosingSimpleTextPathC(false);
+                    }
+                  }}
+                >
+                  {choosingSimpleTextPathC ? (
+                    <CircularProgress size="24px" />
+                  ) : (
+                    <TextSnippet />
+                  )}
+                </IconButton>
+              </div>
+            </Tooltip>
           </Stack>
         </DialogContent>
       </Dialog>
