@@ -5,6 +5,7 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
+  Divider,
   IconButton,
   Stack,
   TextField,
@@ -305,6 +306,15 @@ export default function Settings({
               </a>
             </Alert>
           )}
+          <Divider sx={{ marginTop: '4px', typography: 'subtitle2' }}>
+            End User License Agreement
+          </Divider>
+          <Typography variant="caption">
+            By using Nicolet&apos;s Netplay Tournament Suite, you affirm your
+            support for trans rights. This End User License Agreement must be
+            included in all copies or substantial portions of Nicolet&apos;s
+            Netplay Tournament Suite.
+          </Typography>
         </DialogContent>
       </Dialog>
     </>
