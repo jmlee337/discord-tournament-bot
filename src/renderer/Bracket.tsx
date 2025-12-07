@@ -401,7 +401,7 @@ export default function Bracket({
     <Stack>
       {pendingPhases.length > 0 && (
         <>
-          <Stack direction="row" alignItems="center" spacing="8px">
+          <Stack direction="row" alignItems="center" gap="16px">
             <Typography variant="h5">Pending</Typography>
             <Button
               color="warning"
@@ -413,6 +413,7 @@ export default function Bracket({
                   <DiscordIcon />
                 )
               }
+              size="small"
               variant="contained"
               onClick={async () => {
                 try {
