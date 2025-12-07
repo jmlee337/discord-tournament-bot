@@ -1,4 +1,8 @@
 # Nicolet's Netplay Tournament Suite (NTS)
+Nicolet's Netplay Tournament Suite offers TOs a range of helpful tools for running netplay tournaments, including broadcast management, overlay automation, and a Discord bot.
+
+[![Download](https://github.com/user-attachments/assets/0f155c5c-bd25-45fb-99f7-db055a380e12)](http://github.com/jmlee337/discord-tournament-bot/releases/latest)
+
 ### Broadcasts
 <img width="400" alt="Screenshot 2025-12-07 at 12 45 17" src="https://github.com/user-attachments/assets/7f8030c8-9f15-416e-a6b3-8afccd7fa746" />
 <img width="400" alt="Screenshot 2025-12-07 at 12 45 24" src="https://github.com/user-attachments/assets/abf35ea2-c945-40d8-ab89-e75962fe3b83" />
