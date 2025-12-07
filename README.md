@@ -40,6 +40,15 @@ Then start the Remote Control Server from the Slippi Launcher Spectate tab:
 
 Then you should be able to connect and manage your broadcasts from the NTS Broadcasts tab.
 
+### Overlay
+
+Requires [Melee Stream Tool](https://github.com/Readek/Melee-Stream-Tool/releases/latest).
+This should also work with Melee Ghost Streamer but the pronouns field will not be updatable.
+
+Enable Melee Stream Tool integration and set your Melee Stream Tool `Resources` folder in the settings dialog on the NTS Overlay tab: 
+<img width="600" alt="Screenshot 2025-12-07 162249" src="https://github.com/user-attachments/assets/d43cb0fd-2219-47ca-8615-87da25e0e67b" />
+
+
 ### Discord
 
 Mac users, please see how to [open an app from an unidentified developer](https://support.apple.com/en-gb/guide/mac-help/mh40616/mac).
