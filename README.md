@@ -87,6 +87,11 @@ Clone the repo and install dependencies:
 ```bash
 git clone https://github.com/jmlee337/discord-tournament-bot.git discord-tournament-bot
 cd discord-tournament-bot
+```
+
+I use Node 20
+```bash
+nvm use 20
 npm install
 ```
 
