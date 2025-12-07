@@ -4,7 +4,7 @@ import '@fontsource/roboto/300.css';
 import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/500.css';
 import '@fontsource/roboto/700.css';
-import { ReactNode, useEffect, useRef, useState } from 'react';
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Alert,
   AppBar,
@@ -95,10 +95,10 @@ function StartggIcon() {
 function Hello() {
   const [errors, setErrors] = useState<string[]>([]);
   const [errorDialogOpen, setErrorDialogOpen] = useState(false);
-  const showErrorDialog = (messages: string[]) => {
+  const showErrorDialog = useCallback((messages: string[]) => {
     setErrors(messages);
     setErrorDialogOpen(true);
-  };
+  }, []);
 
   // settings
   const [gotSettings, setGotSettings] = useState(false);
@@ -185,7 +185,7 @@ function Hello() {
       setGotSettings(true);
     };
     inner();
-  }, []);
+  }, [showErrorDialog]);
 
   const [refreshing, setRefreshing] = useState(false);
 

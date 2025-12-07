@@ -67,7 +67,14 @@ export async function setEnableMST(newEnable: boolean, canUpdate: boolean) {
   const positiveEdge = !enable && newEnable;
   enable = newEnable;
   if (canUpdate && positiveEdge && resourcesPath) {
-    mainWindow?.webContents.send('scoreboardInfo', await readScoreboardInfo());
+    try {
+      mainWindow?.webContents.send(
+        'scoreboardInfo',
+        await readScoreboardInfo(),
+      );
+    } catch {
+      // just catch
+    }
   }
 }
 
@@ -78,7 +85,14 @@ export async function setResourcesPath(
   const changed = resourcesPath !== newResourcesPath;
   resourcesPath = newResourcesPath;
   if (canUpdate && changed && enable) {
-    mainWindow?.webContents.send('scoreboardInfo', await readScoreboardInfo());
+    try {
+      mainWindow?.webContents.send(
+        'scoreboardInfo',
+        await readScoreboardInfo(),
+      );
+    } catch {
+      // just catch
+    }
   }
 }
 

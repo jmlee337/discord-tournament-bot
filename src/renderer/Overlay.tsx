@@ -158,10 +158,20 @@ export default function Overlay({
   useEffect(() => {
     (async () => {
       if (gotSettings && enableMST && resourcesPath) {
-        setScoreboardInfo(await window.electron.getScoreboardInfo());
+        try {
+          setScoreboardInfo(await window.electron.getScoreboardInfo());
+        } catch (e: any) {
+          showErrorDialog([e instanceof Error ? e.message : e]);
+        }
       }
     })();
-  }, [enableMST, resourcesPath, gotSettings, setScoreboardInfo]);
+  }, [
+    enableMST,
+    resourcesPath,
+    gotSettings,
+    setScoreboardInfo,
+    showErrorDialog,
+  ]);
 
   useEffect(() => {
     window.electron.onScoreboardInfo((event, newScoreboardInfo) => {
