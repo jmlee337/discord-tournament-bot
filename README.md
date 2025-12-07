@@ -1,31 +1,29 @@
 # Nicolet's Netplay Tournament Suite (NTS)
+Nicolet's Netplay Tournament Suite offers TOs a range of helpful tools for running netplay tournaments, including broadcast management, overlay automation, and a Discord bot.
+
+[![Download](https://github.com/user-attachments/assets/0f155c5c-bd25-45fb-99f7-db055a380e12)](http://github.com/jmlee337/discord-tournament-bot/releases/latest)
 
 ### Broadcasts
-
 <img width="400" alt="Screenshot 2025-12-07 at 12 45 17" src="https://github.com/user-attachments/assets/7f8030c8-9f15-416e-a6b3-8afccd7fa746" />
 <img width="400" alt="Screenshot 2025-12-07 at 12 45 24" src="https://github.com/user-attachments/assets/abf35ea2-c945-40d8-ab89-e75962fe3b83" />
 
 ### Overlay
-
 <img width="400" alt="Screenshot 2025-12-07 at 12 50 01" src="https://github.com/user-attachments/assets/862cbe14-b1a5-47d3-9ce4-fb32aab2e029" />
 
 ### Bracket Dashboard
-
 <img width="400" alt="Screenshot 2025-12-07 at 12 39 12" src="https://github.com/user-attachments/assets/14bf8808-bf69-4383-9dfc-0cce9c228e82" />
 <img width="400" alt="Screenshot 2025-12-07 at 12 39 19" src="https://github.com/user-attachments/assets/bf6287f4-3c7c-46c2-9d94-371e96003b9b" />
 <img width="400" alt="Screenshot 2025-12-07 at 12 39 24" src="https://github.com/user-attachments/assets/d33fe252-1a07-4ef2-a430-177e997a4c7c" />
 <img width="400" alt="Screenshot 2025-12-07 at 12 39 29" src="https://github.com/user-attachments/assets/bcc0281a-c46a-4f23-8365-a88d63394217" />
 <img width="400" alt="Screenshot 2025-12-07 at 12 53 49" src="https://github.com/user-attachments/assets/8b015c31-11bd-4fd9-a758-18a7a1901963" />
 
-### Discord Bot
 
+### Discord Bot
 <img width="313" alt="Screenshot 2025-12-07 at 12 51 49" src="https://github.com/user-attachments/assets/7ce14bc8-1091-4866-8db6-a52c00acfba7" /><br />
 <img width="280" alt="Screenshot 2024-07-01 at 10 41 24 PM" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/a59b2f42-821e-4028-9fb5-f2e785bffab5">
 
 ## Setup
-
 ### Broadcast
-
 You must update Slippi Launcher to version 2.12.0 (TBD) to use the NTS Broadcasts tab.
 
 Enable Spectate Remote Control in Slippi Launcher Settings:  
@@ -96,7 +94,6 @@ cd discord-tournament-bot
 ```
 
 I use Node 20
-
 ```bash
 nvm use 20
 npm install
