@@ -8,10 +8,16 @@ import {
   DialogTitle,
   Stack,
 } from '@mui/material';
-import { useState } from 'react';
-import { SaveAs } from '@mui/icons-material';
+import { useMemo, useState } from 'react';
+import {
+  HourglassTop,
+  NotificationsActive,
+  Restore,
+  SaveAs,
+} from '@mui/icons-material';
 import styled from '@emotion/styled';
 import { StartggSet } from '../common/types';
+import getColor from './getColor';
 
 const Name = styled.div`
   overflow-x: hidden;
@@ -28,6 +34,7 @@ export default function Report({
   setOpen: (open: boolean) => void;
   set: StartggSet;
 }) {
+  const [resetting, setResetting] = useState(false);
   const [reporting, setReporting] = useState(false);
   const [reportError, setReportError] = useState('');
   const [entrant1Dq, setEntrant1Dq] = useState(false);
@@ -48,6 +55,17 @@ export default function Report({
     winnerId = set.entrant2Id;
   }
 
+  const titleEnd = useMemo(() => {
+    const color = getColor(set);
+    if (set.state === 2) {
+      return <HourglassTop style={{ color }} />;
+    }
+    if (set.state === 6) {
+      return <NotificationsActive style={{ color }} />;
+    }
+    return null;
+  }, [set]);
+
   return (
     <Dialog
       open={open}
@@ -55,7 +73,15 @@ export default function Report({
         setOpen(false);
       }}
     >
-      <DialogTitle>Report set</DialogTitle>
+      <Stack
+        alignItems="center"
+        direction="row"
+        justifyContent="space-between"
+        marginRight="24px"
+      >
+        <DialogTitle>Report Set</DialogTitle>
+        {titleEnd}
+      </Stack>
       <DialogContent sx={{ width: '300px' }}>
         <Stack
           direction="row"
@@ -136,7 +162,28 @@ export default function Report({
       </DialogContent>
       <DialogActions>
         <Button
-          disabled={!winnerId || reporting}
+          color="warning"
+          disabled={set.state === 1 || reporting || resetting}
+          endIcon={resetting ? <CircularProgress size="24px" /> : <Restore />}
+          onClick={async () => {
+            setResetting(true);
+            setReportError('');
+            try {
+              await window.electron.resetSet(set.id);
+              setOpen(false);
+            } catch (e: any) {
+              const message = e instanceof Error ? e.message : e;
+              setReportError(message);
+            } finally {
+              setResetting(false);
+            }
+          }}
+          variant="contained"
+        >
+          Reset Set
+        </Button>
+        <Button
+          disabled={!winnerId || reporting || resetting}
           endIcon={reporting ? <CircularProgress size="24px" /> : <SaveAs />}
           onClick={async () => {
             setReporting(true);

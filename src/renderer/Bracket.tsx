@@ -21,6 +21,7 @@ import {
   Typography,
 } from '@mui/material';
 import { JSX, useEffect, useMemo, useState } from 'react';
+import { HourglassTop, NotificationsActive } from '@mui/icons-material';
 import Report from './Report';
 import Reset from './Reset';
 import {
@@ -33,6 +34,7 @@ import {
   Discord,
 } from '../common/types';
 import DiscordIcon from './DiscordIcon';
+import getColor from './getColor';
 
 type SetWithHighlight = {
   entrant1Highlight?: Highlight;
@@ -60,6 +62,151 @@ const EMPTY_STARTGG_SET: StartggSet = {
   updatedAt: 0,
   winnerId: null,
 };
+
+function getBackgroundColor(set: StartggSet) {
+  if (set.round < 0) {
+    return '#ffebee';
+  }
+  return '#fafafa';
+}
+
+function SetWithHighlightListItemButton({
+  setWithHighlight,
+  pending,
+  setReportingDialogOpen,
+  setResetDialogOpen,
+  setResetSelectedSet,
+  setSelectedSet,
+}: {
+  setWithHighlight: SetWithHighlight;
+  pending: boolean;
+  setReportingDialogOpen: (reportingDialogOpen: boolean) => void;
+  setResetDialogOpen: (resetDialogOpen: boolean) => void;
+  setResetSelectedSet: (set: StartggSet) => void;
+  setSelectedSet: (set: StartggSet) => void;
+}) {
+  const titleEnd = useMemo(() => {
+    if (setWithHighlight.set.state === 2) {
+      return (
+        <HourglassTop
+          fontSize="small"
+          style={{ marginLeft: '5px', marginRight: '-5px' }}
+        />
+      );
+    }
+    if (setWithHighlight.set.state === 6) {
+      return (
+        <NotificationsActive
+          fontSize="small"
+          style={{ marginLeft: '2px', marginRight: '-2px' }}
+        />
+      );
+    }
+    return <Box width="20px" />;
+  }, [setWithHighlight]);
+
+  return (
+    <ListItemButton
+      style={{
+        flexGrow: 0,
+        backgroundColor: getBackgroundColor(setWithHighlight.set),
+        padding: '8px',
+      }}
+      onClick={() => {
+        if (pending) {
+          setSelectedSet(setWithHighlight.set);
+          setReportingDialogOpen(true);
+        } else {
+          setResetSelectedSet(setWithHighlight.set);
+          setResetDialogOpen(true);
+        }
+      }}
+    >
+      <Stack>
+        <Stack
+          direction="row"
+          alignItems="center"
+          gap="4px"
+          width="100%"
+          style={{ color: getColor(setWithHighlight.set) }}
+        >
+          <Typography flexGrow={1} textAlign="center" variant="caption">
+            {setWithHighlight.set.fullRoundText}
+          </Typography>
+          {titleEnd}
+        </Stack>
+        <Typography
+          variant="body2"
+          style={{
+            fontWeight:
+              setWithHighlight.set.state === 3 &&
+              setWithHighlight.set.entrant1Id === setWithHighlight.set.winnerId
+                ? 700
+                : undefined,
+          }}
+        >
+          {setWithHighlight.entrant1Highlight ? (
+            <>
+              <span>
+                {setWithHighlight.set.entrant1Name.substring(
+                  0,
+                  setWithHighlight.entrant1Highlight.start,
+                )}
+              </span>
+              <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+                {setWithHighlight.set.entrant1Name.substring(
+                  setWithHighlight.entrant1Highlight.start,
+                  setWithHighlight.entrant1Highlight.end,
+                )}
+              </span>
+              <span>
+                {setWithHighlight.set.entrant1Name.substring(
+                  setWithHighlight.entrant1Highlight.end,
+                )}
+              </span>
+            </>
+          ) : (
+            setWithHighlight.set.entrant1Name
+          )}
+        </Typography>
+        <Typography
+          variant="body2"
+          style={{
+            fontWeight:
+              setWithHighlight.set.state === 3 &&
+              setWithHighlight.set.entrant2Id === setWithHighlight.set.winnerId
+                ? 700
+                : undefined,
+          }}
+        >
+          {setWithHighlight.entrant2Highlight ? (
+            <>
+              <span>
+                {setWithHighlight.set.entrant2Name.substring(
+                  0,
+                  setWithHighlight.entrant2Highlight.start,
+                )}
+              </span>
+              <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+                {setWithHighlight.set.entrant2Name.substring(
+                  setWithHighlight.entrant2Highlight.start,
+                  setWithHighlight.entrant2Highlight.end,
+                )}
+              </span>
+              <span>
+                {setWithHighlight.set.entrant2Name.substring(
+                  setWithHighlight.entrant2Highlight.end,
+                )}
+              </span>
+            </>
+          ) : (
+            setWithHighlight.set.entrant2Name
+          )}
+        </Typography>
+      </Stack>
+    </ListItemButton>
+  );
+}
 
 function mapStartggPhasePredicate(
   phase: StartggPhase,
@@ -106,80 +253,20 @@ function mapStartggPhasePredicate(
     if (groupSets.length > 0) {
       phaseGroups.push(
         <Box key={`${prefix}${phase.name}${phaseGroup.name}`}>
-          <Typography variant="h6">
+          <Typography variant="subtitle1">
             {phase.name}, {phaseGroup.name}
           </Typography>
           <Stack direction="row" gap="8px" flexWrap="wrap">
             {groupSets.map((setWithHighlight) => (
-              <ListItemButton
+              <SetWithHighlightListItemButton
                 key={`${prefix}${setWithHighlight.set.id}`}
-                style={{ flexGrow: 0 }}
-                onClick={() => {
-                  if (pending) {
-                    setSelectedSet(setWithHighlight.set);
-                    setReportingDialogOpen(true);
-                  } else {
-                    setResetSelectedSet(setWithHighlight.set);
-                    setResetDialogOpen(true);
-                  }
-                }}
-              >
-                <Stack>
-                  <Typography variant="caption">
-                    {setWithHighlight.set.fullRoundText}
-                  </Typography>
-                  {setWithHighlight.entrant1Highlight ? (
-                    <Typography variant="body2">
-                      <span>
-                        {setWithHighlight.set.entrant1Name.substring(
-                          0,
-                          setWithHighlight.entrant1Highlight.start,
-                        )}
-                      </span>
-                      <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
-                        {setWithHighlight.set.entrant1Name.substring(
-                          setWithHighlight.entrant1Highlight.start,
-                          setWithHighlight.entrant1Highlight.end,
-                        )}
-                      </span>
-                      <span>
-                        {setWithHighlight.set.entrant1Name.substring(
-                          setWithHighlight.entrant1Highlight.end,
-                        )}
-                      </span>
-                    </Typography>
-                  ) : (
-                    <Typography variant="body2">
-                      {setWithHighlight.set.entrant1Name}
-                    </Typography>
-                  )}
-                  {setWithHighlight.entrant2Highlight ? (
-                    <Typography variant="body2">
-                      <span>
-                        {setWithHighlight.set.entrant2Name.substring(
-                          0,
-                          setWithHighlight.entrant2Highlight.start,
-                        )}
-                      </span>
-                      <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
-                        {setWithHighlight.set.entrant2Name.substring(
-                          setWithHighlight.entrant2Highlight.start,
-                          setWithHighlight.entrant2Highlight.end,
-                        )}
-                      </span>
-                      <span>
-                        {setWithHighlight.set.entrant2Name.substring(
-                          setWithHighlight.entrant2Highlight.end,
-                        )}
-                      </span>
-                    </Typography>
-                  ) : (
-                    <Typography variant="body2">
-                      {setWithHighlight.set.entrant2Name}
-                    </Typography>
-                  )}
-                </Stack>
-              </ListItemButton>
+                setWithHighlight={setWithHighlight}
+                pending={pending}
+                setReportingDialogOpen={setReportingDialogOpen}
+                setResetDialogOpen={setResetDialogOpen}
+                setResetSelectedSet={setResetSelectedSet}
+                setSelectedSet={setSelectedSet}
+              />
             ))}
           </Stack>
         </Box>,
@@ -426,13 +513,15 @@ export default function Bracket({
               </DialogActions>
             </Dialog>
           </Stack>
-          <Stack>{pendingPhases}</Stack>
+          <Stack gap="8px">{pendingPhases}</Stack>
         </>
       )}
       {completedPhases.length > 0 && (
         <>
-          <Typography variant="h5">Completed</Typography>
-          <Stack>{completedPhases}</Stack>
+          <Typography variant="h5" style={{ marginTop: '16px' }}>
+            Completed
+          </Typography>
+          <Stack gap="8px">{completedPhases}</Stack>
         </>
       )}
       <Report

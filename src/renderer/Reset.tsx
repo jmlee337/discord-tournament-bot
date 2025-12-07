@@ -112,7 +112,8 @@ export default function Reset({
       </DialogContent>
       <DialogActions>
         <Button
-          disabled={resetting || swapping}
+          color="error"
+          disabled={resetting || swapping || set.state !== 3}
           endIcon={swapping ? <CircularProgress size="24px" /> : <SwapHoriz />}
           onClick={async () => {
             setSwapping(true);
@@ -132,7 +133,8 @@ export default function Reset({
           Swap Winner
         </Button>
         <Button
-          disabled={resetting || swapping}
+          color="warning"
+          disabled={resetting || swapping || set.state === 1}
           endIcon={resetting ? <CircularProgress size="24px" /> : <Restore />}
           onClick={async () => {
             setResetting(true);
