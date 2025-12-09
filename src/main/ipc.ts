@@ -7,10 +7,12 @@ import {
   ChannelType,
   ChatInputCommandInteraction,
   Client,
+  Collection,
   ComponentType,
   EmbedBuilder,
   Events,
   GatewayIntentBits,
+  GuildMember,
   InteractionResponse,
   PermissionsBitField,
   REST,
@@ -33,13 +35,14 @@ import Store from 'electron-store';
 import { access, constants } from 'fs/promises';
 import {
   ConnectCode,
-  Discord,
   DiscordChannel,
   DiscordConfig,
   DiscordServer,
   DiscordStatus,
+  DiscordToPing,
   DiscordUsername,
   GetTournamentRet,
+  IsDiscordServerMember,
   ParticipantConnections,
   ParticipantSet,
   ReportStartggSet,
@@ -170,6 +173,19 @@ function getOpponentName(set: ParticipantSet) {
   return set.isParticipantEntrant1 ? set.entrant2Name : set.entrant1Name;
 }
 
+function updateIsDiscordServerMember(
+  discordUsernames: DiscordUsername[],
+  members: Collection<string, GuildMember>,
+) {
+  discordUsernames.forEach((discordUsername) => {
+    discordUsername.isDiscordServerMember = members.has(
+      discordUsername.discordId,
+    )
+      ? IsDiscordServerMember.YES
+      : IsDiscordServerMember.NO;
+  });
+}
+
 export default function setupIPCs(mainWindow: BrowserWindow) {
   initMST(mainWindow);
   initStartgg();
@@ -235,7 +251,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   >();
   const participantIdToCompletedSets = new Map<number, ParticipantSet[]>();
   const participantIdToPendingSets = new Map<number, ParticipantSet[]>();
-  const participantIdToDiscord = new Map<number, Discord>();
+  const participantIdToDiscordToPing = new Map<number, DiscordToPing>();
   let sets: Sets = {
     pending: [],
     completed: [],
@@ -459,55 +475,61 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       updateDiscordStatus(DiscordStatus.BAD_APPLICATION_ID);
     }
   };
-  const getGuilds = () => {
+  const discordUsernames: DiscordUsername[] = [];
+  const getGuilds = async () => {
     if (!client) {
       return [];
     }
 
-    const guilds = client.guilds
-      .valueOf()
-      .filter((guild) => {
-        const userId = client?.user?.id;
-        if (!userId) {
-          return false;
-        }
+    const guilds = client.guilds.valueOf().filter((guild) => {
+      const userId = client?.user?.id;
+      if (!userId) {
+        return false;
+      }
 
-        const guildMember = guild.members.valueOf().get(userId);
-        if (!guildMember) {
-          return false;
-        }
+      const guildMember = guild.members.valueOf().get(userId);
+      if (!guildMember) {
+        return false;
+      }
 
-        return guild.channels
-          .valueOf()
-          .some(
-            (channel) =>
-              channel.type === ChannelType.GuildText &&
-              channel.viewable &&
-              channel.isSendable() &&
-              channel
-                .permissionsFor(guildMember)
-                .has(PermissionsBitField.Flags.SendMessages),
-          );
-      })
-      .map(
-        (guild): DiscordServer => ({
-          id: guild.id,
-          name: guild.name,
-          iconUrl: guild.iconURL() ?? '',
-        }),
-      );
-    if (guilds.length === 1) {
-      discordServerId = guilds[0].id;
+      return guild.channels
+        .valueOf()
+        .some(
+          (channel) =>
+            channel.type === ChannelType.GuildText &&
+            channel.viewable &&
+            channel.isSendable() &&
+            channel
+              .permissionsFor(guildMember)
+              .has(PermissionsBitField.Flags.SendMessages),
+        );
+    });
+    if (guilds.size === 1) {
+      const guild = guilds.first()!;
+      discordServerId = guild.id;
       mainWindow.webContents.send('discordServerId', discordServerId);
+      await guild.members.fetch();
+      updateIsDiscordServerMember(discordUsernames, guild.members.valueOf());
+      mainWindow.webContents.send('discordUsernames', discordUsernames);
     } else if (
       discordServerId &&
       !guilds.some((guild) => guild.id === discordServerId)
     ) {
       discordServerId = '';
       mainWindow.webContents.send('discordServerId', discordServerId);
+      discordUsernames.forEach((discordUsername) => {
+        discordUsername.isDiscordServerMember = IsDiscordServerMember.UNKNOWN;
+      });
+      mainWindow.webContents.send('discordUsernames', discordUsernames);
     }
 
-    return guilds;
+    return guilds.map(
+      (guild): DiscordServer => ({
+        id: guild.id,
+        name: guild.name,
+        iconUrl: guild.iconURL() ?? '',
+      }),
+    );
   };
   const getParticipantId = (
     interaction: ChatInputCommandInteraction<CacheType>,
@@ -551,7 +573,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   ) => {
     const validDiscordIds = new Set<string>();
     const forEachPredicate = (participantId: number) => {
-      const discord = participantIdToDiscord.get(participantId);
+      const discord = participantIdToDiscordToPing.get(participantId);
       if (discord) {
         validDiscordIds.add(discord.discordId);
       }
@@ -608,14 +630,16 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         await client.destroy();
       }
       updateDiscordStatus(DiscordStatus.STARTING);
-      client = new Client({ intents: [GatewayIntentBits.Guilds] });
+      client = new Client({
+        intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers],
+      });
       client.once(Events.ClientReady, async () => {
         if (discordRegisteredVersion !== getExpectedRegisteredVersion()) {
           await registerSlashCommands();
         } else {
           updateDiscordStatus(DiscordStatus.READY);
         }
-        const discordServers = getGuilds();
+        const discordServers = await getGuilds();
         mainWindow.webContents.send('discordServers', discordServers);
       });
       client.on(Events.InteractionCreate, async (interaction) => {
@@ -873,7 +897,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
 
           const initialConfirmDiscordIds = new Set<string>();
           set.ownParticipantIds.forEach((ownParticipantId) => {
-            const discord = participantIdToDiscord.get(ownParticipantId);
+            const discord = participantIdToDiscordToPing.get(ownParticipantId);
             if (discord) {
               initialConfirmDiscordIds.add(discord.discordId);
             }
@@ -903,7 +927,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
 
           const bilateralConfirmDiscordIds = new Set<string>();
           set.opponentParticipantIds.forEach((oppParticipantId) => {
-            const discord = participantIdToDiscord.get(oppParticipantId);
+            const discord = participantIdToDiscordToPing.get(oppParticipantId);
             if (discord) {
               bilateralConfirmDiscordIds.add(discord.discordId);
             }
@@ -1286,12 +1310,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     startggApiKey ? getTournaments(startggApiKey) : [],
   );
 
-  const discordUsernames: DiscordUsername[] = [];
   const updateParticipants = (participants: StartggParticipant[]) => {
     // all clear to clear maps and update
     connectCodes.length = 0;
     discordIdToParticipant.clear();
-    participantIdToDiscord.clear();
+    participantIdToDiscordToPing.clear();
     discordUsernames.length = 0;
 
     participants.forEach((participant) => {
@@ -1308,17 +1331,18 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           id: participant.id,
           gamerTag: participant.gamerTag,
         });
-        participantIdToDiscord.set(participant.id, {
-          id: participant.id,
+        participantIdToDiscordToPing.set(participant.id, {
           discordId: participant.discord.id,
           gamerTag: participant.gamerTag,
           username: participant.discord.username,
         });
       }
       discordUsernames.push({
-        id: participant.id,
+        discordId: participant.discord?.id ?? '',
+        participantId: participant.id,
         gamerTag: participant.gamerTag,
-        username: participant.discord?.username || '',
+        username: participant.discord?.username ?? '',
+        isDiscordServerMember: IsDiscordServerMember.UNKNOWN,
       });
     });
     connectCodes.sort((a, b) => a.gamerTag.localeCompare(b.gamerTag));
@@ -1362,6 +1386,14 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           await client.destroy();
           client = null;
           updateDiscordStatus(DiscordStatus.NONE);
+        } else {
+          const guild = client.guilds.valueOf().get(discordServerId);
+          if (guild) {
+            updateIsDiscordServerMember(
+              discordUsernames,
+              guild.members.valueOf(),
+            );
+          }
         }
 
         return {
@@ -1383,6 +1415,12 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       updateParticipants(
         await getTournamentParticipants(startggTournament.slug, startggApiKey),
       );
+
+      const guild = client?.guilds.valueOf().get(discordServerId);
+      if (guild) {
+        updateIsDiscordServerMember(discordUsernames, guild.members.valueOf());
+      }
+
       await preemptGetTournamentSets();
       return {
         connectCodes,
@@ -1461,16 +1499,27 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   ipcMain.removeHandler('setDiscordServerId');
   ipcMain.handle(
     'setDiscordServerId',
-    (event: IpcMainInvokeEvent, newDiscordServerId: string) => {
+    async (event: IpcMainInvokeEvent, newDiscordServerId: string) => {
+      const guild = client?.guilds.valueOf().get(newDiscordServerId);
+      if (!guild) {
+        throw new Error(`Discord server not found: ${newDiscordServerId}`);
+      }
+
       discordServerId = newDiscordServerId;
       mainWindow.webContents.send('discordServerId', discordServerId);
+      await guild.members.fetch();
+      updateIsDiscordServerMember(discordUsernames, guild.members.valueOf());
+      mainWindow.webContents.send('discordUsernames', discordUsernames);
     },
   );
 
   ipcMain.removeHandler('getDiscordCheckinPings');
   ipcMain.handle(
     'getDiscordCheckinPings',
-    async (): Promise<{ channels: DiscordChannel[]; discords: Discord[] }> => {
+    async (): Promise<{
+      channels: DiscordChannel[];
+      discords: DiscordToPing[];
+    }> => {
       if (!client) {
         throw new Error('Discord bot not running');
       }
@@ -1538,9 +1587,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           );
         }),
       );
-      const discords: Discord[] = [];
+      const discords: DiscordToPing[] = [];
       Array.from(participantIds).forEach((participantId) => {
-        const discord = participantIdToDiscord.get(participantId);
+        const discord = participantIdToDiscordToPing.get(participantId);
         if (discord) {
           discords.push(discord);
         }

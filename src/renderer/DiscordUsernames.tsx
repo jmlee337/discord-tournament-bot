@@ -19,6 +19,7 @@ import {
   Highlight,
   DiscordUsername,
   ConnectCode,
+  IsDiscordServerMember,
 } from '../common/types';
 import SearchBar from './SearchBar';
 import DiscordIcon from './DiscordIcon';
@@ -164,7 +165,7 @@ export default function DiscordUsernames({
             </TableHead>
             <TableBody>
               {discordUsernamesWithHighlights.map((duwh) => (
-                <TableRow key={duwh.discordUsername.id}>
+                <TableRow key={duwh.discordUsername.participantId}>
                   <TableCell>
                     {duwh.highlights[0] ? (
                       <>
@@ -190,7 +191,17 @@ export default function DiscordUsernames({
                       duwh.discordUsername.gamerTag
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell
+                    sx={
+                      duwh.discordUsername.isDiscordServerMember ===
+                      IsDiscordServerMember.NO
+                        ? {
+                            color: (theme) => theme.palette.error.main,
+                            textDecoration: 'line-through',
+                          }
+                        : undefined
+                    }
+                  >
                     {duwh.highlights[1] ? (
                       <>
                         <span>

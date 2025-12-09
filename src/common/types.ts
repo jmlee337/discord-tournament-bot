@@ -91,8 +91,22 @@ export type AdminedTournament = {
   slug: string;
 };
 
+export enum IsDiscordServerMember {
+  UNKNOWN,
+  NO,
+  YES,
+}
+
 export type DiscordUsername = {
-  id: number;
+  discordId: string;
+  participantId: number;
+  gamerTag: string;
+  username: string;
+  isDiscordServerMember: IsDiscordServerMember;
+};
+
+export type DiscordToPing = {
+  discordId: string;
   gamerTag: string;
   username: string;
 };
@@ -157,10 +171,6 @@ export const HIGHLIGHT_COLOR = '#ffee58';
 export type Highlight = {
   start: number;
   end: number;
-};
-
-export type Discord = DiscordUsername & {
-  discordId: string;
 };
 
 export type DiscordChannel = {

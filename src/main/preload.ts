@@ -4,11 +4,12 @@ import { IpcRendererEvent, contextBridge, ipcRenderer } from 'electron';
 import {
   AdminedTournament,
   Broadcast,
-  Discord,
   DiscordChannel,
   DiscordConfig,
   DiscordServer,
   DiscordStatus,
+  DiscordToPing,
+  DiscordUsername,
   ParticipantConnections,
   RemoteState,
   Sets,
@@ -118,7 +119,7 @@ const electronHandler = {
     ipcRenderer.invoke('setDiscordServerId', discordServerId),
   getDiscordCheckinPings: (): Promise<{
     channels: DiscordChannel[];
-    discords: Discord[];
+    discords: DiscordToPing[];
   }> => ipcRenderer.invoke('getDiscordCheckinPings'),
   pingDiscords: (channelId: string, discordIds: string[]): Promise<void> =>
     ipcRenderer.invoke('pingDiscords', channelId, discordIds),
@@ -160,6 +161,15 @@ const electronHandler = {
   ) => {
     ipcRenderer.removeAllListeners('discordStatus');
     ipcRenderer.on('discordStatus', callback);
+  },
+  onDiscordUsernames: (
+    callback: (
+      event: IpcRendererEvent,
+      discordUsernames: DiscordUsername[],
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('discordUsernames');
+    ipcRenderer.on('discordUsernames', callback);
   },
   onGettingSets: (
     callback: (event: IpcRendererEvent, getting: boolean) => void,

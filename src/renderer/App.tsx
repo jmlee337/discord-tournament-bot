@@ -192,6 +192,9 @@ function Hello() {
     window.electron.onDiscordServers((event, newDiscordServers) => {
       setDiscordServers(newDiscordServers);
     });
+    window.electron.onDiscordUsernames((event, newDiscordUsernames) => {
+      setDiscordUsernames(newDiscordUsernames);
+    });
     window.electron.onGettingSets((event, getting) => {
       setRefreshing(getting);
     });

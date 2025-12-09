@@ -30,8 +30,8 @@ import {
   StartggSet,
   Sets,
   DiscordChannel,
-  Discord,
   StartggEvent,
+  DiscordToPing,
 } from '../common/types';
 import DiscordIcon from './DiscordIcon';
 import getColor from './getColor';
@@ -346,7 +346,7 @@ export default function Bracket({
     useState(false);
   const [discordCheckinPings, setDiscordCheckinPings] = useState<{
     channels: DiscordChannel[];
-    discords: Discord[];
+    discords: DiscordToPing[];
   }>({ channels: [], discords: [] });
   const [discordChannelId, setDiscordChannelId] = useState('');
   const [discordCheckinPingsDialogOpen, setDiscordCheckinPingsDialogOpen] =
@@ -479,7 +479,7 @@ export default function Bracket({
                     </TableHead>
                     <TableBody>
                       {discordCheckinPings.discords.map((discordUsername) => (
-                        <TableRow key={discordUsername.id}>
+                        <TableRow key={discordUsername.discordId}>
                           <TableCell>{discordUsername.gamerTag}</TableCell>
                           <TableCell>{discordUsername.username}</TableCell>
                         </TableRow>
