@@ -1655,10 +1655,14 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   ipcMain.removeHandler('getLatestVersion');
   ipcMain.handle('getLatestVersion', async () => {
     const response = await fetch(
-      'https://api.github.com/repos/jmlee337/discord-tournament-bot/releases',
+      'https://api.github.com/repos/jmlee337/discord-tournament-bot/releases/latest',
     );
     const json = await response.json();
-    return Array.isArray(json) && json.length > 0 ? json[0].tag_name : '';
+    const latestVersion = json.tag_name;
+    if (typeof latestVersion !== 'string') {
+      return '';
+    }
+    return latestVersion;
   });
 
   ipcMain.removeHandler('copyToClipboard');

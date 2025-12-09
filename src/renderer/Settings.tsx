@@ -14,6 +14,7 @@ import {
 } from '@mui/material';
 import { ContentCopy, Settings as SettingsIcon } from '@mui/icons-material';
 import { useEffect, useMemo, useState } from 'react';
+import { lt, valid } from 'semver';
 import { AdminedTournament } from '../common/types';
 import LabeledCheckbox from './LabeledCheckbox';
 
@@ -67,37 +68,13 @@ export default function Settings({
       setGotSettingsInternal(true);
     })();
   }, []);
-  const needUpdate = useMemo(() => {
-    if (!appVersion || !latestAppVersion) {
-      return false;
-    }
-
-    const versionStrArr = appVersion.split('.');
-    const latestVersionStrArr = latestAppVersion.split('.');
-    if (versionStrArr.length !== 3 || latestVersionStrArr.length !== 3) {
-      return false;
-    }
-
-    const mapPred = (versionPartStr: string) =>
-      Number.parseInt(versionPartStr, 10);
-    const versionNumArr = versionStrArr.map(mapPred);
-    const latestVersionNumArr = latestVersionStrArr.map(mapPred);
-    const somePred = (versionPart: number) => Number.isNaN(versionPart);
-    if (versionNumArr.some(somePred) || latestVersionNumArr.some(somePred)) {
-      return false;
-    }
-
-    if (versionNumArr[0] < latestVersionNumArr[0]) {
-      return true;
-    }
-    if (versionNumArr[1] < latestVersionNumArr[1]) {
-      return true;
-    }
-    if (versionNumArr[2] < latestVersionNumArr[2]) {
-      return true;
-    }
-    return false;
-  }, [appVersion, latestAppVersion]);
+  const needUpdate = useMemo(
+    () =>
+      valid(appVersion) &&
+      valid(latestAppVersion) &&
+      lt(appVersion, latestAppVersion),
+    [appVersion, latestAppVersion],
+  );
 
   useEffect(() => {
     if (
