@@ -66,7 +66,10 @@ Copy the `APPLICATION ID` from the `General Information` tab:
 Paste your Discord bot's application id into Settings:  
 <img width="300" alt="Screenshot 2024-06-30 214723" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/e19eacc9-2510-4c6e-8b1f-77971ac2507b" />
 
-Press `Reset Token` and copy the token from the Bot tab:  
+Turn on `Server Members Intent` on the `Bot` tab:  
+<img width="600" alt="image" src="https://github.com/user-attachments/assets/4f1af5ce-e273-42a1-ad0d-57b63b961563" />
+
+Press `Reset Token` and copy the token from the `Bot` tab:  
 <img width="300" alt="Screenshot 2024-06-30 214012" src="https://github.com/jmlee337/discord-tournament-bot/assets/3300257/78137e48-d6ac-478c-bac2-2222a3299180" />
 
 Paste your Discord bot's token into Settings:  
