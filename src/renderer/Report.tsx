@@ -82,7 +82,7 @@ export default function Report({
         <DialogTitle>Report Set</DialogTitle>
         {titleEnd}
       </Stack>
-      <DialogContent sx={{ width: '300px' }}>
+      <DialogContent sx={{ paddingTop: 0, width: '300px' }}>
         <Stack
           direction="row"
           alignItems="center"

@@ -49,9 +49,20 @@ export type StartggPhase = {
   phaseOrder: number;
 };
 
+export type StartggEvent = {
+  name: string;
+  phases: StartggPhase[];
+};
+
 export type Sets = {
-  pending: StartggPhase[];
-  completed: StartggPhase[];
+  pending: StartggEvent[];
+  completed: StartggEvent[];
+};
+
+export type ParticipantSet = StartggSet & {
+  isParticipantEntrant1: boolean;
+  opponentParticipantIds: number[];
+  ownParticipantIds: number[];
 };
 
 export type StartggParticipant = {
@@ -67,19 +78,12 @@ export type StartggParticipant = {
 
 export type StartggEntrant = {
   id: number;
-  participants: StartggParticipant[];
-};
-
-export type StartggEvent = {
-  id: number;
-  name: string;
-  slug: string;
+  participantsIds: number[];
 };
 
 export type StartggTournament = {
   name: string;
   slug: string;
-  events: StartggEvent[];
 };
 
 export type AdminedTournament = {
@@ -95,8 +99,8 @@ export type DiscordUsername = {
 
 export type ConnectCode = {
   connectCode: string;
-  entrantId: number;
   gamerTag: string;
+  participantId: number;
   prefix: string;
 };
 
@@ -144,7 +148,6 @@ export type StartingState = {
   discordStatus: DiscordStatus;
   discordServerId: string;
   discordUsernames: DiscordUsername[];
-  eventName: string;
   remoteState: RemoteState;
   tournament: StartggTournament;
 };
@@ -176,4 +179,10 @@ export type GameEndInfo = {
   definite: boolean;
   placings: number[];
   playerTypes: number[];
+};
+
+export type GetTournamentRet = {
+  idToEntrant: Map<number, StartggEntrant>;
+  sets: Sets;
+  tournament: StartggTournament;
 };

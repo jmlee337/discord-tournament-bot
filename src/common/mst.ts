@@ -63,8 +63,8 @@ export type MSTSetData = {
 };
 
 export type MSTNewFileScoreboardInfo = {
-  p1EntrantId?: number;
-  p2EntrantId?: number;
+  p1ParticipantId?: number;
+  p2ParticipantId?: number;
   p1Name?: string;
   p1Team?: string;
   p1Character: MSTCharacter;

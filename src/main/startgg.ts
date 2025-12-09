@@ -1,15 +1,14 @@
 import Bottleneck from 'bottleneck';
 import {
   AdminedTournament,
+  GetTournamentRet,
   ReportStartggSet,
-  Sets,
   StartggEntrant,
   StartggEvent,
   StartggParticipant,
   StartggPhase,
   StartggPhaseGroup,
   StartggSet,
-  StartggTournament,
 } from '../common/types';
 
 async function wrappedFetch(
@@ -110,13 +109,87 @@ export async function getTournaments(key: string): Promise<AdminedTournament> {
     }));
 }
 
+type ApiParticipant = {
+  id: number;
+  connectedAccounts: { slippi?: { value?: string | null } | null } | null;
+  gamerTag: string;
+  prefix: string | null;
+  requiredConnections:
+    | {
+        type: string;
+        externalId: string;
+        externalUsername: string;
+      }[]
+    | null;
+};
+const TOURNAMENT_PARTICIPANTS_QUERY = `
+  query TournamentParticipants($page: Int, $slug: String) {
+    tournament(slug: $slug) {
+      participants(query: {page: $page, perPage: 512}) {
+        pageInfo {
+          totalPages
+        }
+        nodes {
+          id
+          connectedAccounts
+          gamerTag
+          prefix
+          requiredConnections {
+            type
+            externalId
+            externalUsername
+          }
+        }
+      }
+    }
+  }
+`;
+export async function getTournamentParticipants(slug: string, key: string) {
+  let page = 1;
+  let nextData;
+  const participants: StartggParticipant[] = [];
+  do {
+    // eslint-disable-next-line no-await-in-loop
+    nextData = await fetchGql(key, TOURNAMENT_PARTICIPANTS_QUERY, {
+      page,
+      slug,
+    });
+    const apiParticipants = nextData.tournament.participants
+      .nodes as ApiParticipant[];
+    const newParticipants = apiParticipants.map((apiParticipant) => {
+      const startggParticipant: StartggParticipant = {
+        id: apiParticipant.id,
+        connectCode:
+          apiParticipant.connectedAccounts?.slippi?.value || undefined,
+        gamerTag: apiParticipant.gamerTag,
+        prefix: apiParticipant.prefix ?? '',
+      };
+      if (apiParticipant.requiredConnections) {
+        const discords = apiParticipant.requiredConnections
+          .filter((rc) => rc.type === 'DISCORD')
+          .map((rc) => ({
+            id: rc.externalId,
+            username: rc.externalUsername,
+          }));
+        if (discords.length > 0) {
+          [startggParticipant.discord] = discords;
+        }
+      }
+      return startggParticipant;
+    });
+    participants.push(...newParticipants);
+    page += 1;
+  } while (page <= nextData.tournament.participants.pageInfo.totalPages);
+  return participants;
+}
+
 type TournamentJSON = {
   entities: {
     event: {
       id: number;
       isOnline: boolean;
       name: string;
-      slug: string;
+      state: number;
     }[];
     tournament: {
       name: string;
@@ -124,113 +197,6 @@ type TournamentJSON = {
     };
   };
 };
-export async function getTournament(slug: string): Promise<StartggTournament> {
-  const response = await wrappedFetch(
-    `https://api.start.gg/tournament/${slug}?expand[]=event`,
-  );
-  const json = (await response.json()) as TournamentJSON;
-  return {
-    name: json.entities.tournament.name,
-    slug: json.entities.tournament.slug.slice(11),
-    events: json.entities.event
-      .filter((event) => event.isOnline)
-      .map(
-        (event): StartggEvent => ({
-          id: event.id,
-          name: event.name,
-          slug: event.slug,
-        }),
-      ),
-  };
-}
-
-type ApiEntrant = {
-  id: number;
-  participants: {
-    id: number;
-    connectedAccounts: { slippi?: { value?: string | null } | null } | null;
-    gamerTag: string;
-    prefix: string | null;
-    requiredConnections:
-      | {
-          type: string;
-          externalId: string;
-          externalUsername: string;
-        }[]
-      | null;
-  }[];
-};
-const EVENT_ENTRANTS_QUERY = `
-  query EventQuery($id: ID, $page: Int) {
-    event(id: $id) {
-      entrants(query: {page: $page, perPage: 500}) {
-        pageInfo {
-          totalPages
-        }
-        nodes {
-          id
-          participants {
-            id
-            connectedAccounts
-            gamerTag
-            prefix
-            requiredConnections {
-              type
-              externalId
-              externalUsername
-            }
-          }
-        }
-      }
-    }
-  }
-`;
-// 985241
-// 1166836
-export async function getEventEntrants(id: number, key: string) {
-  let page = 1;
-  let nextData;
-  const entrants: StartggEntrant[] = [];
-  do {
-    // eslint-disable-next-line no-await-in-loop
-    nextData = await fetchGql(key, EVENT_ENTRANTS_QUERY, {
-      id,
-      page,
-    });
-    const apiSets = nextData.event.entrants.nodes as ApiEntrant[];
-    const newEntrants = apiSets.map((entrant): StartggEntrant => {
-      return {
-        id: entrant.id,
-        participants: entrant.participants.map((participant) => {
-          const startggParticipant: StartggParticipant = {
-            id: participant.id,
-            connectCode:
-              participant.connectedAccounts?.slippi?.value || undefined,
-            gamerTag: participant.gamerTag,
-            prefix: participant.prefix ?? '',
-          };
-          if (participant.requiredConnections) {
-            const discords = participant.requiredConnections
-              .filter((rc) => rc.type === 'DISCORD')
-              .map((rc) => ({
-                id: rc.externalId,
-                username: rc.externalUsername,
-              }));
-            if (discords.length > 0) {
-              [startggParticipant.discord] = discords;
-            }
-          }
-          return startggParticipant;
-        }),
-      };
-    });
-    entrants.push(...newEntrants);
-
-    page += 1;
-  } while (page <= nextData.event.entrants.pageInfo.totalPages);
-  return entrants;
-}
-
 type EventJSON = {
   entities: {
     phase: {
@@ -271,7 +237,11 @@ type GroupJSON = {
       id: number;
       mutations: {
         participants: {
-          [key: string]: { gamerTag: string; prefix: string | null };
+          [key: string]: {
+            id: number;
+            gamerTag: string;
+            prefix: string | null;
+          };
         };
       };
     }[];
@@ -304,137 +274,193 @@ function setSortPred(a: StartggSet, b: StartggSet) {
 }
 
 const idToSet = new Map<number, StartggSet>();
-export async function getEventSets(event: StartggEvent): Promise<Sets> {
-  const eventResponse = await wrappedFetch(
-    `https://api.start.gg/${event.slug}?expand[]=phase`,
+const setIdToBestOf = new Map<number, number>();
+export async function getTournamentSets(
+  slug: string,
+): Promise<GetTournamentRet> {
+  const tournamentResponse = await wrappedFetch(
+    `https://api.start.gg/tournament/${slug}?expand[]=event`,
   );
-  const eventJson = (await eventResponse.json()) as EventJSON;
-  const startedPhases = eventJson.entities.phase.filter(
-    (phase) => phase.state !== 1,
+  const tournamentJson = (await tournamentResponse.json()) as TournamentJSON;
+  const startedEvents = tournamentJson.entities.event.filter(
+    (event) => event.isOnline && event.state !== 1,
   );
 
-  const startggPhases = await Promise.all(
-    startedPhases.map(async (phase) => {
-      const phaseResponse = await wrappedFetch(
-        `https://api.start.gg/phase/${phase.id}?expand[]=groups`,
+  const idToEntrant = new Map<number, StartggEntrant>();
+  const startggEvents = await Promise.all(
+    startedEvents.map(async (event) => {
+      const eventResponse = await wrappedFetch(
+        `https://api.start.gg/event/${event.id}?expand[]=phase`,
       );
-      const phaseJson = (await phaseResponse.json()) as PhaseJSON;
-      const startggPhaseGroups = await Promise.all(
-        phaseJson.entities.groups.map(async (group) => {
-          const groupResponse = await wrappedFetch(
-            `https://api.start.gg/phase_group/${group.id}?expand[]=sets&expand[]=entrants`,
+      const eventJson = (await eventResponse.json()) as EventJSON;
+      const startedPhases = eventJson.entities.phase.filter(
+        (phase) => phase.state !== 1,
+      );
+
+      const startggPhases = await Promise.all(
+        startedPhases.map(async (phase) => {
+          const phaseResponse = await wrappedFetch(
+            `https://api.start.gg/phase/${phase.id}?expand[]=groups`,
           );
-          const groupJson = (await groupResponse.json()) as GroupJSON;
-          const entrantIdToNameAndSponsor = new Map<
-            number,
-            { name: string; sponsor: string }
-          >();
-          groupJson.entities.entrants.forEach((entrant) => {
-            const participants = Object.values(entrant.mutations.participants);
-            const name = participants
-              .map((participant) => participant.gamerTag)
-              .join(' / ');
-            const sponsor = participants
-              .map((participant) => participant.prefix ?? '')
-              .join(' / ');
-            entrantIdToNameAndSponsor.set(entrant.id, { name, sponsor });
-          });
-          const pendingSets: StartggSet[] = [];
-          const completedSets: StartggSet[] = [];
-          groupJson.entities.sets
-            .filter(
-              (set) =>
-                !set.unreachable &&
-                Number.isInteger(set.entrant1Id) &&
-                Number.isInteger(set.entrant2Id),
-            )
-            .map((set): StartggSet => {
-              const existingSet = idToSet.get(set.id);
-              if (existingSet && existingSet.updatedAt > set.updatedAt) {
-                return existingSet;
-              }
+          const phaseJson = (await phaseResponse.json()) as PhaseJSON;
+          const startggPhaseGroups = await Promise.all(
+            phaseJson.entities.groups.map(async (group) => {
+              const groupResponse = await wrappedFetch(
+                `https://api.start.gg/phase_group/${group.id}?expand[]=sets&expand[]=entrants`,
+              );
+              const groupJson = (await groupResponse.json()) as GroupJSON;
+              const entrantIdToNameAndSponsor = new Map<
+                number,
+                { name: string; sponsor: string }
+              >();
+              groupJson.entities.entrants.forEach((entrant) => {
+                const participants = Object.values(
+                  entrant.mutations.participants,
+                );
+                idToEntrant.set(entrant.id, {
+                  id: entrant.id,
+                  participantsIds: participants.map(
+                    (participant) => participant.id,
+                  ),
+                });
 
-              const { name: entrant1Name, sponsor: entrant1Sponsor } =
-                entrantIdToNameAndSponsor.get(set.entrant1Id!)!;
-              const { name: entrant2Name, sponsor: entrant2Sponsor } =
-                entrantIdToNameAndSponsor.get(set.entrant2Id!)!;
+                const name = participants
+                  .map((participant) => participant.gamerTag)
+                  .join(' / ');
+                const sponsor = participants
+                  .filter((participant) => participant.prefix)
+                  .map((participant) => participant.prefix!)
+                  .join(' / ');
+                entrantIdToNameAndSponsor.set(entrant.id, { name, sponsor });
+              });
+              const pendingSets: StartggSet[] = [];
+              const completedSets: StartggSet[] = [];
+              groupJson.entities.sets.forEach((set) => {
+                setIdToBestOf.set(set.id, set.bestOf);
+              });
+              groupJson.entities.sets
+                .filter(
+                  (set) =>
+                    !set.unreachable &&
+                    Number.isInteger(set.entrant1Id) &&
+                    Number.isInteger(set.entrant2Id),
+                )
+                .map((set): StartggSet => {
+                  const existingSet = idToSet.get(set.id);
+                  if (existingSet && existingSet.updatedAt > set.updatedAt) {
+                    return existingSet;
+                  }
 
-              const newSet: StartggSet = {
-                id: set.id,
-                bestOf: set.bestOf,
-                completedAt: set.completedAt,
-                isDQ: set.entrant1Score === -1 || set.entrant2Score === -1,
-                entrant1Id: set.entrant1Id!,
-                entrant1Name,
-                entrant1Sponsor,
-                entrant1Score: set.entrant1Score || 0,
-                entrant2Id: set.entrant2Id!,
-                entrant2Name,
-                entrant2Sponsor,
-                entrant2Score: set.entrant2Score || 0,
-                fullRoundText: set.fullRoundText,
-                round: set.round,
-                startedAt: set.startedAt,
-                state: set.state,
-                updatedAt: set.updatedAt,
-                winnerId: set.winnerId,
+                  const { name: entrant1Name, sponsor: entrant1Sponsor } =
+                    entrantIdToNameAndSponsor.get(set.entrant1Id!)!;
+                  const { name: entrant2Name, sponsor: entrant2Sponsor } =
+                    entrantIdToNameAndSponsor.get(set.entrant2Id!)!;
+
+                  const newSet: StartggSet = {
+                    id: set.id,
+                    bestOf: set.bestOf,
+                    completedAt: set.completedAt,
+                    isDQ: set.entrant1Score === -1 || set.entrant2Score === -1,
+                    entrant1Id: set.entrant1Id!,
+                    entrant1Name,
+                    entrant1Sponsor,
+                    entrant1Score: set.entrant1Score || 0,
+                    entrant2Id: set.entrant2Id!,
+                    entrant2Name,
+                    entrant2Sponsor,
+                    entrant2Score: set.entrant2Score || 0,
+                    fullRoundText: set.fullRoundText,
+                    round: set.round,
+                    startedAt: set.startedAt,
+                    state: set.state,
+                    updatedAt: set.updatedAt,
+                    winnerId: set.winnerId,
+                  };
+                  idToSet.set(set.id, newSet);
+                  return newSet;
+                })
+                .forEach((set) => {
+                  if (set.state === 3) {
+                    completedSets.push(set);
+                  } else {
+                    pendingSets.push(set);
+                  }
+                });
+
+              const name = `Pool ${group.displayIdentifier}`;
+              const completed: StartggPhaseGroup = {
+                name,
+                sets: completedSets.sort(setSortPred),
               };
-              idToSet.set(set.id, newSet);
-              return newSet;
-            })
-            .forEach((set) => {
-              if (set.state === 3) {
-                completedSets.push(set);
-              } else {
-                pendingSets.push(set);
-              }
-            });
-
-          const name = `Pool ${group.displayIdentifier}`;
-          const completed: StartggPhaseGroup = {
-            name,
-            sets: completedSets.sort(setSortPred),
+              const pending: StartggPhaseGroup = {
+                name,
+                sets: pendingSets.sort(setSortPred),
+              };
+              return { completed, pending };
+            }),
+          );
+          const completedPhaseGroups: StartggPhaseGroup[] = [];
+          const pendingPhaseGroups: StartggPhaseGroup[] = [];
+          startggPhaseGroups.forEach(({ completed, pending }) => {
+            if (completed.sets.length > 0) {
+              completedPhaseGroups.push(completed);
+            }
+            if (pending.sets.length > 0) {
+              pendingPhaseGroups.push(pending);
+            }
+          });
+          const completed: StartggPhase = {
+            name: phase.name,
+            phaseGroups: completedPhaseGroups.sort(groupSortPred),
+            phaseOrder: phase.phaseOrder,
           };
-          const pending: StartggPhaseGroup = {
-            name,
-            sets: pendingSets.sort(setSortPred),
+          const pending: StartggPhase = {
+            name: phase.name,
+            phaseGroups: pendingPhaseGroups.sort(groupSortPred),
+            phaseOrder: phase.phaseOrder,
           };
           return { completed, pending };
         }),
       );
-      const completedPhaseGroups: StartggPhaseGroup[] = [];
-      const pendingPhaseGroups: StartggPhaseGroup[] = [];
-      startggPhaseGroups.forEach(({ completed, pending }) => {
-        if (completed.sets.length > 0) {
-          completedPhaseGroups.push(completed);
+
+      const completedPhases: StartggPhase[] = [];
+      const pendingPhases: StartggPhase[] = [];
+      startggPhases.forEach(({ completed, pending }) => {
+        if (completed.phaseGroups.length > 0) {
+          completedPhases.push(completed);
         }
-        if (pending.sets.length > 0) {
-          pendingPhaseGroups.push(pending);
+        if (pending.phaseGroups.length > 0) {
+          pendingPhases.push(pending);
         }
       });
-      const completed: StartggPhase = {
-        name: phase.name,
-        phaseGroups: completedPhaseGroups.sort(groupSortPred),
-        phaseOrder: phase.phaseOrder,
+      const completed: StartggEvent = {
+        name: event.name,
+        phases: completedPhases.sort(phaseSortPred),
       };
-      const pending: StartggPhase = {
-        name: phase.name,
-        phaseGroups: pendingPhaseGroups.sort(groupSortPred),
-        phaseOrder: phase.phaseOrder,
+      const pending: StartggEvent = {
+        name: event.name,
+        phases: pendingPhases.sort(phaseSortPred),
       };
       return { completed, pending };
     }),
   );
 
-  const completedPhases: StartggPhase[] = [];
-  const pendingPhases: StartggPhase[] = [];
-  startggPhases.forEach(({ completed, pending }) => {
-    completedPhases.push(completed);
-    pendingPhases.push(pending);
+  const completedEvents: StartggEvent[] = [];
+  const pendingEvents: StartggEvent[] = [];
+  startggEvents.forEach(({ completed, pending }) => {
+    completedEvents.push(completed);
+    pendingEvents.push(pending);
   });
   return {
-    completed: completedPhases.sort(phaseSortPred),
-    pending: pendingPhases.sort(phaseSortPred),
+    idToEntrant,
+    sets: {
+      completed: completedEvents,
+      pending: pendingEvents,
+    },
+    tournament: {
+      slug,
+      name: tournamentJson.entities.tournament.name,
+    },
   };
 }
 
@@ -528,7 +554,7 @@ function gqlSetToStartggSet(set: GqlSet): StartggSet {
   const entrant2Participants = set.slots[1].entrant!.participants;
   return {
     id: set.id,
-    bestOf: idToSet.get(set.id)!.bestOf,
+    bestOf: setIdToBestOf.get(set.id)!,
     completedAt: set.completedAt,
     isDQ: set.displayScore === 'DQ',
     entrant1Id: set.slots[0].entrant!.id,
@@ -577,8 +603,10 @@ const RESET_SET_MUTATION = `
 `;
 export async function resetSet(id: number, key: string) {
   const data = await fetchGql(key, RESET_SET_MUTATION, { id });
-  const set = gqlSetToStartggSet(data.resetSet);
-  idToSet.set(set.id, set);
+  if (gqlSetFilterPred(data.resetSet)) {
+    const set = gqlSetToStartggSet(data.resetSet);
+    idToSet.set(set.id, set);
+  }
 }
 
 const SWAP_WINNER_MUTATION = `
@@ -615,10 +643,7 @@ export async function reportSets(sets: ReportStartggSet[], key: string) {
   sets.forEach((set, i) => {
     outer.push(`$setId${i}: ID!, $winnerId${i}: ID, $isDQ${i}: Boolean`);
     inner.push(`
-  set${i}: reportBracketSet(setId: $setId${i}, winnerId: $winnerId${i}, isDQ: $isDQ${i}) {
-    id
-    completedAt
-  }`);
+  set${i}: reportBracketSet(setId: $setId${i}, winnerId: $winnerId${i}, isDQ: $isDQ${i}) {${GQL_SET_INNER}}`);
     variables[`setId${i}`] = set.setId;
     variables[`winnerId${i}`] = set.winnerId;
     variables[`isDQ${i}`] = set.isDQ;

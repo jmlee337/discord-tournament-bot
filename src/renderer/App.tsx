@@ -111,14 +111,12 @@ function Hello() {
   const [discordStatus, setDiscordStatus] = useState(DiscordStatus.NONE);
   const [discordServers, setDiscordServers] = useState<DiscordServer[]>([]);
   const [discordServerId, setDiscordServerId] = useState('');
-  const [eventDescription, setEventDescription] = useState('');
   const [discordUsernames, setDiscordUsernames] = useState<DiscordUsername[]>(
     [],
   );
   const [tournament, setTournament] = useState<StartggTournament>({
     name: '',
     slug: '',
-    events: [],
   });
   const [tournaments, setTournaments] = useState<AdminedTournament[]>([]);
   const [remoteState, setRemoteState] = useState<RemoteState>({
@@ -150,11 +148,6 @@ function Hello() {
       setDiscordStatus((await startingStatePromise).discordStatus);
       setDiscordServerId((await startingStatePromise).discordServerId);
       setDiscordUsernames((await startingStatePromise).discordUsernames);
-      const tournamentName = (await startingStatePromise).tournament.name;
-      const { eventName } = await startingStatePromise;
-      if (tournamentName && eventName) {
-        setEventDescription(`${tournamentName}, ${eventName}`);
-      }
       setRemoteState((await startingStatePromise).remoteState);
       setTournament((await startingStatePromise).tournament);
       setEnableMST(await enableMSTPromise);
@@ -217,13 +210,9 @@ function Hello() {
       discordNotStartedExplanation = (
         <Alert severity="warning">Set Discord token</Alert>
       );
-    } else if (tournament.events.length === 0) {
+    } else if (!tournament.name) {
       discordNotStartedExplanation = (
         <Alert severity="warning">Select tournament</Alert>
-      );
-    } else if (!eventDescription) {
-      discordNotStartedExplanation = (
-        <Alert severity="warning">Select event</Alert>
       );
     } else {
       discordNotStartedExplanation = (
@@ -255,8 +244,6 @@ function Hello() {
           tournaments={tournaments}
           tournament={tournament}
           setTournament={setTournament}
-          eventDescription={eventDescription}
-          setEventDescription={setEventDescription}
           setConnectCodes={setConnectCodes}
           setDiscordUsernames={setDiscordUsernames}
           showErrorDialog={showErrorDialog}
@@ -389,7 +376,7 @@ function Hello() {
               setSearchSubstr={setSearchSubstr}
             />
             <Button
-              disabled={refreshing || !eventDescription}
+              disabled={refreshing || !tournament.name}
               startIcon={
                 refreshing ? <CircularProgress size="20px" /> : <StartggIcon />
               }

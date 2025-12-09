@@ -5,10 +5,10 @@ import { writeFile } from 'fs/promises';
 import {
   Broadcast,
   ConnectCode,
+  ParticipantSet,
   RemoteState,
   RemoteStatus,
   Spectating,
-  StartggSet,
 } from '../common/types';
 import { getGameEndInfo, getGameStartInfos } from './replay';
 import {
@@ -62,12 +62,12 @@ let mainWindow: BrowserWindow | null = null;
 const connectCodeMisses = new Set<string>();
 const connectCodeToParticipant = new Map<
   string,
-  { entrantId: number; gamerTag: string; prefix: string }
+  { id: number; gamerTag: string; prefix: string }
 >();
 const dolphinIdToReplayPath = new Map<string, string>();
 const dolphinIdToSimpleTextPathId = new Map<string, SimpleTextPathId>();
 let overlayDolphinId = '';
-let entrantIdToPendingSets = new Map<number, StartggSet[]>();
+let participantIdToPendingSets = new Map<number, ParticipantSet[]>();
 
 export function initSpectate(newMainWindow: BrowserWindow) {
   remoteErr = '';
@@ -191,19 +191,18 @@ function getParticipant(connectCode: string) {
 
 function recalculateAndSendBroadcasts() {
   Array.from(idToBroadcast.entries()).forEach(([broadcastId, broadcast]) => {
-    const entrant = getParticipant(broadcast.connectCode);
-    if (entrant) {
-      const pendingSets = entrantIdToPendingSets.get(entrant.entrantId);
+    const participant = getParticipant(broadcast.connectCode);
+    if (participant) {
+      const pendingSets = participantIdToPendingSets.get(participant.id);
       idToBroadcast.set(broadcastId, {
         ...broadcast,
-        gamerTag: entrant.gamerTag,
+        gamerTag: participant.gamerTag,
         sets: pendingSets
           ? pendingSets.map((pendingSet) => ({
               id: pendingSet.id,
-              opponentName:
-                entrant.entrantId === pendingSet.entrant1Id
-                  ? pendingSet.entrant2Name
-                  : pendingSet.entrant1Name,
+              opponentName: pendingSet.isParticipantEntrant1
+                ? pendingSet.entrant2Name
+                : pendingSet.entrant1Name,
             }))
           : [],
       });
@@ -214,9 +213,9 @@ function recalculateAndSendBroadcasts() {
 
 export function setConnectCodes(connectCodes: ConnectCode[]) {
   connectCodeMisses.clear();
-  connectCodes.forEach(({ connectCode, entrantId, gamerTag, prefix }) => {
+  connectCodes.forEach(({ connectCode, gamerTag, participantId, prefix }) => {
     connectCodeToParticipant.set(connectCode.toLowerCase(), {
-      entrantId,
+      id: participantId,
       gamerTag,
       prefix,
     });
@@ -224,10 +223,10 @@ export function setConnectCodes(connectCodes: ConnectCode[]) {
   recalculateAndSendBroadcasts();
 }
 
-export function setEntrantIdToPendingSets(
-  newEntrantIdToPendingSets: Map<number, StartggSet[]>,
+export function setParticipantIdToPendingSets(
+  newParticipantIdToPendingSets: Map<number, ParticipantSet[]>,
 ) {
-  entrantIdToPendingSets = newEntrantIdToPendingSets;
+  participantIdToPendingSets = newParticipantIdToPendingSets;
   recalculateAndSendBroadcasts();
 }
 
@@ -249,7 +248,7 @@ export async function processNewReplay(replayPath: string) {
     ): {
       character: MSTCharacter;
       skinColor: MSTSkinColor;
-      participant?: { entrantId: number; gamerTag: string; prefix: string };
+      participant?: { id: number; gamerTag: string; prefix: string };
     } => {
       const mst = characterIdToMST.get(gameStartInfo.characterId);
       if (!mst) {
@@ -282,10 +281,10 @@ export async function processNewReplay(replayPath: string) {
 
   let setData: MSTSetData | undefined;
   const p1PendingSets = mstInfos[0].participant
-    ? entrantIdToPendingSets.get(mstInfos[0].participant.entrantId)
+    ? participantIdToPendingSets.get(mstInfos[0].participant.id)
     : undefined;
   const p2PendingSets = mstInfos[1].participant
-    ? entrantIdToPendingSets.get(mstInfos[1].participant.entrantId)
+    ? participantIdToPendingSets.get(mstInfos[1].participant.id)
     : undefined;
   if (
     p1PendingSets &&
@@ -299,39 +298,54 @@ export async function processNewReplay(replayPath: string) {
       ),
     );
     if (intersectionSets.length === 1) {
-      const [set] = intersectionSets;
-      const p1IsEntrant1 = mstInfos[0].participant
-        ? set.entrant1Id === mstInfos[0].participant.entrantId
-        : set.entrant2Id === mstInfos[1].participant!.entrantId;
-      p1Name = p1IsEntrant1 ? set.entrant1Name : set.entrant2Name;
-      p1Team = p1IsEntrant1 ? set.entrant1Sponsor : set.entrant2Sponsor;
-      p2Name = p1IsEntrant1 ? set.entrant2Name : set.entrant1Name;
-      p2Team = p1IsEntrant1 ? set.entrant2Sponsor : set.entrant1Sponsor;
+      const [p1Set] = intersectionSets;
+      p1Name = p1Set.isParticipantEntrant1
+        ? p1Set.entrant1Name
+        : p1Set.entrant2Name;
+      p1Team = p1Set.isParticipantEntrant1
+        ? p1Set.entrant1Sponsor
+        : p1Set.entrant2Sponsor;
+      p2Name = p1Set.isParticipantEntrant1
+        ? p1Set.entrant2Name
+        : p1Set.entrant1Name;
+      p2Team = p1Set.isParticipantEntrant1
+        ? p1Set.entrant2Sponsor
+        : p1Set.entrant1Sponsor;
 
       let p1WL: MSTWL | undefined;
       let p2WL: MSTWL | undefined;
-      if (set.fullRoundText === 'Grand Final Reset') {
+      if (p1Set.fullRoundText === 'Grand Final Reset') {
         p1WL = 'L';
         p2WL = 'L';
-      } else if (set.fullRoundText === 'Grand Final') {
-        p1WL = !p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'W';
-        p2WL = p1IsEntrant1 && set.fullRoundText === 'Grand Final' ? 'L' : 'W';
+      } else if (p1Set.fullRoundText === 'Grand Final') {
+        p1WL =
+          !p1Set.isParticipantEntrant1 && p1Set.fullRoundText === 'Grand Final'
+            ? 'L'
+            : 'W';
+        p2WL =
+          p1Set.isParticipantEntrant1 && p1Set.fullRoundText === 'Grand Final'
+            ? 'L'
+            : 'W';
       }
       setData = {
-        setId: set.id,
-        bestOf: set.bestOf === 5 ? 'Bo5' : 'Bo3',
-        round: set.fullRoundText,
-        p1Score: p1IsEntrant1 ? set.entrant1Score : set.entrant2Score,
+        setId: p1Set.id,
+        bestOf: p1Set.bestOf === 5 ? 'Bo5' : 'Bo3',
+        round: p1Set.fullRoundText,
+        p1Score: p1Set.isParticipantEntrant1
+          ? p1Set.entrant1Score
+          : p1Set.entrant2Score,
         p1WL,
-        p2Score: p1IsEntrant1 ? set.entrant2Score : set.entrant1Score,
+        p2Score: p1Set.isParticipantEntrant1
+          ? p1Set.entrant2Score
+          : p1Set.entrant1Score,
         p2WL,
       };
     }
   }
 
   const newFileScoreboardInfo: MSTNewFileScoreboardInfo = {
-    p1EntrantId: mstInfos[0].participant?.entrantId,
-    p2EntrantId: mstInfos[1].participant?.entrantId,
+    p1ParticipantId: mstInfos[0].participant?.id,
+    p2ParticipantId: mstInfos[1].participant?.id,
     p1Name,
     p1Team,
     p1Character: mstInfos[0].character,
@@ -719,21 +733,20 @@ export function connect(port: number) {
 
             (message.broadcasts as RemoteBroadcast[]).forEach((broadcast) => {
               const connectCode = broadcast.name;
-              const entrant = getParticipant(connectCode);
-              const pendingSets = entrant
-                ? entrantIdToPendingSets.get(entrant.entrantId)
+              const participant = getParticipant(connectCode);
+              const pendingSets = participant
+                ? participantIdToPendingSets.get(participant.id)
                 : undefined;
               idToBroadcast.set(broadcast.id, {
                 id: broadcast.id,
                 connectCode,
-                gamerTag: entrant?.gamerTag,
+                gamerTag: participant?.gamerTag,
                 sets: pendingSets
                   ? pendingSets.map((pendingSet) => ({
                       id: pendingSet.id,
-                      opponentName:
-                        entrant!.entrantId === pendingSet.entrant1Id
-                          ? pendingSet.entrant2Name
-                          : pendingSet.entrant1Name,
+                      opponentName: pendingSet.isParticipantEntrant1
+                        ? pendingSet.entrant2Name
+                        : pendingSet.entrant1Name,
                     }))
                   : [],
                 slippiName: broadcast.broadcaster.name,

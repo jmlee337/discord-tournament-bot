@@ -13,7 +13,6 @@ import {
   RemoteState,
   Sets,
   Spectating,
-  StartggEvent,
   StartggSet,
   StartggTournament,
   StartingState,
@@ -100,12 +99,12 @@ const electronHandler = {
     ipcRenderer.invoke('setStartggApiKey', startggApiKey),
   getTournaments: (): Promise<AdminedTournament[]> =>
     ipcRenderer.invoke('getTournaments'),
-  getTournament: (slug: string): Promise<StartggTournament> =>
-    ipcRenderer.invoke('getTournament', slug),
-  setEvent: (event: StartggEvent): Promise<ParticipantConnections> =>
-    ipcRenderer.invoke('setEvent', event),
-  refreshEntrants: (): Promise<ParticipantConnections> =>
-    ipcRenderer.invoke('refreshEntrants'),
+  setTournament: (
+    slug: string,
+  ): Promise<ParticipantConnections & { tournament: StartggTournament }> =>
+    ipcRenderer.invoke('setTournament', slug),
+  refreshParticipants: (): Promise<ParticipantConnections> =>
+    ipcRenderer.invoke('refreshParticipants'),
   refreshSets: (): Promise<void> => ipcRenderer.invoke('refreshSets'),
   reportSet: (setId: number, winnerId: number, isDQ: boolean): Promise<void> =>
     ipcRenderer.invoke('reportSet', setId, winnerId, isDQ),

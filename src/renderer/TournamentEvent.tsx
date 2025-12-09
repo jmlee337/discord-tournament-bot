@@ -1,10 +1,9 @@
-import { Close, EventAvailable, TaskAlt } from '@mui/icons-material';
+import { EventAvailable, TaskAlt } from '@mui/icons-material';
 import {
   Button,
   CircularProgress,
   Dialog,
   DialogContent,
-  DialogContentText,
   DialogTitle,
   IconButton,
   InputBase,
@@ -23,21 +22,10 @@ import {
   StartggTournament,
 } from '../common/types';
 
-type RestoreTournament =
-  | {
-      shouldRestore: false;
-    }
-  | {
-      shouldRestore: true;
-      tournament: StartggTournament;
-    };
-
 export default function TournamentEvent({
   tournaments,
   tournament,
   setTournament,
-  eventDescription,
-  setEventDescription,
   setConnectCodes,
   setDiscordUsernames,
   showErrorDialog,
@@ -45,45 +33,25 @@ export default function TournamentEvent({
   tournaments: AdminedTournament[];
   tournament: StartggTournament;
   setTournament: (tournament: StartggTournament) => void;
-  eventDescription: string;
-  setEventDescription: (eventDescription: string) => void;
   setConnectCodes: (connectCodes: ConnectCode[]) => void;
   setDiscordUsernames: (discordUsernames: DiscordUsername[]) => void;
   showErrorDialog: (messages: string[]) => void;
 }) {
   const [tournamentDialogOpen, setTournamentDialogOpen] = useState(false);
   const [gettingTournament, setGettingTournament] = useState(false);
-  const [shouldRestore, setShouldRestore] = useState<RestoreTournament>({
-    shouldRestore: false,
-  });
   const getTournament = async (slug: string) => {
-    let newTournament;
     setGettingTournament(true);
     try {
-      newTournament = await window.electron.getTournament(slug);
-      setTournament(newTournament);
+      const ret = await window.electron.setTournament(slug);
+      setTournament(ret.tournament);
+      setConnectCodes(ret.connectCodes);
+      setDiscordUsernames(ret.discordUsernames);
+      setTournamentDialogOpen(false);
     } catch (e: any) {
       const message = e instanceof Error ? e.message : e;
       showErrorDialog([message]);
     } finally {
       setGettingTournament(false);
-    }
-    if (newTournament && newTournament.events.length === 1) {
-      const newEvent = newTournament.events[0];
-      setGettingTournament(true);
-      try {
-        const participantConnections = await window.electron.setEvent(newEvent);
-        setConnectCodes(participantConnections.connectCodes);
-        setDiscordUsernames(participantConnections.discordUsernames);
-        setEventDescription(`${newTournament.name}, ${newEvent.name}`);
-        setShouldRestore({ shouldRestore: false });
-        setTournamentDialogOpen(false);
-      } catch (e: any) {
-        const message = e instanceof Error ? e.message : e;
-        showErrorDialog([message]);
-      } finally {
-        setGettingTournament(false);
-      }
     }
   };
   const getStartggTournamentOnSubmit = (event: FormEvent<HTMLFormElement>) => {
@@ -103,10 +71,10 @@ export default function TournamentEvent({
       <InputBase
         disabled
         size="small"
-        value={eventDescription || 'Select start.gg event...'}
+        value={tournament.name || 'Select start.gg tournament...'}
         style={{ flexGrow: 1 }}
       />
-      <Tooltip placement="left" title="Select start.gg event">
+      <Tooltip placement="left" title="Select start.gg tournament">
         <IconButton
           onClick={async () => {
             setTournamentDialogOpen(true);
@@ -118,13 +86,6 @@ export default function TournamentEvent({
       <Dialog
         open={tournamentDialogOpen}
         onClose={() => {
-          if (shouldRestore.shouldRestore) {
-            setTournament({
-              name: shouldRestore.tournament.name,
-              slug: shouldRestore.tournament.slug,
-              events: shouldRestore.tournament.events,
-            });
-          }
           setTournamentDialogOpen(false);
         }}
       >
@@ -162,84 +123,24 @@ export default function TournamentEvent({
               Set
             </Button>
           </form>
-          {tournament.name ? (
-            <Stack>
-              <Stack
-                direction="row"
-                alignItems="center"
-                justifyContent="space-between"
+          {tournaments.map((adminedTournament) => (
+            <ListItemButton
+              key={adminedTournament.slug}
+              disabled={gettingTournament}
+              onClick={() => {
+                getTournament(adminedTournament.slug);
+              }}
+            >
+              <ListItemText
+                style={{ overflowX: 'hidden', whiteSpace: 'nowrap' }}
               >
-                <DialogContentText>{tournament.name}</DialogContentText>
-                {!gettingTournament && (
-                  <Tooltip placement="right" title="Choose another tournament">
-                    <IconButton
-                      onClick={() => {
-                        setShouldRestore({
-                          shouldRestore: true,
-                          tournament: {
-                            name: tournament.name,
-                            slug: tournament.slug,
-                            events: tournament.events,
-                          },
-                        });
-                        setTournament({ name: '', slug: '', events: [] });
-                      }}
-                    >
-                      <Close />
-                    </IconButton>
-                  </Tooltip>
-                )}
-              </Stack>
-              {tournament.events.map((event) => (
-                <ListItemButton
-                  disabled={gettingTournament}
-                  key={event.id}
-                  onClick={async () => {
-                    try {
-                      setGettingTournament(true);
-                      const participantConnections =
-                        await window.electron.setEvent(event);
-                      setConnectCodes(participantConnections.connectCodes);
-                      setDiscordUsernames(
-                        participantConnections.discordUsernames,
-                      );
-                      setEventDescription(`${tournament.name}, ${event.name}`);
-                      setShouldRestore({ shouldRestore: false });
-                      setTournamentDialogOpen(false);
-                    } catch (e: any) {
-                      const message = e instanceof Error ? e.message : e;
-                      showErrorDialog([message]);
-                    } finally {
-                      setGettingTournament(false);
-                    }
-                  }}
-                >
-                  <ListItemText>{event.name}</ListItemText>
-                </ListItemButton>
-              ))}
-            </Stack>
-          ) : (
-            <>
-              {tournaments.map((adminedTournament) => (
-                <ListItemButton
-                  key={adminedTournament.slug}
-                  disabled={gettingTournament}
-                  onClick={() => {
-                    getTournament(adminedTournament.slug);
-                  }}
-                >
-                  <ListItemText
-                    style={{ overflowX: 'hidden', whiteSpace: 'nowrap' }}
-                  >
-                    {adminedTournament.name}{' '}
-                    <Typography variant="caption">
-                      ({adminedTournament.slug})
-                    </Typography>
-                  </ListItemText>
-                </ListItemButton>
-              ))}
-            </>
-          )}
+                {adminedTournament.name}{' '}
+                <Typography variant="caption">
+                  ({adminedTournament.slug})
+                </Typography>
+              </ListItemText>
+            </ListItemButton>
+          ))}
         </DialogContent>
       </Dialog>
     </Stack>

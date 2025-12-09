@@ -27,11 +27,11 @@ import Reset from './Reset';
 import {
   HIGHLIGHT_COLOR,
   Highlight,
-  StartggPhase,
   StartggSet,
   Sets,
   DiscordChannel,
   Discord,
+  StartggEvent,
 } from '../common/types';
 import DiscordIcon from './DiscordIcon';
 import getColor from './getColor';
@@ -208,8 +208,8 @@ function SetWithHighlightListItemButton({
   );
 }
 
-function mapStartggPhasePredicate(
-  phase: StartggPhase,
+function mapStartggEventPredicate(
+  event: StartggEvent,
   searchSubstrInner: string,
   setReportingDialogOpen: (reportingDialogOpen: boolean) => void,
   setResetDialogOpen: (resetDialogOpen: boolean) => void,
@@ -218,62 +218,64 @@ function mapStartggPhasePredicate(
   pending: boolean,
 ) {
   const prefix = pending ? 'pending' : 'completed';
-  const phaseGroups: JSX.Element[] = [];
-  phase.phaseGroups.forEach((phaseGroup) => {
-    const groupSets: SetWithHighlight[] = [];
-    phaseGroup.sets.forEach((set) => {
-      if (!searchSubstrInner) {
-        groupSets.push({ set });
-      } else {
-        let entrant1Highlight: Highlight | undefined;
-        let entrant2Highlight: Highlight | undefined;
-        let include = false;
-        const includeStr = searchSubstrInner.toLowerCase();
-        const start1 = set.entrant1Name.toLowerCase().indexOf(includeStr);
-        if (start1 >= 0) {
-          include = true;
-          entrant1Highlight = {
-            start: start1,
-            end: start1 + includeStr.length,
-          };
+  const phases: JSX.Element[] = [];
+  event.phases.forEach((phase) => {
+    phase.phaseGroups.forEach((phaseGroup) => {
+      const groupSets: SetWithHighlight[] = [];
+      phaseGroup.sets.forEach((set) => {
+        if (!searchSubstrInner) {
+          groupSets.push({ set });
+        } else {
+          let entrant1Highlight: Highlight | undefined;
+          let entrant2Highlight: Highlight | undefined;
+          let include = false;
+          const includeStr = searchSubstrInner.toLowerCase();
+          const start1 = set.entrant1Name.toLowerCase().indexOf(includeStr);
+          if (start1 >= 0) {
+            include = true;
+            entrant1Highlight = {
+              start: start1,
+              end: start1 + includeStr.length,
+            };
+          }
+          const start2 = set.entrant2Name.toLowerCase().indexOf(includeStr);
+          if (start2 >= 0) {
+            include = true;
+            entrant2Highlight = {
+              start: start2,
+              end: start2 + includeStr.length,
+            };
+          }
+          if (include) {
+            groupSets.push({ entrant1Highlight, entrant2Highlight, set });
+          }
         }
-        const start2 = set.entrant2Name.toLowerCase().indexOf(includeStr);
-        if (start2 >= 0) {
-          include = true;
-          entrant2Highlight = {
-            start: start2,
-            end: start2 + includeStr.length,
-          };
-        }
-        if (include) {
-          groupSets.push({ entrant1Highlight, entrant2Highlight, set });
-        }
+      });
+      if (groupSets.length > 0) {
+        phases.push(
+          <Box key={`${prefix}${phase.name}${phaseGroup.name}`}>
+            <Typography variant="subtitle1">
+              {event.name}, {phase.name}, {phaseGroup.name}
+            </Typography>
+            <Stack direction="row" gap="8px" flexWrap="wrap">
+              {groupSets.map((setWithHighlight) => (
+                <SetWithHighlightListItemButton
+                  key={`${prefix}${setWithHighlight.set.id}`}
+                  setWithHighlight={setWithHighlight}
+                  pending={pending}
+                  setReportingDialogOpen={setReportingDialogOpen}
+                  setResetDialogOpen={setResetDialogOpen}
+                  setResetSelectedSet={setResetSelectedSet}
+                  setSelectedSet={setSelectedSet}
+                />
+              ))}
+            </Stack>
+          </Box>,
+        );
       }
     });
-    if (groupSets.length > 0) {
-      phaseGroups.push(
-        <Box key={`${prefix}${phase.name}${phaseGroup.name}`}>
-          <Typography variant="subtitle1">
-            {phase.name}, {phaseGroup.name}
-          </Typography>
-          <Stack direction="row" gap="8px" flexWrap="wrap">
-            {groupSets.map((setWithHighlight) => (
-              <SetWithHighlightListItemButton
-                key={`${prefix}${setWithHighlight.set.id}`}
-                setWithHighlight={setWithHighlight}
-                pending={pending}
-                setReportingDialogOpen={setReportingDialogOpen}
-                setResetDialogOpen={setResetDialogOpen}
-                setResetSelectedSet={setResetSelectedSet}
-                setSelectedSet={setSelectedSet}
-              />
-            ))}
-          </Stack>
-        </Box>,
-      );
-    }
   });
-  return phaseGroups;
+  return phases;
 }
 
 function getPendingPhases(
@@ -284,11 +286,11 @@ function getPendingPhases(
   setResetSelectedSet: (resetSelectedSet: StartggSet) => void,
   setSelectedSet: (selectedSet: StartggSet) => void,
 ) {
-  const pendingPhases: JSX.Element[] = [];
-  sets.pending.forEach((phase) => {
-    pendingPhases.push(
-      ...mapStartggPhasePredicate(
-        phase,
+  const pendingEvents: JSX.Element[] = [];
+  sets.pending.forEach((event) => {
+    pendingEvents.push(
+      ...mapStartggEventPredicate(
+        event,
         searchSubstr,
         setReportingDialogOpen,
         setResetDialogOpen,
@@ -298,7 +300,7 @@ function getPendingPhases(
       ),
     );
   });
-  return pendingPhases;
+  return pendingEvents;
 }
 
 function getCompletedPhases(
@@ -310,10 +312,10 @@ function getCompletedPhases(
   setSelectedSet: (selectedSet: StartggSet) => void,
 ) {
   const completedPhases: JSX.Element[] = [];
-  sets.completed.forEach((phase) => {
+  sets.completed.forEach((event) => {
     completedPhases.push(
-      ...mapStartggPhasePredicate(
-        phase,
+      ...mapStartggEventPredicate(
+        event,
         searchSubstr,
         setReportingDialogOpen,
         setResetDialogOpen,
@@ -398,9 +400,9 @@ export default function Bracket({
   );
 
   return (
-    <Stack>
+    <Stack gap="16px">
       {pendingPhases.length > 0 && (
-        <>
+        <Stack>
           <Stack direction="row" alignItems="center" gap="16px">
             <Typography variant="h5">Pending</Typography>
             <Button
@@ -515,15 +517,13 @@ export default function Bracket({
             </Dialog>
           </Stack>
           <Stack gap="8px">{pendingPhases}</Stack>
-        </>
+        </Stack>
       )}
       {completedPhases.length > 0 && (
-        <>
-          <Typography variant="h5" style={{ marginTop: '16px' }}>
-            Completed
-          </Typography>
+        <Stack>
+          <Typography variant="h5">Completed</Typography>
           <Stack gap="8px">{completedPhases}</Stack>
-        </>
+        </Stack>
       )}
       <Report
         open={reportingDialogOpen}

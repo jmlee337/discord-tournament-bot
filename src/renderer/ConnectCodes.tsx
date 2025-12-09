@@ -161,7 +161,7 @@ export default function ConnectCodes({
                     try {
                       setRefreshing(true);
                       const participantConnections =
-                        await window.electron.refreshEntrants();
+                        await window.electron.refreshParticipants();
                       setConnectCodes(participantConnections.connectCodes);
                       setDiscordUsernames(
                         participantConnections.discordUsernames,

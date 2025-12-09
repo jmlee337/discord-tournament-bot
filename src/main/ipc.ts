@@ -39,21 +39,21 @@ import {
   DiscordServer,
   DiscordStatus,
   DiscordUsername,
+  GetTournamentRet,
   ParticipantConnections,
+  ParticipantSet,
   ReportStartggSet,
   Sets,
-  StartggEntrant,
-  StartggEvent,
+  StartggParticipant,
   StartggSet,
   StartggTournament,
   StartingState,
 } from '../common/types';
 import {
-  getEventEntrants,
-  getEventSets,
   getNotCheckedInParticipantIds,
-  getTournament,
+  getTournamentParticipants,
   getTournaments,
+  getTournamentSets,
   initStartgg,
   reportSet,
   reportSets,
@@ -70,8 +70,8 @@ import {
   refreshBroadcasts,
   setConnectCodes,
   setEnableOverlay,
-  setEntrantIdToPendingSets,
   setOverlayDolphinId,
+  setParticipantIdToPendingSets,
   setSimpleTextPathA,
   setSimpleTextPathB,
   setSimpleTextPathC,
@@ -89,7 +89,7 @@ import {
   setEnableSggRound,
   setEnableSggSponsors,
   setEnableSkinColor,
-  setRequestGetEventSets,
+  setRequestGetTournamentSets,
   setResourcesPath,
   tournamentNameUpdate,
 } from './mst';
@@ -166,14 +166,8 @@ function startggFailConfirmation(
   });
 }
 
-function getOpponentName(set: StartggSet, entrantId: number) {
-  if (entrantId === set.entrant1Id) {
-    return set.entrant2Name;
-  }
-  if (entrantId === set.entrant2Id) {
-    return set.entrant1Name;
-  }
-  throw new Error('entrantId not in set.');
+function getOpponentName(set: ParticipantSet) {
+  return set.isParticipantEntrant1 ? set.entrant2Name : set.entrant1Name;
 }
 
 export default function setupIPCs(mainWindow: BrowserWindow) {
@@ -235,73 +229,144 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
    * Needed for both Discord and start.gg
    */
   const connectCodes: ConnectCode[] = [];
-  const discordIdToEntrantId = new Map<string, number>();
-  const discordIdToGamerTag = new Map<string, string>();
-  const entrantIdToDiscordIds = new Map<number, string[]>();
-  const entrantIdToCompletedSets = new Map<number, StartggSet[]>();
-  const entrantIdToPendingSets = new Map<number, StartggSet[]>();
+  const discordIdToParticipant = new Map<
+    string,
+    { id: number; gamerTag: string }
+  >();
+  const participantIdToCompletedSets = new Map<number, ParticipantSet[]>();
+  const participantIdToPendingSets = new Map<number, ParticipantSet[]>();
   const participantIdToDiscord = new Map<number, Discord>();
-  let startggEvent: StartggEvent = {
-    id: 0,
-    name: '',
-    slug: '',
-  };
   let sets: Sets = {
     pending: [],
     completed: [],
   };
-  let tournament: StartggTournament = {
+  let startggTournament: StartggTournament = {
     name: '',
     slug: '',
-    events: [],
   };
-  const updateEntrantIdToSet = (newSets: Sets) => {
-    entrantIdToCompletedSets.clear();
-    newSets.completed.forEach((completedPhase) => {
-      completedPhase.phaseGroups.forEach((completedPhaseGroup) => {
-        completedPhaseGroup.sets.forEach((completedSet) => {
-          const entrant1Sets =
-            entrantIdToCompletedSets.get(completedSet.entrant1Id) || [];
-          entrant1Sets.push(completedSet);
-          entrantIdToCompletedSets.set(completedSet.entrant1Id, entrant1Sets);
-          const entrant2Sets =
-            entrantIdToCompletedSets.get(completedSet.entrant2Id) || [];
-          entrant2Sets.push(completedSet);
-          entrantIdToCompletedSets.set(completedSet.entrant2Id, entrant2Sets);
+  const updateParticipantIdToSet = (getTournamentRet: GetTournamentRet) => {
+    participantIdToCompletedSets.clear();
+    getTournamentRet.sets.completed.forEach((completedEvent) => {
+      completedEvent.phases.forEach((completedPhase) => {
+        completedPhase.phaseGroups.forEach((completedPhaseGroup) => {
+          completedPhaseGroup.sets.forEach((completedSet) => {
+            const entrant1ParticipantIds = getTournamentRet.idToEntrant.get(
+              completedSet.entrant1Id,
+            )?.participantsIds;
+            if (
+              !entrant1ParticipantIds ||
+              entrant1ParticipantIds.length === 0
+            ) {
+              throw new Error(
+                `set ${completedSet.id} can't find participant(s) for entrant: ${completedSet.entrant1Id}`,
+              );
+            }
+            const entrant2ParticipantIds = getTournamentRet.idToEntrant.get(
+              completedSet.entrant2Id,
+            )?.participantsIds;
+            if (
+              !entrant2ParticipantIds ||
+              entrant2ParticipantIds.length === 0
+            ) {
+              throw new Error(
+                `set ${completedSet.id} can't find participant(s) for entrant: ${completedSet.entrant2Id}`,
+              );
+            }
+            entrant1ParticipantIds.forEach((participantId) => {
+              const participantSets =
+                participantIdToCompletedSets.get(participantId) ?? [];
+              participantSets.push({
+                ...completedSet,
+                isParticipantEntrant1: true,
+                opponentParticipantIds: entrant2ParticipantIds,
+                ownParticipantIds: entrant1ParticipantIds,
+              });
+              participantIdToCompletedSets.set(participantId, participantSets);
+            });
+            entrant2ParticipantIds.forEach((participantId) => {
+              const participantSets =
+                participantIdToCompletedSets.get(participantId) ?? [];
+              participantSets.push({
+                ...completedSet,
+                isParticipantEntrant1: false,
+                opponentParticipantIds: entrant1ParticipantIds,
+                ownParticipantIds: entrant2ParticipantIds,
+              });
+              participantIdToCompletedSets.set(participantId, participantSets);
+            });
+          });
         });
       });
     });
 
-    entrantIdToPendingSets.clear();
-    newSets.pending.forEach((pendingPhase) => {
-      pendingPhase.phaseGroups.forEach((pendingPhaseGroup) => {
-        pendingPhaseGroup.sets.forEach((pendingSet) => {
-          const entrant1Sets =
-            entrantIdToPendingSets.get(pendingSet.entrant1Id) || [];
-          entrant1Sets.push(pendingSet);
-          entrantIdToPendingSets.set(pendingSet.entrant1Id, entrant1Sets);
-          const entrant2Sets =
-            entrantIdToPendingSets.get(pendingSet.entrant2Id) || [];
-          entrant2Sets.push(pendingSet);
-          entrantIdToPendingSets.set(pendingSet.entrant2Id, entrant2Sets);
+    participantIdToPendingSets.clear();
+    getTournamentRet.sets.pending.forEach((pendingEvent) => {
+      pendingEvent.phases.forEach((pendingPhase) => {
+        pendingPhase.phaseGroups.forEach((pendingPhaseGroup) => {
+          pendingPhaseGroup.sets.forEach((pendingSet) => {
+            const entrant1ParticipantIds = getTournamentRet.idToEntrant.get(
+              pendingSet.entrant1Id,
+            )?.participantsIds;
+            if (
+              !entrant1ParticipantIds ||
+              entrant1ParticipantIds.length === 0
+            ) {
+              throw new Error(
+                `set ${pendingSet.id} can't find participant(s) for entrant: ${pendingSet.entrant1Id}`,
+              );
+            }
+            const entrant2ParticipantIds = getTournamentRet.idToEntrant.get(
+              pendingSet.entrant2Id,
+            )?.participantsIds;
+            if (
+              !entrant2ParticipantIds ||
+              entrant2ParticipantIds.length === 0
+            ) {
+              throw new Error(
+                `set ${pendingSet.id} can't find participant(s) for entrant: ${pendingSet.entrant2Id}`,
+              );
+            }
+            entrant1ParticipantIds.forEach((participantId) => {
+              const participantSets =
+                participantIdToPendingSets.get(participantId) ?? [];
+              participantSets.push({
+                ...pendingSet,
+                isParticipantEntrant1: true,
+                opponentParticipantIds: entrant2ParticipantIds,
+                ownParticipantIds: entrant1ParticipantIds,
+              });
+              participantIdToPendingSets.set(participantId, participantSets);
+            });
+            entrant2ParticipantIds.forEach((participantId) => {
+              const participantSets =
+                participantIdToPendingSets.get(participantId) ?? [];
+              participantSets.push({
+                ...pendingSet,
+                isParticipantEntrant1: false,
+                opponentParticipantIds: entrant1ParticipantIds,
+                ownParticipantIds: entrant2ParticipantIds,
+              });
+              participantIdToPendingSets.set(participantId, participantSets);
+            });
+          });
         });
       });
     });
-    setEntrantIdToPendingSets(entrantIdToPendingSets);
+    setParticipantIdToPendingSets(participantIdToPendingSets);
     if (enableMST && updateAutomatically) {
-      pendingSetsUpdate(entrantIdToPendingSets);
+      pendingSetsUpdate(participantIdToPendingSets);
     }
-    mainWindow.webContents.send('sets', newSets);
-    sets = newSets;
+    mainWindow.webContents.send('sets', getTournamentRet.sets);
+    sets = getTournamentRet.sets;
   };
-  const findResettableSet = (entrantId: number) => {
-    const completedSet = entrantIdToCompletedSets
-      .get(entrantId)
+  const findResettableSet = (participantId: number) => {
+    const completedSet = participantIdToCompletedSets
+      .get(participantId)
       ?.sort(
         (setA, setB) => (setB.completedAt ?? 0) - (setA.completedAt ?? 0),
       )[0];
-    const startedSet = entrantIdToPendingSets
-      .get(entrantId)
+    const startedSet = participantIdToPendingSets
+      .get(participantId)
       ?.filter((set) => set.startedAt)
       .sort((setA, setB) => setB.startedAt! - setA.startedAt!)[0];
     // prioritize startedSet for RR. If one set was completed more
@@ -319,30 +384,32 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   };
 
   let timeoutId: NodeJS.Timeout | undefined;
-  const setGetEventSetsTimeout = () => {
+  const setGetTournamentSetsTimeout = () => {
     timeoutId = setTimeout(async () => {
       try {
         mainWindow.webContents.send('gettingSets', true);
-        updateEntrantIdToSet(await getEventSets(startggEvent));
+        updateParticipantIdToSet(
+          await getTournamentSets(startggTournament.slug),
+        );
       } finally {
         mainWindow.webContents.send('gettingSets', false);
       }
-      setGetEventSetsTimeout();
+      setGetTournamentSetsTimeout();
     }, REFRESH_CADENCE_MS);
   };
-  const preemptGetEventSets = async () => {
+  const preemptGetTournamentSets = async () => {
     clearTimeout(timeoutId);
     try {
       mainWindow.webContents.send('gettingSets', true);
-      updateEntrantIdToSet(await getEventSets(startggEvent));
+      updateParticipantIdToSet(await getTournamentSets(startggTournament.slug));
     } finally {
       mainWindow.webContents.send('gettingSets', false);
     }
-    setGetEventSetsTimeout();
+    setGetTournamentSetsTimeout();
   };
-  setRequestGetEventSets(() => {
+  setRequestGetTournamentSets(() => {
     setImmediate(() => {
-      preemptGetEventSets();
+      preemptGetTournamentSets();
     });
   });
 
@@ -442,37 +509,35 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
 
     return guilds;
   };
-  const getEntrantId = (
+  const getParticipantId = (
     interaction: ChatInputCommandInteraction<CacheType>,
-  ): number | undefined => {
-    const entrantId = discordIdToEntrantId.get(interaction.user.id);
-    if (!entrantId) {
+  ) => {
+    const participantId = discordIdToParticipant.get(interaction.user.id)?.id;
+    if (!participantId) {
       interaction.reply({
         content:
           "Sorry, I can't figure out who you are on start.gg. Please make sure you're registered for\n" +
-          `\`${tournament.name}, ${startggEvent.name}\`\n` +
+          `\`${startggTournament.name}\`\n` +
           `and that your Discord account \`${interaction.user.tag}\`\n` +
           'is connected here: https://www.start.gg/admin/profile/connected-accounts',
         ephemeral: true,
       });
     }
-    return entrantId;
+    return participantId;
   };
-  const getEntrantIdAndSets = (
+  const getParticipantIdAndSets = (
     interaction: ChatInputCommandInteraction<CacheType>,
-  ): { entrantId?: number; entrantSets?: StartggSet[] } => {
-    const entrantId = getEntrantId(interaction);
-    if (!entrantId) {
+  ) => {
+    const participantId = getParticipantId(interaction);
+    if (!participantId) {
       return {};
     }
     return {
-      entrantId,
-      entrantSets: entrantIdToPendingSets
-        .get(entrantId)
+      participantId,
+      participantSets: participantIdToPendingSets
+        .get(participantId)
         ?.sort((setA, setB) =>
-          getOpponentName(setA, entrantId).localeCompare(
-            getOpponentName(setB, entrantId),
-          ),
+          getOpponentName(setA).localeCompare(getOpponentName(setB)),
         ),
     };
   };
@@ -482,14 +547,17 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       | ChatInputCommandInteraction<CacheType>
       | StringSelectMenuInteraction<CacheType>,
     response: InteractionResponse<boolean>,
-    set: StartggSet,
+    set: ParticipantSet,
   ) => {
     const validDiscordIds = new Set<string>();
-    const forEachPredicate = (discordId: string) => {
-      validDiscordIds.add(discordId);
+    const forEachPredicate = (participantId: number) => {
+      const discord = participantIdToDiscord.get(participantId);
+      if (discord) {
+        validDiscordIds.add(discord.discordId);
+      }
     };
-    entrantIdToDiscordIds.get(set.entrant1Id)?.forEach(forEachPredicate);
-    entrantIdToDiscordIds.get(set.entrant2Id)?.forEach(forEachPredicate);
+    set.opponentParticipantIds.forEach(forEachPredicate);
+    set.ownParticipantIds.forEach(forEachPredicate);
     try {
       const confirmation =
         await response.awaitMessageComponent<ComponentType.Button>({
@@ -503,10 +571,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           { setId: set.id, winnerId, isDQ: false },
           startggApiKey,
         );
-        await preemptGetEventSets();
+        await preemptGetTournamentSets();
         const inner = winnerId === set.entrant1Id ? '[W - L]' : '[L - W]';
         const { displayName } = confirmation.user;
-        const gamerTag = discordIdToGamerTag.get(confirmation.user.id)!;
+        const { gamerTag } = discordIdToParticipant.get(confirmation.user.id)!;
         const suffix = displayName
           .toLowerCase()
           .includes(gamerTag.toLowerCase())
@@ -534,7 +602,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     if (
       discordConfig.applicationId &&
       discordConfig.token &&
-      discordIdToEntrantId.size > 0
+      discordIdToParticipant.size > 0
     ) {
       if (client) {
         await client.destroy();
@@ -565,11 +633,12 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             });
             return;
           }
-          const { entrantId, entrantSets } = getEntrantIdAndSets(interaction);
-          if (!entrantId) {
+          const { participantId, participantSets } =
+            getParticipantIdAndSets(interaction);
+          if (!participantId) {
             return;
           }
-          if (!entrantSets || entrantSets.length === 0) {
+          if (!participantSets || participantSets.length === 0) {
             interaction.reply({ content: 'No pending sets', ephemeral: true });
             return;
           }
@@ -577,16 +646,16 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             .setColor(STARTGG_RED)
             .setTitle('Are you sure you want to DQ?')
             .setFields(
-              entrantSets.slice(0, 25).map((entrantSet) => ({
-                name: entrantSet.fullRoundText,
-                value: `vs ${getOpponentName(entrantSet, entrantId)}`,
+              participantSets.slice(0, 25).map((participantSet) => ({
+                name: participantSet.fullRoundText,
+                value: `vs ${getOpponentName(participantSet)}`,
                 inline: true,
               })),
             );
-          const numNotShown = entrantSets.length - 25;
+          const numNotShown = participantSets.length - 25;
           if (numNotShown > 0) {
             embed.setFooter({
-              text: `${numNotShown} sets not shown (${entrantSets.length} total)`,
+              text: `${numNotShown} sets not shown (${participantSets.length} total)`,
             });
           }
           const response = await interaction.reply({
@@ -600,7 +669,9 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
                 new ButtonBuilder()
                   .setCustomId('confirm')
                   .setLabel(
-                    entrantSets.length > 1 ? 'Confirm all DQs' : 'Confirm DQ',
+                    participantSets.length > 1
+                      ? 'Confirm all DQs'
+                      : 'Confirm DQ',
                   )
                   .setStyle(ButtonStyle.Danger),
               ),
@@ -626,29 +697,29 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             startggPendingConfirmation(embed, confirmation);
             try {
               await reportSets(
-                entrantSets.map(
-                  (entrantSet): ReportStartggSet => ({
-                    setId: entrantSet.id,
-                    winnerId:
-                      entrantId === entrantSet.entrant1Id
-                        ? entrantSet.entrant2Id
-                        : entrantSet.entrant1Id,
+                participantSets.map(
+                  (participantSet): ReportStartggSet => ({
+                    setId: participantSet.id,
+                    winnerId: participantSet.isParticipantEntrant1
+                      ? participantSet.entrant2Id
+                      : participantSet.entrant1Id,
                     isDQ: true,
                   }),
                 ),
                 startggApiKey,
               );
-              await preemptGetEventSets();
-              const entrantName =
-                entrantId === entrantSets[0].entrant1Id
-                  ? entrantSets[0].entrant1Name
-                  : entrantSets[0].entrant2Name;
+              await preemptGetTournamentSets();
+              const entrantName = participantSets[0].isParticipantEntrant1
+                ? participantSets[0].entrant1Name
+                : participantSets[0].entrant2Name;
               const titleSuffix =
-                entrantSets.length > 1
-                  ? ` from ${entrantSets.length} sets`
+                participantSets.length > 1
+                  ? ` from ${participantSets.length} sets`
                   : '';
               const { displayName } = confirmation.user;
-              const gamerTag = discordIdToGamerTag.get(confirmation.user.id)!;
+              const { gamerTag } = discordIdToParticipant.get(
+                confirmation.user.id,
+              )!;
               const footerSuffix = displayName
                 .toLowerCase()
                 .includes(gamerTag.toLowerCase())
@@ -678,16 +749,17 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             });
             return;
           }
-          const { entrantId, entrantSets } = getEntrantIdAndSets(interaction);
-          if (!entrantId) {
+          const { participantId, participantSets } =
+            getParticipantIdAndSets(interaction);
+          if (!participantId) {
             return;
           }
-          if (!entrantSets || entrantSets.length === 0) {
+          if (!participantSets || participantSets.length === 0) {
             interaction.reply({ content: 'No set to report', ephemeral: true });
             return;
           }
-          if (entrantSets.length === 1) {
-            const [set] = entrantSets;
+          if (participantSets.length === 1) {
+            const [set] = participantSets;
             const embed = setInitialEmbed(new EmbedBuilder(), set);
             const response = await interaction.reply({
               components: [getButtonRow(set)],
@@ -707,12 +779,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
                     .setCustomId('asdf')
                     .setPlaceholder('Which set would you like to report?')
                     .addOptions(
-                      entrantSets.map((entrantSet) =>
+                      participantSets.map((participantSet) =>
                         new StringSelectMenuOptionBuilder()
-                          .setLabel(
-                            `vs ${getOpponentName(entrantSet, entrantId)}`,
-                          )
-                          .setValue(entrantSet.id.toString(10)),
+                          .setLabel(`vs ${getOpponentName(participantSet)}`)
+                          .setValue(participantSet.id.toString(10)),
                       ),
                     ),
                 ),
@@ -727,17 +797,19 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
                 });
               if (selectSetConfirmation.isStringSelectMenu()) {
                 const setId = parseInt(selectSetConfirmation.values[0], 10);
-                const entrantSet = entrantSets.find((set) => set.id === setId);
-                if (entrantSet) {
+                const participantSet = participantSets.find(
+                  (set) => set.id === setId,
+                );
+                if (participantSet) {
                   const reportSetResponse = await selectSetConfirmation.update({
-                    components: [getButtonRow(entrantSet)],
-                    embeds: [setInitialEmbed(embed, entrantSet)],
+                    components: [getButtonRow(participantSet)],
+                    embeds: [setInitialEmbed(embed, participantSet)],
                   });
                   await awaitReportResponse(
                     embed,
                     selectSetConfirmation,
                     reportSetResponse,
-                    entrantSet,
+                    participantSet,
                   );
                 }
               }
@@ -753,30 +825,30 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             });
             return;
           }
-          const entrantId = getEntrantId(interaction);
-          if (!entrantId) {
+          const participantId = getParticipantId(interaction);
+          if (!participantId) {
             return;
           }
 
-          const set = findResettableSet(entrantId);
+          const set = findResettableSet(participantId);
           let oppSet: StartggSet | undefined;
           if (set) {
-            const oppEntrantId =
-              set.entrant1Id === entrantId ? set.entrant2Id : set.entrant1Id;
-            oppSet = findResettableSet(oppEntrantId);
+            // eslint-disable-next-line no-restricted-syntax
+            for (const oppParticipantId of set.opponentParticipantIds) {
+              const resettableSet = findResettableSet(oppParticipantId);
+              if (resettableSet && resettableSet.id === set.id) {
+                oppSet = resettableSet;
+                break;
+              }
+            }
           }
-          if (!set || !oppSet || oppSet !== set) {
+          if (!set || !oppSet) {
             interaction.reply({
               content: 'You do not have any resettable sets.',
               ephemeral: true,
             });
             return;
           }
-
-          const initialConfirmValidDiscordIds = new Set<string>();
-          entrantIdToDiscordIds.get(entrantId)?.forEach((discordId) => {
-            initialConfirmValidDiscordIds.add(discordId);
-          });
 
           const embed = new EmbedBuilder()
             .setColor(STARTGG_RED)
@@ -799,12 +871,19 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             ],
           });
 
+          const initialConfirmDiscordIds = new Set<string>();
+          set.ownParticipantIds.forEach((ownParticipantId) => {
+            const discord = participantIdToDiscord.get(ownParticipantId);
+            if (discord) {
+              initialConfirmDiscordIds.add(discord.discordId);
+            }
+          });
           let confirmation: ButtonInteraction<CacheType>;
           try {
             confirmation =
               await response1.awaitMessageComponent<ComponentType.Button>({
                 time: CONFIRMATION_TIMEOUT_MS,
-                filter: (confI) => confI.user.id === interaction.user.id,
+                filter: (confI) => initialConfirmDiscordIds.has(confI.user.id),
               });
             if (confirmation.customId === 'cancel') {
               confirmation.update({
@@ -823,10 +902,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           }
 
           const bilateralConfirmDiscordIds = new Set<string>();
-          const oppEntrantId =
-            entrantId === set.entrant1Id ? set.entrant2Id : set.entrant1Id;
-          entrantIdToDiscordIds.get(oppEntrantId)?.forEach((discordId) => {
-            bilateralConfirmDiscordIds.add(discordId);
+          set.opponentParticipantIds.forEach((oppParticipantId) => {
+            const discord = participantIdToDiscord.get(oppParticipantId);
+            if (discord) {
+              bilateralConfirmDiscordIds.add(discord.discordId);
+            }
           });
           if (bilateralConfirmDiscordIds.size > 0) {
             const oppTags = Array.from(bilateralConfirmDiscordIds.values())
@@ -873,7 +953,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           });
           try {
             await resetSet(set.id, startggApiKey);
-            await preemptGetEventSets();
+            await preemptGetTournamentSets();
             confirmation.editReply({
               embeds: [
                 embed.setColor(STARTGG_GREEN).setFooter({
@@ -1206,56 +1286,39 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     startggApiKey ? getTournaments(startggApiKey) : [],
   );
 
-  ipcMain.removeHandler('getTournament');
-  ipcMain.handle(
-    'getTournament',
-    async (event: IpcMainInvokeEvent, slug: string) => {
-      tournament = await getTournament(slug);
-      await tournamentNameUpdate(tournament.name);
-      return tournament;
-    },
-  );
-
   const discordUsernames: DiscordUsername[] = [];
-  const updateEntrants = (entrants: StartggEntrant[]) => {
+  const updateParticipants = (participants: StartggParticipant[]) => {
     // all clear to clear maps and update
     connectCodes.length = 0;
-    discordIdToEntrantId.clear();
-    discordIdToGamerTag.clear();
-    entrantIdToDiscordIds.clear();
+    discordIdToParticipant.clear();
     participantIdToDiscord.clear();
     discordUsernames.length = 0;
-    entrants.forEach((entrant) => {
-      entrantIdToDiscordIds.set(
-        entrant.id,
-        entrant.participants
-          .filter((participant) => participant.discord)
-          .map((participant) => participant.discord!.id),
-      );
-      entrant.participants.forEach((participant) => {
-        if (participant.connectCode) {
-          connectCodes.push({
-            connectCode: participant.connectCode,
-            entrantId: entrant.id,
-            gamerTag: participant.gamerTag,
-            prefix: participant.prefix,
-          });
-        }
-        if (participant.discord) {
-          discordIdToEntrantId.set(participant.discord.id, entrant.id);
-          discordIdToGamerTag.set(participant.discord.id, participant.gamerTag);
-          participantIdToDiscord.set(participant.id, {
-            id: participant.id,
-            discordId: participant.discord.id,
-            gamerTag: participant.gamerTag,
-            username: participant.discord.username,
-          });
-        }
-        discordUsernames.push({
+
+    participants.forEach((participant) => {
+      if (participant.connectCode) {
+        connectCodes.push({
+          connectCode: participant.connectCode,
+          gamerTag: participant.gamerTag,
+          participantId: participant.id,
+          prefix: participant.prefix,
+        });
+      }
+      if (participant.discord) {
+        discordIdToParticipant.set(participant.discord.id, {
           id: participant.id,
           gamerTag: participant.gamerTag,
-          username: participant.discord?.username || '',
         });
+        participantIdToDiscord.set(participant.id, {
+          id: participant.id,
+          discordId: participant.discord.id,
+          gamerTag: participant.gamerTag,
+          username: participant.discord.username,
+        });
+      }
+      discordUsernames.push({
+        id: participant.id,
+        gamerTag: participant.gamerTag,
+        username: participant.discord?.username || '',
       });
     });
     connectCodes.sort((a, b) => a.gamerTag.localeCompare(b.gamerTag));
@@ -1263,13 +1326,13 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     discordUsernames.sort((a, b) => a.gamerTag.localeCompare(b.gamerTag));
   };
 
-  ipcMain.removeHandler('setEvent');
+  ipcMain.removeHandler('setTournament');
   ipcMain.handle(
-    'setEvent',
+    'setTournament',
     async (
       event: IpcMainInvokeEvent,
-      newEvent: StartggEvent,
-    ): Promise<ParticipantConnections> => {
+      slug: string,
+    ): Promise<ParticipantConnections & { tournament: StartggTournament }> => {
       if (!startggApiKey) {
         throw new Error('Please set start.gg token');
       }
@@ -1277,41 +1340,50 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
 
       try {
         mainWindow.webContents.send('gettingSets', true);
-        const entrantsPromise = getEventEntrants(newEvent.id, startggApiKey);
-        const setsPromise = getEventSets(newEvent);
+        const participantsPromise = getTournamentParticipants(
+          slug,
+          startggApiKey,
+        );
+        const getTournamentRetPromise = getTournamentSets(slug);
         // await both, we don't want to proceed if either throws
-        const entrants = await entrantsPromise;
-        const newSets = await setsPromise;
-        updateEntrants(entrants);
-        updateEntrantIdToSet(newSets);
+        const participants = await participantsPromise;
+        const getTournamentRet = await getTournamentRetPromise;
+        updateParticipants(participants);
+        updateParticipantIdToSet(getTournamentRet);
+        startggTournament = getTournamentRet.tournament;
+        tournamentNameUpdate(getTournamentRet.tournament.name).catch(() => {
+          // just catch
+        });
+
+        setGetTournamentSetsTimeout();
+        if (client === null) {
+          maybeStartDiscordClient();
+        } else if (discordIdToParticipant.size === 0) {
+          await client.destroy();
+          client = null;
+          updateDiscordStatus(DiscordStatus.NONE);
+        }
+
+        return {
+          tournament: startggTournament,
+          connectCodes,
+          discordUsernames,
+        };
       } finally {
         mainWindow.webContents.send('gettingSets', false);
       }
-
-      startggEvent = newEvent;
-      setGetEventSetsTimeout();
-      if (client === null) {
-        maybeStartDiscordClient();
-      } else if (discordIdToEntrantId.size === 0) {
-        await client.destroy();
-        client = null;
-        updateDiscordStatus(DiscordStatus.NONE);
-      }
-
-      return {
-        connectCodes,
-        discordUsernames,
-      };
     },
   );
 
-  ipcMain.removeHandler('refreshEntrants');
+  ipcMain.removeHandler('refreshParticipants');
   ipcMain.handle(
-    'refreshEntrants',
+    'refreshParticipants',
     async (): Promise<ParticipantConnections> => {
       clearTimeout(timeoutId);
-      updateEntrants(await getEventEntrants(startggEvent.id, startggApiKey));
-      await preemptGetEventSets();
+      updateParticipants(
+        await getTournamentParticipants(startggTournament.slug, startggApiKey),
+      );
+      await preemptGetTournamentSets();
       return {
         connectCodes,
         discordUsernames,
@@ -1328,7 +1400,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     if (timeoutId) {
       clearTimeout(timeoutId);
     }
-    await preemptGetEventSets();
+    await preemptGetTournamentSets();
   });
 
   ipcMain.removeHandler('reportSet');
@@ -1345,7 +1417,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       }
 
       await reportSet({ setId, winnerId, isDQ }, startggApiKey);
-      await preemptGetEventSets();
+      await preemptGetTournamentSets();
     },
   );
 
@@ -1358,7 +1430,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       }
 
       await resetSet(setId, startggApiKey);
-      await preemptGetEventSets();
+      await preemptGetTournamentSets();
     },
   );
 
@@ -1379,7 +1451,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         set.isDQ,
         startggApiKey,
       );
-      await preemptGetEventSets();
+      await preemptGetTournamentSets();
     },
   );
 
@@ -1445,13 +1517,15 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           name: channel.name,
         }));
 
-      await preemptGetEventSets();
+      await preemptGetTournamentSets();
       const pendingSets: StartggSet[] = [];
-      sets.pending.forEach((phase) => {
-        phase.phaseGroups.forEach((group) => {
-          pendingSets.push(
-            ...group.sets.filter((set) => set.state === 1 || set.state === 6),
-          );
+      sets.pending.forEach((event) => {
+        event.phases.forEach((phase) => {
+          phase.phaseGroups.forEach((group) => {
+            pendingSets.push(
+              ...group.sets.filter((set) => set.state === 1 || set.state === 6),
+            );
+          });
         });
       });
       const participantIds = new Set<number>();
@@ -1518,9 +1592,8 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       discordStatus,
       discordServerId,
       discordUsernames,
-      eventName: startggEvent.name,
       remoteState: getRemoteState(),
-      tournament,
+      tournament: startggTournament,
     }),
   );
 
