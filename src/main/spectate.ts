@@ -563,6 +563,17 @@ export function connect(port: number) {
             if (broadcastId) {
               spectatingBroadcastIdToDolphinId.delete(broadcastId);
             }
+            const simpleTextPathId = dolphinIdToSimpleTextPathId.get(
+              message.dolphinId,
+            );
+            if (simpleTextPathId) {
+              const simpleTextPath = idToSimpleTextPath.get(simpleTextPathId);
+              if (simpleTextPath) {
+                writeFile(simpleTextPath, '').catch(() => {
+                  // just catch
+                });
+              }
+            }
             dolphinIdToSpectating.delete(message.dolphinId);
             sendSpectating();
             return;
@@ -772,6 +783,16 @@ export function connect(port: number) {
               message.broadcastId,
             );
             if (dolphinId) {
+              const simpleTextPathId =
+                dolphinIdToSimpleTextPathId.get(dolphinId);
+              if (simpleTextPathId) {
+                const simpleTextPath = idToSimpleTextPath.get(simpleTextPathId);
+                if (simpleTextPath) {
+                  writeFile(simpleTextPath, '').catch(() => {
+                    // just catch
+                  });
+                }
+              }
               dolphinIdToSpectating.delete(dolphinId);
             }
             spectatingBroadcastIdToDolphinId.delete(message.broadcastId);
