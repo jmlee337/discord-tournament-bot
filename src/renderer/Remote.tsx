@@ -469,7 +469,7 @@ export default function Remote({
             Connect
           </Button>
         </Stack>
-        <Stack spacing="8px" style={{ marginTop: '8px' }}>
+        <Stack spacing="8px" style={{ marginTop: '8px', marginBottom: '24px' }}>
           {spectating.map((spectate) => (
             <Card
               key={spectate.dolphinId}
