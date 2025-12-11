@@ -412,16 +412,20 @@ export async function setOverlayDolphinId(newOverlayDolphinId: string) {
 
       const replayPath = dolphinIdToReplayPath.get(overlayDolphinId);
       const simpleTextPath = idToSimpleTextPath.get(simpleTextPathId);
-      if (replayPath && simpleTextPath) {
+      if (simpleTextPath) {
         try {
-          const newFileScoreboardInfo = await processNewReplay(replayPath);
-          if (newFileScoreboardInfo) {
-            await writeFile(
-              simpleTextPath,
-              newFileScoreboardInfo.p1Name && newFileScoreboardInfo.p2Name
-                ? `${newFileScoreboardInfo.p1Name} vs ${newFileScoreboardInfo.p2Name}`
-                : '',
-            );
+          if (replayPath) {
+            const newFileScoreboardInfo = await processNewReplay(replayPath);
+            if (newFileScoreboardInfo) {
+              await writeFile(
+                simpleTextPath,
+                newFileScoreboardInfo.p1Name && newFileScoreboardInfo.p2Name
+                  ? `${newFileScoreboardInfo.p1Name} vs ${newFileScoreboardInfo.p2Name}`
+                  : '',
+              );
+            }
+          } else {
+            await writeFile(simpleTextPath, '');
           }
         } catch {
           // just catch
@@ -435,9 +439,32 @@ export async function setOverlayDolphinId(newOverlayDolphinId: string) {
       throw new Error('simpleTextDolphinIds/simpleTextPathIds length mismatch');
     }
 
-    for (let i = 0; i < dolphinIds.length; i += 1) {
-      dolphinIdToSimpleTextPathId.set(dolphinIds[i], simpleTextPathIds[i]);
-    }
+    await Promise.all(
+      dolphinIds.map(async (dolphinId, i) => {
+        dolphinIdToSimpleTextPathId.set(dolphinId, simpleTextPathIds[i]);
+        const replayPath = dolphinIdToReplayPath.get(dolphinId);
+        const simpleTextPath = idToSimpleTextPath.get(simpleTextPathIds[i]);
+        if (simpleTextPath) {
+          try {
+            if (replayPath) {
+              const newFileScoreboardInfo = await processNewReplay(replayPath);
+              if (newFileScoreboardInfo) {
+                await writeFile(
+                  simpleTextPath,
+                  newFileScoreboardInfo.p1Name && newFileScoreboardInfo.p2Name
+                    ? `${newFileScoreboardInfo.p1Name} vs ${newFileScoreboardInfo.p2Name}`
+                    : '',
+                );
+              }
+            } else {
+              await writeFile(simpleTextPath, '');
+            }
+          } catch {
+            // just catch
+          }
+        }
+      }),
+    );
   }
 
   overlayDolphinId = newOverlayDolphinId;
