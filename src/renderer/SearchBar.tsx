@@ -9,10 +9,12 @@ import {
 import { MutableRefObject } from 'react';
 
 export default function SearchBar({
+  fullWidth,
   inputRef,
   searchSubstr,
   setSearchSubstr,
 }: {
+  fullWidth?: boolean;
   inputRef: MutableRefObject<HTMLInputElement | undefined>;
   searchSubstr: string;
   setSearchSubstr: (searchSubstr: string) => void;
@@ -21,6 +23,7 @@ export default function SearchBar({
     <Box style={{ padding: '8px 0' }}>
       <TextField
         label="Search"
+        fullWidth={fullWidth}
         inputRef={inputRef}
         onChange={(event) => {
           setSearchSubstr(event.target.value);
@@ -59,3 +62,7 @@ export default function SearchBar({
     </Box>
   );
 }
+
+SearchBar.defaultProps = {
+  fullWidth: false,
+};

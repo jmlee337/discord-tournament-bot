@@ -1,8 +1,10 @@
 import {
+  Button,
   Dialog,
   DialogContent,
   DialogTitle,
   IconButton,
+  Link,
   Stack,
   Table,
   TableBody,
@@ -10,8 +12,10 @@ import {
   TableHead,
   TableRow,
   Tooltip,
+  Typography,
 } from '@mui/material';
 import { useRef, useState } from 'react';
+import { ContentCopy } from '@mui/icons-material';
 import {
   HIGHLIGHT_COLOR,
   Highlight,
@@ -37,6 +41,7 @@ export default function DiscordUsernames({
   discordUsernames: DiscordUsername[];
 }) {
   const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>();
   const [searchSubstr, setSearchSubstr] = useState('');
 
@@ -107,17 +112,40 @@ export default function DiscordUsernames({
       >
         <DialogTitle>Discord Usernames</DialogTitle>
         <DialogContent>
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-          >
-            <SearchBar
-              inputRef={searchInputRef}
-              searchSubstr={searchSubstr}
-              setSearchSubstr={setSearchSubstr}
-            />
+          <Stack direction="row" alignItems="center" gap="8px">
+            <Typography variant="caption">
+              Players can update their Discord connection at
+              <br />
+              <Link
+                href="https://www.start.gg/admin/profile/connected-accounts"
+                target="_blank"
+                rel="noreferrer"
+              >
+                https://www.start.gg/admin/profile/connected-accounts
+              </Link>
+            </Typography>
+            <Button
+              style={{ width: '94px' }}
+              variant="contained"
+              disabled={copied}
+              endIcon={copied ? undefined : <ContentCopy />}
+              onClick={async () => {
+                await window.electron.copyToClipboard(
+                  'https://www.start.gg/admin/profile/connected-accounts',
+                );
+                setCopied(true);
+                setTimeout(() => setCopied(false), 5000);
+              }}
+            >
+              {copied ? 'Copied!' : 'Copy'}
+            </Button>
           </Stack>
+          <SearchBar
+            fullWidth
+            inputRef={searchInputRef}
+            searchSubstr={searchSubstr}
+            setSearchSubstr={setSearchSubstr}
+          />
           <Table stickyHeader size="small">
             <TableHead>
               <TableRow>

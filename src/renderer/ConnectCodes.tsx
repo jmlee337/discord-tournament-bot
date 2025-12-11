@@ -4,7 +4,6 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  Stack,
   SvgIcon,
   Table,
   TableBody,
@@ -126,17 +125,12 @@ export default function ConnectCodes({
       >
         <DialogTitle>Connect Codes</DialogTitle>
         <DialogContent>
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-          >
-            <SearchBar
-              inputRef={searchInputRef}
-              searchSubstr={searchSubstr}
-              setSearchSubstr={setSearchSubstr}
-            />
-          </Stack>
+          <SearchBar
+            fullWidth
+            inputRef={searchInputRef}
+            searchSubstr={searchSubstr}
+            setSearchSubstr={setSearchSubstr}
+          />
           <Table stickyHeader size="small">
             <TableHead>
               <TableRow>

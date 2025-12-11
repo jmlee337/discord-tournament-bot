@@ -7,6 +7,7 @@ import {
   DialogTitle,
   Divider,
   IconButton,
+  Link,
   Stack,
   TextField,
   Tooltip,
@@ -141,13 +142,13 @@ export default function Settings({
           <DialogContentText>
             Get your start.gg token by clicking “Create new token” in the
             “Personal Access Tokens” tab of{' '}
-            <a
+            <Link
               href="https://start.gg/admin/profile/developer"
               target="_blank"
               rel="noreferrer"
             >
               this page
-            </a>
+            </Link>
             . Keep it private!
           </DialogContentText>
           <Stack alignItems="center" direction="row" gap="8px">
@@ -173,6 +174,7 @@ export default function Settings({
                 setStartggApiKeyCopied(true);
                 setTimeout(() => setStartggApiKeyCopied(false), 5000);
               }}
+              style={{ width: '94px' }}
               variant="contained"
             >
               {startggApiKeyCopied ? 'Copied!' : 'Copy'}
@@ -181,13 +183,13 @@ export default function Settings({
           <DialogContentText>
             Get your bot&apos;s application id from the “General Information”
             settings tab in the appropriate app found on{' '}
-            <a
+            <Link
               href="https://discord.com/developers/applications"
               target="_blank"
               rel="noreferrer"
             >
               this page
-            </a>
+            </Link>
             .
           </DialogContentText>
           <Stack alignItems="center" direction="row" gap="8px">
@@ -207,13 +209,13 @@ export default function Settings({
           <DialogContentText>
             Get your bot&apos;s token by clicking “Reset Token” on the “Bot”
             settings tab in the appropriate app found on{' '}
-            <a
+            <Link
               href="https://discord.com/developers/applications"
               target="_blank"
               rel="noreferrer"
             >
               this page
-            </a>
+            </Link>
             . Keep it private!
           </DialogContentText>
           <Stack alignItems="center" direction="row" gap="8px">
@@ -238,6 +240,7 @@ export default function Settings({
                 setDiscordTokenCopied(true);
                 setTimeout(() => setDiscordTokenCopied(false), 5000);
               }}
+              style={{ width: '94px' }}
               variant="contained"
             >
               {discordTokenCopied ? 'Copied!' : 'Copy'}
@@ -274,13 +277,13 @@ export default function Settings({
           {needUpdate && (
             <Alert severity="warning">
               Update available!{' '}
-              <a
+              <Link
                 href="https://github.com/jmlee337/discord-tournament-bot/releases/latest"
                 target="_blank"
                 rel="noreferrer"
               >
                 Version {latestAppVersion}
-              </a>
+              </Link>
             </Alert>
           )}
           <Divider sx={{ marginTop: '4px', typography: 'subtitle2' }}>
