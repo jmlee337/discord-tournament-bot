@@ -192,11 +192,12 @@ function Hello() {
     window.electron.onDiscordServers((event, newDiscordServers) => {
       setDiscordServers(newDiscordServers);
     });
-    window.electron.onDiscordUsernames((event, newDiscordUsernames) => {
-      setDiscordUsernames(newDiscordUsernames);
-    });
     window.electron.onGettingSets((event, getting) => {
       setRefreshing(getting);
+    });
+    window.electron.onParticipants((event, newParticipantConnections) => {
+      setConnectCodes(newParticipantConnections.connectCodes);
+      setDiscordUsernames(newParticipantConnections.discordUsernames);
     });
     window.electron.onRemoteState((event, newRemoteState) => {
       setRemoteState(newRemoteState);
@@ -247,8 +248,6 @@ function Hello() {
           tournaments={tournaments}
           tournament={tournament}
           setTournament={setTournament}
-          setConnectCodes={setConnectCodes}
-          setDiscordUsernames={setDiscordUsernames}
           showErrorDialog={showErrorDialog}
         />
         <Stack
@@ -361,18 +360,8 @@ function Hello() {
               latestAppVersion={latestAppVersion}
               gotSettings={gotSettings}
             />
-            <ConnectCodes
-              connectCodes={connectCodes}
-              setConnectCodes={setConnectCodes}
-              setDiscordUsernames={setDiscordUsernames}
-              showErrorDialog={showErrorDialog}
-            />
-            <DiscordUsernames
-              discordUsernames={discordUsernames}
-              setConnectCodes={setConnectCodes}
-              setDiscordUsernames={setDiscordUsernames}
-              showErrorDialog={showErrorDialog}
-            />
+            <ConnectCodes connectCodes={connectCodes} />
+            <DiscordUsernames discordUsernames={discordUsernames} />
             <SearchBar
               inputRef={searchInputRef}
               searchSubstr={searchSubstr}

@@ -15,26 +15,17 @@ import {
   Typography,
 } from '@mui/material';
 import { FormEvent, useState } from 'react';
-import {
-  AdminedTournament,
-  ConnectCode,
-  DiscordUsername,
-  StartggTournament,
-} from '../common/types';
+import { AdminedTournament, StartggTournament } from '../common/types';
 
 export default function TournamentEvent({
   tournaments,
   tournament,
   setTournament,
-  setConnectCodes,
-  setDiscordUsernames,
   showErrorDialog,
 }: {
   tournaments: AdminedTournament[];
   tournament: StartggTournament;
   setTournament: (tournament: StartggTournament) => void;
-  setConnectCodes: (connectCodes: ConnectCode[]) => void;
-  setDiscordUsernames: (discordUsernames: DiscordUsername[]) => void;
   showErrorDialog: (messages: string[]) => void;
 }) {
   const [tournamentDialogOpen, setTournamentDialogOpen] = useState(false);
@@ -42,10 +33,7 @@ export default function TournamentEvent({
   const getTournament = async (slug: string) => {
     setGettingTournament(true);
     try {
-      const ret = await window.electron.setTournament(slug);
-      setTournament(ret.tournament);
-      setConnectCodes(ret.connectCodes);
-      setDiscordUsernames(ret.discordUsernames);
+      setTournament(await window.electron.setTournament(slug));
       setTournamentDialogOpen(false);
     } catch (e: any) {
       const message = e instanceof Error ? e.message : e;

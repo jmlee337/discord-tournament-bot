@@ -1,6 +1,5 @@
 import { useRef, useState } from 'react';
 import {
-  CircularProgress,
   Dialog,
   DialogContent,
   DialogTitle,
@@ -14,13 +13,7 @@ import {
   TableRow,
   Tooltip,
 } from '@mui/material';
-import { Refresh } from '@mui/icons-material';
-import {
-  ConnectCode,
-  DiscordUsername,
-  Highlight,
-  HIGHLIGHT_COLOR,
-} from '../common/types';
+import { ConnectCode, Highlight, HIGHLIGHT_COLOR } from '../common/types';
 import SearchBar from './SearchBar';
 import {
   popWindowEventListener,
@@ -35,19 +28,12 @@ type ConnectCodeWithHighlight = {
 
 export default function ConnectCodes({
   connectCodes,
-  setConnectCodes,
-  setDiscordUsernames,
-  showErrorDialog,
 }: {
   connectCodes: ConnectCode[];
-  setConnectCodes: (connectCodes: ConnectCode[]) => void;
-  setDiscordUsernames: (discordUsernames: DiscordUsername[]) => void;
-  showErrorDialog: (messages: string[]) => void;
 }) {
   const [open, setOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>();
   const [searchSubstr, setSearchSubstr] = useState('');
-  const [refreshing, setRefreshing] = useState(false);
 
   const connectCodesWithHighlights: ConnectCodeWithHighlight[] = [];
   connectCodes.forEach((connectCode) => {
@@ -150,34 +136,6 @@ export default function ConnectCodes({
               searchSubstr={searchSubstr}
               setSearchSubstr={setSearchSubstr}
             />
-            <Tooltip
-              placement="top"
-              title={refreshing ? 'Refreshing' : 'Refresh'}
-            >
-              <span>
-                <IconButton
-                  disabled={refreshing}
-                  onClick={async () => {
-                    try {
-                      setRefreshing(true);
-                      const participantConnections =
-                        await window.electron.refreshParticipants();
-                      setConnectCodes(participantConnections.connectCodes);
-                      setDiscordUsernames(
-                        participantConnections.discordUsernames,
-                      );
-                    } catch (e: any) {
-                      const message = e instanceof Error ? e.message : e;
-                      showErrorDialog([message]);
-                    } finally {
-                      setRefreshing(false);
-                    }
-                  }}
-                >
-                  {refreshing ? <CircularProgress size="24px" /> : <Refresh />}
-                </IconButton>
-              </span>
-            </Tooltip>
           </Stack>
           <Table stickyHeader size="small">
             <TableHead>

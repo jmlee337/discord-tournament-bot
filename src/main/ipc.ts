@@ -245,10 +245,13 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
    * Needed for both Discord and start.gg
    */
   const connectCodes: ConnectCode[] = [];
+  let client: Client | null = null;
   const discordIdToParticipant = new Map<
     string,
     { id: number; gamerTag: string }
   >();
+  let discordServerId = '';
+  const discordUsernames: DiscordUsername[] = [];
   const participantIdToCompletedSets = new Map<number, ParticipantSet[]>();
   const participantIdToPendingSets = new Map<number, ParticipantSet[]>();
   const participantIdToDiscordToPing = new Map<number, DiscordToPing>();
@@ -259,6 +262,13 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let startggTournament: StartggTournament = {
     name: '',
     slug: '',
+  };
+  const sendParticipants = () => {
+    const newParticipantConnections: ParticipantConnections = {
+      connectCodes,
+      discordUsernames,
+    };
+    mainWindow.webContents.send('participants', newParticipantConnections);
   };
   const updateParticipantIdToSet = (getTournamentRet: GetTournamentRet) => {
     participantIdToCompletedSets.clear();
@@ -375,6 +385,45 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     mainWindow.webContents.send('sets', getTournamentRet.sets);
     sets = getTournamentRet.sets;
   };
+  const updateParticipants = (participants: StartggParticipant[]) => {
+    // all clear to clear maps and update
+    connectCodes.length = 0;
+    discordIdToParticipant.clear();
+    participantIdToDiscordToPing.clear();
+    discordUsernames.length = 0;
+
+    participants.forEach((participant) => {
+      if (participant.connectCode) {
+        connectCodes.push({
+          connectCode: participant.connectCode,
+          gamerTag: participant.gamerTag,
+          participantId: participant.id,
+          prefix: participant.prefix,
+        });
+      }
+      if (participant.discord) {
+        discordIdToParticipant.set(participant.discord.id, {
+          id: participant.id,
+          gamerTag: participant.gamerTag,
+        });
+        participantIdToDiscordToPing.set(participant.id, {
+          discordId: participant.discord.id,
+          gamerTag: participant.gamerTag,
+          username: participant.discord.username,
+        });
+      }
+      discordUsernames.push({
+        discordId: participant.discord?.id ?? '',
+        participantId: participant.id,
+        gamerTag: participant.gamerTag,
+        username: participant.discord?.username ?? '',
+        isDiscordServerMember: IsDiscordServerMember.UNKNOWN,
+      });
+    });
+    connectCodes.sort((a, b) => a.gamerTag.localeCompare(b.gamerTag));
+    setConnectCodes(connectCodes);
+    discordUsernames.sort((a, b) => a.gamerTag.localeCompare(b.gamerTag));
+  };
   const findResettableSet = (participantId: number) => {
     const completedSet = participantIdToCompletedSets
       .get(participantId)
@@ -404,9 +453,27 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     timeoutId = setTimeout(async () => {
       try {
         mainWindow.webContents.send('gettingSets', true);
-        updateParticipantIdToSet(
-          await getTournamentSets(startggTournament.slug),
+        const newParticipantsPromise = getTournamentParticipants(
+          startggTournament.slug,
+          startggApiKey,
         );
+        const newSetsPromise = getTournamentSets(startggTournament.slug);
+        const [newParticipants, newSets] = await Promise.all([
+          newParticipantsPromise,
+          newSetsPromise,
+        ]);
+
+        updateParticipants(newParticipants);
+        updateParticipantIdToSet(newSets);
+
+        const guild = client?.guilds.valueOf().get(discordServerId);
+        if (guild) {
+          updateIsDiscordServerMember(
+            discordUsernames,
+            guild.members.valueOf(),
+          );
+        }
+        sendParticipants();
       } finally {
         mainWindow.webContents.send('gettingSets', false);
       }
@@ -417,7 +484,24 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     clearTimeout(timeoutId);
     try {
       mainWindow.webContents.send('gettingSets', true);
-      updateParticipantIdToSet(await getTournamentSets(startggTournament.slug));
+      const newParticipantsPromise = getTournamentParticipants(
+        startggTournament.slug,
+        startggApiKey,
+      );
+      const newSetsPromise = getTournamentSets(startggTournament.slug);
+      const [newParticipants, newSets] = await Promise.all([
+        newParticipantsPromise,
+        newSetsPromise,
+      ]);
+
+      updateParticipants(newParticipants);
+      updateParticipantIdToSet(newSets);
+
+      const guild = client?.guilds.valueOf().get(discordServerId);
+      if (guild) {
+        updateIsDiscordServerMember(discordUsernames, guild.members.valueOf());
+      }
+      sendParticipants();
     } finally {
       mainWindow.webContents.send('gettingSets', false);
     }
@@ -432,9 +516,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   /**
    * Discord
    */
-  let client: Client | null = null;
   let discordStatus = DiscordStatus.NONE;
-  let discordServerId = '';
   const updateDiscordStatus = (newDiscordStatus: DiscordStatus) => {
     discordStatus = newDiscordStatus;
     mainWindow.webContents.send('discordStatus', newDiscordStatus);
@@ -475,7 +557,6 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       updateDiscordStatus(DiscordStatus.BAD_APPLICATION_ID);
     }
   };
-  const discordUsernames: DiscordUsername[] = [];
   const getGuilds = async () => {
     if (!client) {
       return [];
@@ -510,7 +591,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       mainWindow.webContents.send('discordServerId', discordServerId);
       await guild.members.fetch();
       updateIsDiscordServerMember(discordUsernames, guild.members.valueOf());
-      mainWindow.webContents.send('discordUsernames', discordUsernames);
+      sendParticipants();
     } else if (
       discordServerId &&
       !guilds.some((guild) => guild.id === discordServerId)
@@ -520,7 +601,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       discordUsernames.forEach((discordUsername) => {
         discordUsername.isDiscordServerMember = IsDiscordServerMember.UNKNOWN;
       });
-      mainWindow.webContents.send('discordUsernames', discordUsernames);
+      sendParticipants();
     }
 
     return guilds.map(
@@ -1310,53 +1391,13 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     startggApiKey ? getTournaments(startggApiKey) : [],
   );
 
-  const updateParticipants = (participants: StartggParticipant[]) => {
-    // all clear to clear maps and update
-    connectCodes.length = 0;
-    discordIdToParticipant.clear();
-    participantIdToDiscordToPing.clear();
-    discordUsernames.length = 0;
-
-    participants.forEach((participant) => {
-      if (participant.connectCode) {
-        connectCodes.push({
-          connectCode: participant.connectCode,
-          gamerTag: participant.gamerTag,
-          participantId: participant.id,
-          prefix: participant.prefix,
-        });
-      }
-      if (participant.discord) {
-        discordIdToParticipant.set(participant.discord.id, {
-          id: participant.id,
-          gamerTag: participant.gamerTag,
-        });
-        participantIdToDiscordToPing.set(participant.id, {
-          discordId: participant.discord.id,
-          gamerTag: participant.gamerTag,
-          username: participant.discord.username,
-        });
-      }
-      discordUsernames.push({
-        discordId: participant.discord?.id ?? '',
-        participantId: participant.id,
-        gamerTag: participant.gamerTag,
-        username: participant.discord?.username ?? '',
-        isDiscordServerMember: IsDiscordServerMember.UNKNOWN,
-      });
-    });
-    connectCodes.sort((a, b) => a.gamerTag.localeCompare(b.gamerTag));
-    setConnectCodes(connectCodes);
-    discordUsernames.sort((a, b) => a.gamerTag.localeCompare(b.gamerTag));
-  };
-
   ipcMain.removeHandler('setTournament');
   ipcMain.handle(
     'setTournament',
     async (
       event: IpcMainInvokeEvent,
       slug: string,
-    ): Promise<ParticipantConnections & { tournament: StartggTournament }> => {
+    ): Promise<StartggTournament> => {
       if (!startggApiKey) {
         throw new Error('Please set start.gg token');
       }
@@ -1395,37 +1436,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
             );
           }
         }
-
-        return {
-          tournament: startggTournament,
-          connectCodes,
-          discordUsernames,
-        };
+        sendParticipants();
+        return startggTournament;
       } finally {
         mainWindow.webContents.send('gettingSets', false);
       }
-    },
-  );
-
-  ipcMain.removeHandler('refreshParticipants');
-  ipcMain.handle(
-    'refreshParticipants',
-    async (): Promise<ParticipantConnections> => {
-      clearTimeout(timeoutId);
-      updateParticipants(
-        await getTournamentParticipants(startggTournament.slug, startggApiKey),
-      );
-
-      const guild = client?.guilds.valueOf().get(discordServerId);
-      if (guild) {
-        updateIsDiscordServerMember(discordUsernames, guild.members.valueOf());
-      }
-
-      await preemptGetTournamentSets();
-      return {
-        connectCodes,
-        discordUsernames,
-      };
     },
   );
 
@@ -1509,7 +1524,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       mainWindow.webContents.send('discordServerId', discordServerId);
       await guild.members.fetch();
       updateIsDiscordServerMember(discordUsernames, guild.members.valueOf());
-      mainWindow.webContents.send('discordUsernames', discordUsernames);
+      sendParticipants();
     },
   );
 

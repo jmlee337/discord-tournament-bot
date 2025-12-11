@@ -9,7 +9,6 @@ import {
   DiscordServer,
   DiscordStatus,
   DiscordToPing,
-  DiscordUsername,
   ParticipantConnections,
   RemoteState,
   Sets,
@@ -100,12 +99,8 @@ const electronHandler = {
     ipcRenderer.invoke('setStartggApiKey', startggApiKey),
   getTournaments: (): Promise<AdminedTournament[]> =>
     ipcRenderer.invoke('getTournaments'),
-  setTournament: (
-    slug: string,
-  ): Promise<ParticipantConnections & { tournament: StartggTournament }> =>
+  setTournament: (slug: string): Promise<StartggTournament> =>
     ipcRenderer.invoke('setTournament', slug),
-  refreshParticipants: (): Promise<ParticipantConnections> =>
-    ipcRenderer.invoke('refreshParticipants'),
   refreshSets: (): Promise<void> => ipcRenderer.invoke('refreshSets'),
   reportSet: (setId: number, winnerId: number, isDQ: boolean): Promise<void> =>
     ipcRenderer.invoke('reportSet', setId, winnerId, isDQ),
@@ -162,15 +157,6 @@ const electronHandler = {
     ipcRenderer.removeAllListeners('discordStatus');
     ipcRenderer.on('discordStatus', callback);
   },
-  onDiscordUsernames: (
-    callback: (
-      event: IpcRendererEvent,
-      discordUsernames: DiscordUsername[],
-    ) => void,
-  ) => {
-    ipcRenderer.removeAllListeners('discordUsernames');
-    ipcRenderer.on('discordUsernames', callback);
-  },
   onGettingSets: (
     callback: (event: IpcRendererEvent, getting: boolean) => void,
   ) => {
@@ -182,6 +168,15 @@ const electronHandler = {
   ) => {
     ipcRenderer.removeAllListeners('refreshingBroadcasts');
     ipcRenderer.on('refreshingBroadcasts', callback);
+  },
+  onParticipants: (
+    callback: (
+      event: IpcRendererEvent,
+      participants: ParticipantConnections,
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('participants');
+    ipcRenderer.on('participants', callback);
   },
   onSets: (callback: (event: IpcRendererEvent, sets: Sets) => void) => {
     ipcRenderer.removeAllListeners('sets');
