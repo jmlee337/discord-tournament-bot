@@ -145,8 +145,14 @@ export type Broadcast = {
   slippiName: string;
 };
 
+export type DolphinId =
+  | 'spectate-1'
+  | 'spectate-2'
+  | 'spectate-3'
+  | 'spectate-4';
+
 export type Spectating = {
-  dolphinId: string;
+  dolphinId: DolphinId;
   broadcast?: Broadcast;
   spectating: boolean;
 };
@@ -196,3 +202,5 @@ export type GetTournamentRet = {
   sets: Sets;
   tournament: StartggTournament;
 };
+
+export type OverlayId = 1 | 2 | 3 | 4;

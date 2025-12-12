@@ -41,8 +41,10 @@ import {
   DiscordStatus,
   DiscordToPing,
   DiscordUsername,
+  DolphinId,
   GetTournamentRet,
   IsDiscordServerMember,
+  OverlayId,
   ParticipantConnections,
   ParticipantSet,
   ReportStartggSet,
@@ -66,35 +68,34 @@ import {
 import {
   connect,
   getBroadcasts,
-  getOverlayDolphinId,
+  getDolphinIdToOverlayId,
   getRemoteState,
   getSpectating,
   initSpectate,
   refreshBroadcasts,
   setConnectCodes,
-  setEnableOverlay,
-  setOverlayDolphinId,
+  setDolphinOverlayId,
   setParticipantIdToPendingSets,
   setSimpleTextPathA,
   setSimpleTextPathB,
   setSimpleTextPathC,
+  setSimpleTextPathD,
   setUpdateAutomatically,
   startSpectating,
   stopSpectating,
 } from './spectate';
 import {
+  deleteMstOverlay,
+  forEachMstOverlay,
+  getMstOverlay,
+  getMstOverlaysLength,
   getScoreboardInfoJSONPath,
   initMST,
-  manualUpdate,
-  pendingSetsUpdate,
-  readScoreboardInfo,
-  setEnableMST,
-  setEnableSggRound,
+  MSTOverlay,
   setEnableSggSponsors,
   setEnableSkinColor,
+  setMstOverlay,
   setRequestGetTournamentSets,
-  setResourcesPath,
-  tournamentNameUpdate,
 } from './mst';
 import { MSTManualUpdateScoreboardInfo } from '../common/mst';
 import { REFRESH_CADENCE_MS } from '../common/constants';
@@ -196,14 +197,22 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     discordCommandReport: boolean;
     discordCommandReset: boolean;
     discordRegisteredVersion: string;
-    enableMST: boolean;
     enableSkinColor: boolean;
+    enableSggRound1: boolean;
+    enableSggRound2: boolean;
+    enableSggRound3: boolean;
+    enableSggRound4: boolean;
     enableSggSponsors: boolean;
+    numMSTs: 0 | OverlayId;
     remotePort: number;
-    resourcesPath: string;
+    resourcesPath1: string;
+    resourcesPath2: string;
+    resourcesPath3: string;
+    resourcesPath4: string;
     simpleTextPathA: string;
     simpleTextPathB: string;
     simpleTextPathC: string;
+    simpleTextPathD: string;
     startggApiKey: string;
     updateAutomatically: boolean;
   }>();
@@ -215,31 +224,47 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let discordCommandReport = store.get('discordCommandReport', true);
   let discordCommandReset = store.get('discordCommandReset', true);
   let discordRegisteredVersion = store.get('discordRegisteredVersion', '');
-  let enableMST = store.get('enableMST', false);
   let enableSkinColor = store.get('enableSkinColor', true);
+  let enableSggRound1 = store.get('enableSggRound1', true);
+  let enableSggRound2 = store.get('enableSggRound2', true);
+  let enableSggRound3 = store.get('enableSggRound3', true);
+  let enableSggRound4 = store.get('enableSggRound4', true);
   let enableSggSponsors = store.get('enableSggSponsors', true);
-  let enableSggRound = store.get('enableSggRound', true);
+  const initNumMSTs = store.get('numMSTs', 0);
   let remotePort = store.get('remotePort', 49809);
-  let resourcesPath = store.get('resourcesPath', '');
+  let resourcesPath1 = store.get('resourcesPath1', '');
+  let resourcesPath2 = store.get('resourcesPath2', '');
+  let resourcesPath3 = store.get('resourcesPath3', '');
+  let resourcesPath4 = store.get('resourcesPath4', '');
   let simpleTextPathA = store.get('simpleTextPathA', '');
   let simpleTextPathB = store.get('simpleTextPathB', '');
   let simpleTextPathC = store.get('simpleTextPathC', '');
+  let simpleTextPathD = store.get('simpleTextPathD', '');
   let startggApiKey = store.get('startggApiKey', '');
   let updateAutomatically = store.get('updateAutomatically', true);
 
   // spectate
-  setEnableOverlay(enableMST);
   setSimpleTextPathA(simpleTextPathA);
   setSimpleTextPathB(simpleTextPathB);
   setSimpleTextPathC(simpleTextPathC);
+  setSimpleTextPathD(simpleTextPathD);
   setUpdateAutomatically(updateAutomatically);
 
   // mst
-  setEnableMST(enableMST, false);
-  setResourcesPath(resourcesPath, false);
   setEnableSkinColor(enableSkinColor);
   setEnableSggSponsors(enableSggSponsors);
-  setEnableSggRound(enableSggRound);
+  if (initNumMSTs > 0) {
+    setMstOverlay(1, new MSTOverlay(1, enableSggRound1, resourcesPath1));
+  }
+  if (initNumMSTs > 1) {
+    setMstOverlay(2, new MSTOverlay(2, enableSggRound2, resourcesPath2));
+  }
+  if (initNumMSTs > 2) {
+    setMstOverlay(3, new MSTOverlay(3, enableSggRound3, resourcesPath3));
+  }
+  if (initNumMSTs > 3) {
+    setMstOverlay(4, new MSTOverlay(4, enableSggRound4, resourcesPath4));
+  }
 
   /**
    * Needed for both Discord and start.gg
@@ -379,8 +404,12 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       });
     });
     setParticipantIdToPendingSets(participantIdToPendingSets);
-    if (enableMST && updateAutomatically) {
-      pendingSetsUpdate(participantIdToPendingSets);
+    if (updateAutomatically) {
+      forEachMstOverlay((mstOverlay) => {
+        mstOverlay.pendingSetsUpdate(participantIdToPendingSets).catch(() => {
+          // just catch
+        });
+      });
     }
     mainWindow.webContents.send('sets', getTournamentRet.sets);
     sets = getTournamentRet.sets;
@@ -1188,43 +1217,77 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
-  ipcMain.removeHandler('getOverlayDolphinId');
-  ipcMain.handle('getOverlayDolphinId', () => getOverlayDolphinId());
+  ipcMain.removeHandler('getDolphinIdToOverlayId');
+  ipcMain.handle('getDolphinIdToOverlayId', () => getDolphinIdToOverlayId());
 
-  ipcMain.removeHandler('setOverlayDolphinId');
+  ipcMain.removeHandler('setDolphinOverlayId');
   ipcMain.handle(
-    'setOverlayDolphinId',
-    (event: IpcMainInvokeEvent, newOverlayDolphinId: string) =>
-      setOverlayDolphinId(newOverlayDolphinId),
+    'setDolphinOverlayId',
+    (event: IpcMainInvokeEvent, dolphinId: DolphinId, overlayId: OverlayId) =>
+      setDolphinOverlayId(dolphinId, overlayId),
   );
 
-  ipcMain.removeHandler('getEnableMST');
-  ipcMain.handle('getEnableMST', () => enableMST);
+  ipcMain.removeHandler('getNumMSTs');
+  ipcMain.handle('getNumMSTs', () => getMstOverlaysLength());
 
-  ipcMain.removeHandler('setEnableMST');
+  ipcMain.removeHandler('setNumMSTs');
   ipcMain.handle(
-    'setEnableMST',
-    async (event: IpcMainInvokeEvent, newEnableMST: boolean) => {
-      store.set('enableMST', newEnableMST);
-      enableMST = newEnableMST;
-      setEnableOverlay(enableMST);
-      await setEnableMST(enableMST, true);
+    'setNumMSTs',
+    (event: IpcMainInvokeEvent, newNumMSTs: 0 | OverlayId) => {
+      const numMSTs = getMstOverlaysLength();
+      if (newNumMSTs === numMSTs) {
+        return;
+      }
+
+      if (newNumMSTs > numMSTs) {
+        if (newNumMSTs > 0) {
+          setMstOverlay(1, new MSTOverlay(1, enableSggRound1, resourcesPath1));
+        }
+        if (newNumMSTs > 1) {
+          setMstOverlay(2, new MSTOverlay(2, enableSggRound2, resourcesPath2));
+        }
+        if (newNumMSTs > 2) {
+          setMstOverlay(3, new MSTOverlay(3, enableSggRound3, resourcesPath3));
+        }
+        if (newNumMSTs > 3) {
+          setMstOverlay(4, new MSTOverlay(4, enableSggRound4, resourcesPath4));
+        }
+      } else {
+        if (newNumMSTs < 4) {
+          deleteMstOverlay(4);
+        }
+        if (newNumMSTs < 3) {
+          deleteMstOverlay(3);
+        }
+        if (newNumMSTs < 2) {
+          deleteMstOverlay(2);
+        }
+        if (newNumMSTs < 1) {
+          deleteMstOverlay(1);
+        }
+      }
+      store.set('numMSTs', newNumMSTs);
     },
   );
 
-  ipcMain.removeHandler('getResourcesPath');
-  ipcMain.handle('getResourcesPath', () => resourcesPath);
+  ipcMain.removeHandler('getResourcesPath1');
+  ipcMain.handle('getResourcesPath1', () => resourcesPath1);
 
-  ipcMain.removeHandler('chooseResourcesPath');
-  ipcMain.handle('chooseResourcesPath', async () => {
+  ipcMain.removeHandler('chooseResourcesPath1');
+  ipcMain.handle('chooseResourcesPath1', async () => {
+    const mstOverlay = getMstOverlay(1);
+    if (!mstOverlay) {
+      throw new Error('no scorboard 1');
+    }
+
     const openDialogRes = await dialog.showOpenDialog({
       properties: ['openDirectory', 'showHiddenFiles'],
     });
     if (openDialogRes.canceled) {
-      return resourcesPath;
+      return resourcesPath1;
     }
     const [newResourcesPath] = openDialogRes.filePaths;
-    if (resourcesPath !== newResourcesPath) {
+    if (resourcesPath1 !== newResourcesPath) {
       const scoreboardInfoJSONPath =
         getScoreboardInfoJSONPath(newResourcesPath);
       try {
@@ -1236,11 +1299,119 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         );
       }
 
-      store.set('resourcesPath', newResourcesPath);
-      resourcesPath = newResourcesPath;
-      await setResourcesPath(resourcesPath, true);
+      store.set('resourcesPath1', newResourcesPath);
+      resourcesPath1 = newResourcesPath;
+      await mstOverlay.setResourcesPath(resourcesPath1, true);
     }
-    return resourcesPath;
+    return resourcesPath1;
+  });
+
+  ipcMain.removeHandler('getResourcesPath2');
+  ipcMain.handle('getResourcesPath2', () => resourcesPath2);
+
+  ipcMain.removeHandler('chooseResourcesPath2');
+  ipcMain.handle('chooseResourcesPath2', async () => {
+    const mstOverlay = getMstOverlay(2);
+    if (!mstOverlay) {
+      throw new Error('no scorboard 2');
+    }
+
+    const openDialogRes = await dialog.showOpenDialog({
+      properties: ['openDirectory', 'showHiddenFiles'],
+    });
+    if (openDialogRes.canceled) {
+      return resourcesPath2;
+    }
+    const [newResourcesPath] = openDialogRes.filePaths;
+    if (resourcesPath2 !== newResourcesPath) {
+      const scoreboardInfoJSONPath =
+        getScoreboardInfoJSONPath(newResourcesPath);
+      try {
+        // eslint-disable-next-line no-bitwise
+        await access(scoreboardInfoJSONPath, constants.R_OK | constants.W_OK);
+      } catch (e: any) {
+        throw new Error(
+          `Invalid Resources folder: cannot access ${scoreboardInfoJSONPath}`,
+        );
+      }
+
+      store.set('resourcesPath2', newResourcesPath);
+      resourcesPath2 = newResourcesPath;
+      await mstOverlay.setResourcesPath(resourcesPath2, true);
+    }
+    return resourcesPath2;
+  });
+
+  ipcMain.removeHandler('getResourcesPath3');
+  ipcMain.handle('getResourcesPath3', () => resourcesPath3);
+
+  ipcMain.removeHandler('chooseResourcesPath3');
+  ipcMain.handle('chooseResourcesPath3', async () => {
+    const mstOverlay = getMstOverlay(3);
+    if (!mstOverlay) {
+      throw new Error('no scorboard 3');
+    }
+
+    const openDialogRes = await dialog.showOpenDialog({
+      properties: ['openDirectory', 'showHiddenFiles'],
+    });
+    if (openDialogRes.canceled) {
+      return resourcesPath3;
+    }
+    const [newResourcesPath] = openDialogRes.filePaths;
+    if (resourcesPath3 !== newResourcesPath) {
+      const scoreboardInfoJSONPath =
+        getScoreboardInfoJSONPath(newResourcesPath);
+      try {
+        // eslint-disable-next-line no-bitwise
+        await access(scoreboardInfoJSONPath, constants.R_OK | constants.W_OK);
+      } catch (e: any) {
+        throw new Error(
+          `Invalid Resources folder: cannot access ${scoreboardInfoJSONPath}`,
+        );
+      }
+
+      store.set('resourcesPath3', newResourcesPath);
+      resourcesPath3 = newResourcesPath;
+      await mstOverlay.setResourcesPath(resourcesPath3, true);
+    }
+    return resourcesPath3;
+  });
+
+  ipcMain.removeHandler('getResourcesPath4');
+  ipcMain.handle('getResourcesPath4', () => resourcesPath4);
+
+  ipcMain.removeHandler('chooseResourcesPath4');
+  ipcMain.handle('chooseResourcesPath4', async () => {
+    const mstOverlay = getMstOverlay(4);
+    if (!mstOverlay) {
+      throw new Error('no scorboard 4');
+    }
+
+    const openDialogRes = await dialog.showOpenDialog({
+      properties: ['openDirectory', 'showHiddenFiles'],
+    });
+    if (openDialogRes.canceled) {
+      return resourcesPath4;
+    }
+    const [newResourcesPath] = openDialogRes.filePaths;
+    if (resourcesPath4 !== newResourcesPath) {
+      const scoreboardInfoJSONPath =
+        getScoreboardInfoJSONPath(newResourcesPath);
+      try {
+        // eslint-disable-next-line no-bitwise
+        await access(scoreboardInfoJSONPath, constants.R_OK | constants.W_OK);
+      } catch (e: any) {
+        throw new Error(
+          `Invalid Resources folder: cannot access ${scoreboardInfoJSONPath}`,
+        );
+      }
+
+      store.set('resourcesPath4', newResourcesPath);
+      resourcesPath4 = newResourcesPath;
+      await mstOverlay.setResourcesPath(resourcesPath4, true);
+    }
+    return resourcesPath4;
   });
 
   ipcMain.removeHandler('getUpdateAutomatically');
@@ -1282,16 +1453,75 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
-  ipcMain.removeHandler('getEnableSggRound');
-  ipcMain.handle('getEnableSggRound', () => enableSggRound);
+  ipcMain.removeHandler('getEnableSggRound1');
+  ipcMain.handle('getEnableSggRound1', () => enableSggRound1);
 
-  ipcMain.removeHandler('setEnableSggRound');
+  ipcMain.removeHandler('setEnableSggRound1');
   ipcMain.handle(
-    'setEnableSggRound',
+    'setEnableSggRound1',
     (event: IpcMainInvokeEvent, newEnableSggRound: boolean) => {
-      store.set('enableSggRound', newEnableSggRound);
-      enableSggRound = newEnableSggRound;
-      setEnableSggRound(enableSggRound);
+      const mstOverlay = getMstOverlay(1);
+      if (!mstOverlay) {
+        throw new Error('no scorboard 1');
+      }
+
+      store.set('enableSggRound1', newEnableSggRound);
+      enableSggRound1 = newEnableSggRound;
+      mstOverlay.setEnableSggRound(enableSggRound1);
+    },
+  );
+
+  ipcMain.removeHandler('getEnableSggRound2');
+  ipcMain.handle('getEnableSggRound2', () => enableSggRound2);
+
+  ipcMain.removeHandler('setEnableSggRound2');
+  ipcMain.handle(
+    'setEnableSggRound2',
+    (event: IpcMainInvokeEvent, newEnableSggRound: boolean) => {
+      const mstOverlay = getMstOverlay(2);
+      if (!mstOverlay) {
+        throw new Error('no scorboard 2');
+      }
+
+      store.set('enableSggRound2', newEnableSggRound);
+      enableSggRound2 = newEnableSggRound;
+      mstOverlay.setEnableSggRound(enableSggRound2);
+    },
+  );
+
+  ipcMain.removeHandler('getEnableSggRound3');
+  ipcMain.handle('getEnableSggRound3', () => enableSggRound3);
+
+  ipcMain.removeHandler('setEnableSggRound3');
+  ipcMain.handle(
+    'setEnableSggRound3',
+    (event: IpcMainInvokeEvent, newEnableSggRound: boolean) => {
+      const mstOverlay = getMstOverlay(3);
+      if (!mstOverlay) {
+        throw new Error('no scorboard 3');
+      }
+
+      store.set('enableSggRound3', newEnableSggRound);
+      enableSggRound3 = newEnableSggRound;
+      mstOverlay.setEnableSggRound(enableSggRound3);
+    },
+  );
+
+  ipcMain.removeHandler('getEnableSggRound4');
+  ipcMain.handle('getEnableSggRound4', () => enableSggRound4);
+
+  ipcMain.removeHandler('setEnableSggRound4');
+  ipcMain.handle(
+    'setEnableSggRound4',
+    (event: IpcMainInvokeEvent, newEnableSggRound: boolean) => {
+      const mstOverlay = getMstOverlay(4);
+      if (!mstOverlay) {
+        throw new Error('no scorboard 4');
+      }
+
+      store.set('enableSggRound4', newEnableSggRound);
+      enableSggRound4 = newEnableSggRound;
+      mstOverlay.setEnableSggRound(enableSggRound4);
     },
   );
 
@@ -1341,7 +1571,6 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   ipcMain.handle('getSimpleTextPathC', () => simpleTextPathC);
 
   ipcMain.removeHandler('chooseSimpleTextPathC');
-  ipcMain.removeHandler('setSimpleTextPathC');
   ipcMain.handle('chooseSimpleTextPathC', async () => {
     const openDialogRes = await dialog.showOpenDialog({
       filters: [{ name: 'Text File', extensions: ['txt'] }],
@@ -1359,16 +1588,121 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     return simpleTextPathC;
   });
 
-  ipcMain.removeHandler('getScoreboardInfo');
-  ipcMain.handle('getScoreboardInfo', () => readScoreboardInfo());
+  ipcMain.removeHandler('getSimpleTextPathD');
+  ipcMain.handle('getSimpleTextPathD', () => simpleTextPathD);
 
-  ipcMain.removeHandler('setScoreboardInfo');
+  ipcMain.removeHandler('chooseSimpleTextPathD');
+  ipcMain.handle('chooseSimpleTextPathD', async () => {
+    const openDialogRes = await dialog.showOpenDialog({
+      filters: [{ name: 'Text File', extensions: ['txt'] }],
+      properties: ['openFile'],
+    });
+    if (openDialogRes.canceled) {
+      return simpleTextPathD;
+    }
+
+    const [simpleTextPath] = openDialogRes.filePaths;
+
+    store.set('simpleTextPathD', simpleTextPath);
+    simpleTextPathD = simpleTextPath;
+    setSimpleTextPathD(simpleTextPath);
+    return simpleTextPathD;
+  });
+
+  ipcMain.removeHandler('getScoreboardInfo1');
+  ipcMain.handle('getScoreboardInfo1', () => {
+    const mstOverlay = getMstOverlay(1);
+    if (!mstOverlay) {
+      throw new Error('no scorboard 1');
+    }
+    return mstOverlay.readScoreboardInfo();
+  });
+
+  ipcMain.removeHandler('setScoreboardInfo1');
   ipcMain.handle(
-    'setScoreboardInfo',
+    'setScoreboardInfo1',
     (
       event: IpcMainInvokeEvent,
       scoreboardInfo: MSTManualUpdateScoreboardInfo,
-    ) => manualUpdate(scoreboardInfo),
+    ) => {
+      const mstOverlay = getMstOverlay(1);
+      if (!mstOverlay) {
+        throw new Error('no scorboard 1');
+      }
+      mstOverlay.manualUpdate(scoreboardInfo);
+    },
+  );
+
+  ipcMain.removeHandler('getScoreboardInfo2');
+  ipcMain.handle('getScoreboardInfo2', () => {
+    const mstOverlay = getMstOverlay(2);
+    if (!mstOverlay) {
+      throw new Error('no scorboard 2');
+    }
+    return mstOverlay.readScoreboardInfo();
+  });
+
+  ipcMain.removeHandler('setScoreboardInfo2');
+  ipcMain.handle(
+    'setScoreboardInfo2',
+    (
+      event: IpcMainInvokeEvent,
+      scoreboardInfo: MSTManualUpdateScoreboardInfo,
+    ) => {
+      const mstOverlay = getMstOverlay(2);
+      if (!mstOverlay) {
+        throw new Error('no scorboard 2');
+      }
+      mstOverlay.manualUpdate(scoreboardInfo);
+    },
+  );
+
+  ipcMain.removeHandler('getScoreboardInfo3');
+  ipcMain.handle('getScoreboardInfo3', () => {
+    const mstOverlay = getMstOverlay(3);
+    if (!mstOverlay) {
+      throw new Error('no scorboard 3');
+    }
+    return mstOverlay.readScoreboardInfo();
+  });
+
+  ipcMain.removeHandler('setScoreboardInfo3');
+  ipcMain.handle(
+    'setScoreboardInfo3',
+    (
+      event: IpcMainInvokeEvent,
+      scoreboardInfo: MSTManualUpdateScoreboardInfo,
+    ) => {
+      const mstOverlay = getMstOverlay(3);
+      if (!mstOverlay) {
+        throw new Error('no scorboard 3');
+      }
+      mstOverlay.manualUpdate(scoreboardInfo);
+    },
+  );
+
+  ipcMain.removeHandler('getScoreboardInfo4');
+  ipcMain.handle('getScoreboardInfo4', () => {
+    const mstOverlay = getMstOverlay(4);
+    if (!mstOverlay) {
+      throw new Error('no scorboard 4');
+    }
+    return mstOverlay.readScoreboardInfo();
+  });
+
+  ipcMain.removeHandler('setScoreboardInfo4');
+  ipcMain.handle(
+    'setScoreboardInfo4',
+    (
+      event: IpcMainInvokeEvent,
+      scoreboardInfo: MSTManualUpdateScoreboardInfo,
+    ) => {
+      const mstOverlay = getMstOverlay(4);
+      if (!mstOverlay) {
+        throw new Error('no scorboard 4');
+      }
+      mstOverlay.manualUpdate(scoreboardInfo);
+    },
   );
 
   /**
@@ -1416,9 +1750,15 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         updateParticipants(participants);
         updateParticipantIdToSet(getTournamentRet);
         startggTournament = getTournamentRet.tournament;
-        tournamentNameUpdate(getTournamentRet.tournament.name).catch(() => {
-          // just catch
-        });
+        if (updateAutomatically) {
+          forEachMstOverlay((mstOverlay) => {
+            mstOverlay
+              .tournamentNameUpdate(getTournamentRet.tournament.name)
+              .catch(() => {
+                // just catch
+              });
+          });
+        }
 
         setGetTournamentSetsTimeout();
         if (client === null) {

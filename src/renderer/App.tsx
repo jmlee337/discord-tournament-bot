@@ -37,6 +37,7 @@ import {
   RemoteStatus,
   RemoteState,
   DiscordServer,
+  OverlayId,
 } from '../common/types';
 import DiscordUsernames from './DiscordUsernames';
 import SearchBar from './SearchBar';
@@ -50,7 +51,10 @@ import Overlay from './Overlay';
 enum TabValue {
   BRACKET = 'bracket',
   BROADCASTS = 'broadcasts',
-  OVERLAY = 'overlay',
+  OVERLAY_1 = 'overlay1',
+  OVERLAY_2 = 'overlay2',
+  OVERLAY_3 = 'overlay3',
+  OVERLAY_4 = 'overlay4',
 }
 
 function TabPanel({
@@ -69,7 +73,7 @@ function TabPanel({
       id={`tabpanel-${index}`}
       aria-labelledby={`tab-${index}`}
     >
-      {value === index && children}
+      {children}
     </div>
   );
 }
@@ -104,6 +108,8 @@ function Hello() {
   const [gotSettings, setGotSettings] = useState(false);
   const [discordApplicationId, setDiscordApplicationId] = useState('');
   const [discordToken, setDiscordToken] = useState('');
+  const [enableSkinColor, setEnableSkinColor] = useState(false);
+  const [numMSTs, setNumMSTs] = useState<0 | OverlayId>(0);
   const [latestAppVersion, setLatestAppVersion] = useState('');
 
   // starting state
@@ -123,8 +129,6 @@ function Hello() {
     err: '',
     status: RemoteStatus.DISCONNECTED,
   });
-  const [enableMST, setEnableMST] = useState(false);
-  const [resourcesPath, setResourcesPath] = useState('');
 
   // tabs
   const [tabValue, setTabValue] = useState(TabValue.BROADCASTS);
@@ -133,9 +137,9 @@ function Hello() {
     const inner = async () => {
       const discordConfigPromise = window.electron.getDiscordConfig();
       const discordServersPromise = window.electron.getDiscordServers();
+      const enableSkinColorPromise = window.electron.getEnableSkinColor();
+      const numMSTsPromise = window.electron.getNumMSTs();
       const startingStatePromise = window.electron.getStartingState();
-      const enableMSTPromise = window.electron.getEnableMST();
-      const resourcesPathPromise = window.electron.getResourcesPath();
 
       // req network
       const latestAppVersionPromise = window.electron.getLatestVersion();
@@ -144,14 +148,14 @@ function Hello() {
       setDiscordApplicationId((await discordConfigPromise).applicationId);
       setDiscordToken((await discordConfigPromise).token);
       setDiscordServers(await discordServersPromise);
+      setEnableSkinColor(await enableSkinColorPromise);
+      setNumMSTs(await numMSTsPromise);
       setConnectCodes((await startingStatePromise).connectCodes);
       setDiscordStatus((await startingStatePromise).discordStatus);
       setDiscordServerId((await startingStatePromise).discordServerId);
       setDiscordUsernames((await startingStatePromise).discordUsernames);
       setRemoteState((await startingStatePromise).remoteState);
       setTournament((await startingStatePromise).tournament);
-      setEnableMST(await enableMSTPromise);
-      setResourcesPath(await resourcesPathPromise);
 
       // req network
       const messages: string[] = [];
@@ -356,6 +360,10 @@ function Hello() {
               setDiscordApplicationId={setDiscordApplicationId}
               discordToken={discordToken}
               setDiscordToken={setDiscordToken}
+              enableSkinColor={enableSkinColor}
+              setEnableSkinColor={setEnableSkinColor}
+              numMSTs={numMSTs}
+              setNumMSTs={setNumMSTs}
               setTournaments={setTournaments}
               latestAppVersion={latestAppVersion}
               gotSettings={gotSettings}
@@ -403,12 +411,38 @@ function Hello() {
             aria-controls="tabpanel-broadcasts"
             value={TabValue.BROADCASTS}
           />
-          <Tab
-            label="Overlay"
-            id="tab-overlay"
-            aria-controls="tabpanel-overlay"
-            value={TabValue.OVERLAY}
-          />
+          {numMSTs > 0 && (
+            <Tab
+              label="Overlay 1"
+              id="tab-overlay-1"
+              aria-controls="tabpanel-overlay-1"
+              value={TabValue.OVERLAY_1}
+            />
+          )}
+          {numMSTs > 1 && (
+            <Tab
+              label="Overlay 2"
+              id="tab-overlay-2"
+              aria-controls="tabpanel-overlay-2"
+              value={TabValue.OVERLAY_2}
+            />
+          )}
+          {numMSTs > 2 && (
+            <Tab
+              label="Overlay 3"
+              id="tab-overlay-3"
+              aria-controls="tabpanel-overlay-3"
+              value={TabValue.OVERLAY_3}
+            />
+          )}
+          {numMSTs > 3 && (
+            <Tab
+              label="Overlay 4"
+              id="tab-overlay-4"
+              aria-controls="tabpanel-overlay-4"
+              value={TabValue.OVERLAY_4}
+            />
+          )}
           <Tab
             label="Bracket"
             id="tab-bracket"
@@ -420,23 +454,76 @@ function Hello() {
       <div style={{ marginTop: '169px' }} />
       <TabPanel value={tabValue} index={TabValue.BROADCASTS}>
         <Remote
-          overlayEnabled={enableMST && Boolean(resourcesPath)}
+          numMSTs={numMSTs}
           remoteState={remoteState}
           searchSubstr={searchSubstr}
           showErrorDialog={showErrorDialog}
         />
       </TabPanel>
-      <TabPanel value={tabValue} index={TabValue.OVERLAY}>
-        <Overlay
-          enableMST={enableMST}
-          resourcesPath={resourcesPath}
-          gotSettings={gotSettings}
-          sggTournamentName={tournament.name}
-          setEnableMST={setEnableMST}
-          setResourcesPath={setResourcesPath}
-          showErrorDialog={showErrorDialog}
-        />
-      </TabPanel>
+      {numMSTs > 0 && (
+        <TabPanel value={tabValue} index={TabValue.OVERLAY_1}>
+          <Overlay
+            enableSkinColor={enableSkinColor}
+            windowGetResourcesPath={window.electron.getResourcesPath1}
+            windowChooseResourcesPath={window.electron.chooseResourcesPath1}
+            windowGetEnableSggRound={window.electron.getEnableSggRound1}
+            windowSetEnableSggRound={window.electron.setEnableSggRound1}
+            windowGetScoreboardInfo={window.electron.getScoreboardInfo1}
+            windowSetScoreboardInfo={window.electron.setScoreboardInfo1}
+            windowOnScoreboardInfo={window.electron.onScoreboardInfo1}
+            sggTournamentName={tournament.name}
+            showErrorDialog={showErrorDialog}
+          />
+        </TabPanel>
+      )}
+      {numMSTs > 1 && (
+        <TabPanel value={tabValue} index={TabValue.OVERLAY_2}>
+          <Overlay
+            enableSkinColor={enableSkinColor}
+            windowGetResourcesPath={window.electron.getResourcesPath2}
+            windowChooseResourcesPath={window.electron.chooseResourcesPath2}
+            windowGetEnableSggRound={window.electron.getEnableSggRound2}
+            windowSetEnableSggRound={window.electron.setEnableSggRound2}
+            windowGetScoreboardInfo={window.electron.getScoreboardInfo2}
+            windowSetScoreboardInfo={window.electron.setScoreboardInfo2}
+            windowOnScoreboardInfo={window.electron.onScoreboardInfo2}
+            sggTournamentName={tournament.name}
+            showErrorDialog={showErrorDialog}
+          />
+        </TabPanel>
+      )}
+      {numMSTs > 2 && (
+        <TabPanel value={tabValue} index={TabValue.OVERLAY_3}>
+          <Overlay
+            enableSkinColor={enableSkinColor}
+            windowGetResourcesPath={window.electron.getResourcesPath3}
+            windowChooseResourcesPath={window.electron.chooseResourcesPath3}
+            windowGetEnableSggRound={window.electron.getEnableSggRound3}
+            windowSetEnableSggRound={window.electron.setEnableSggRound3}
+            windowGetScoreboardInfo={window.electron.getScoreboardInfo3}
+            windowSetScoreboardInfo={window.electron.setScoreboardInfo3}
+            windowOnScoreboardInfo={window.electron.onScoreboardInfo3}
+            sggTournamentName={tournament.name}
+            showErrorDialog={showErrorDialog}
+          />
+        </TabPanel>
+      )}
+      {numMSTs > 3 && (
+        <TabPanel value={tabValue} index={TabValue.OVERLAY_4}>
+          <Overlay
+            enableSkinColor={enableSkinColor}
+            windowGetResourcesPath={window.electron.getResourcesPath4}
+            windowChooseResourcesPath={window.electron.chooseResourcesPath4}
+            windowGetEnableSggRound={window.electron.getEnableSggRound4}
+            windowSetEnableSggRound={window.electron.setEnableSggRound4}
+            windowGetScoreboardInfo={window.electron.getScoreboardInfo4}
+            windowSetScoreboardInfo={window.electron.setScoreboardInfo4}
+            windowOnScoreboardInfo={window.electron.onScoreboardInfo4}
+            sggTournamentName={tournament.name}
+            showErrorDialog={showErrorDialog}
+          />
+        </TabPanel>
+      )}
       <TabPanel value={tabValue} index={TabValue.BRACKET}>
         <Bracket
           discordServerId={discordServerId}

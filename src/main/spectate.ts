@@ -5,6 +5,8 @@ import { writeFile } from 'fs/promises';
 import {
   Broadcast,
   ConnectCode,
+  DolphinId,
+  OverlayId,
   ParticipantSet,
   RemoteState,
   RemoteStatus,
@@ -20,8 +22,8 @@ import {
   MSTSkinColor,
   MSTWL,
 } from '../common/mst';
-import { gameEndUpdate, newFileUpdate } from './mst';
 import { REFRESH_CADENCE_MS } from '../common/constants';
+import { getMstOverlay } from './mst';
 
 const lock = new AsyncLock();
 
@@ -43,18 +45,19 @@ enum SimpleTextPathId {
   A = 'A',
   B = 'B',
   C = 'C',
+  D = 'D',
 }
 
 type SpectatingInternal = {
-  dolphinId: string;
+  dolphinId: DolphinId;
   broadcastId: string;
   spectating: boolean;
 };
 
 let timeoutId: NodeJS.Timeout | undefined;
 const idToBroadcast = new Map<string, Broadcast>();
-const dolphinIdToSpectating = new Map<string, SpectatingInternal>();
-const spectatingBroadcastIdToDolphinId = new Map<string, string>();
+const dolphinIdToSpectating = new Map<DolphinId, SpectatingInternal>();
+const spectatingBroadcastIdToDolphinId = new Map<string, DolphinId>();
 let remoteErr = '';
 let remoteStatus = RemoteStatus.DISCONNECTED;
 let webSocketClient: WebSocket | null = null;
@@ -64,9 +67,10 @@ const connectCodeToParticipant = new Map<
   string,
   { id: number; gamerTag: string; prefix: string }
 >();
-const dolphinIdToReplayPath = new Map<string, string>();
-const dolphinIdToSimpleTextPathId = new Map<string, SimpleTextPathId>();
-let overlayDolphinId = '';
+const dolphinIdToReplayPath = new Map<DolphinId, string>();
+let dolphinIdToSimpleTextPathId = new Map<DolphinId, SimpleTextPathId>();
+const dolphinIdToOverlayId = new Map<DolphinId, OverlayId>();
+const overlayIdToDolphinId = new Map<OverlayId, DolphinId>();
 let participantIdToPendingSets = new Map<number, ParticipantSet[]>();
 
 export function initSpectate(newMainWindow: BrowserWindow) {
@@ -85,14 +89,17 @@ export function initSpectate(newMainWindow: BrowserWindow) {
   connectCodeMisses.clear();
   connectCodeToParticipant.clear();
   dolphinIdToReplayPath.clear();
-  overlayDolphinId = '';
+  dolphinIdToSimpleTextPathId = new Map([
+    ['spectate-1', SimpleTextPathId.A],
+    ['spectate-2', SimpleTextPathId.B],
+    ['spectate-3', SimpleTextPathId.C],
+    ['spectate-4', SimpleTextPathId.D],
+  ]);
+  dolphinIdToOverlayId.clear();
+  overlayIdToDolphinId.clear();
   mainWindow = newMainWindow;
 }
 
-let enableOverlay = false;
-export function setEnableOverlay(newEnableOverlay: boolean) {
-  enableOverlay = newEnableOverlay;
-}
 let updateAutomatically = false;
 export function setUpdateAutomatically(newUpdateAutomatically: boolean) {
   updateAutomatically = newUpdateAutomatically;
@@ -102,6 +109,7 @@ const idToSimpleTextPath = new Map([
   [SimpleTextPathId.A, ''],
   [SimpleTextPathId.B, ''],
   [SimpleTextPathId.C, ''],
+  [SimpleTextPathId.D, ''],
 ]);
 export function setSimpleTextPathA(simpleTextPath: string) {
   idToSimpleTextPath.set(SimpleTextPathId.A, simpleTextPath);
@@ -111,6 +119,9 @@ export function setSimpleTextPathB(simpleTextPath: string) {
 }
 export function setSimpleTextPathC(simpleTextPath: string) {
   idToSimpleTextPath.set(SimpleTextPathId.C, simpleTextPath);
+}
+export function setSimpleTextPathD(simpleTextPath: string) {
+  idToSimpleTextPath.set(SimpleTextPathId.D, simpleTextPath);
 }
 
 export function getRemoteState() {
@@ -125,8 +136,20 @@ function sendState() {
   mainWindow?.webContents.send('remoteState', getRemoteState());
 }
 
-function getDolphinIds() {
+function getDolphinIds(): DolphinId[] {
   return ['spectate-1', 'spectate-2', 'spectate-3', 'spectate-4'];
+}
+
+function getValidDolphinId(maybeDolphinId: any): DolphinId | null {
+  if (
+    maybeDolphinId === 'spectate-1' ||
+    maybeDolphinId === 'spectate-2' ||
+    maybeDolphinId === 'spectate-3' ||
+    maybeDolphinId === 'spectate-4'
+  ) {
+    return maybeDolphinId;
+  }
+  return null;
 }
 
 export function getSpectating() {
@@ -359,7 +382,7 @@ export async function processNewReplay(replayPath: string) {
   return newFileScoreboardInfo;
 }
 
-export async function processFinishedReplay(replayPath: string) {
+async function processFinishedReplay(replayPath: string) {
   const gameEndInfo = await getGameEndInfo(replayPath);
   if (!gameEndInfo.definite) {
     return null;
@@ -390,98 +413,102 @@ export async function processFinishedReplay(replayPath: string) {
   return gameEndScoreboardInfo;
 }
 
-export function getOverlayDolphinId() {
-  return overlayDolphinId;
-}
-
-export async function setOverlayDolphinId(newOverlayDolphinId: string) {
-  const dolphinIds = getDolphinIds();
-  const index = dolphinIds.indexOf(newOverlayDolphinId);
-  if (index === -1) {
-    throw new Error(`invalid dolphinId: ${newOverlayDolphinId}`);
-  }
-
-  const changed = newOverlayDolphinId !== overlayDolphinId;
-
-  if (overlayDolphinId) {
-    const simpleTextPathId =
-      dolphinIdToSimpleTextPathId.get(newOverlayDolphinId);
-    if (simpleTextPathId) {
-      dolphinIdToSimpleTextPathId.delete(newOverlayDolphinId);
-      dolphinIdToSimpleTextPathId.set(overlayDolphinId, simpleTextPathId);
-
-      const replayPath = dolphinIdToReplayPath.get(overlayDolphinId);
-      const simpleTextPath = idToSimpleTextPath.get(simpleTextPathId);
-      if (simpleTextPath) {
-        try {
-          if (replayPath) {
-            const newFileScoreboardInfo = await processNewReplay(replayPath);
-            if (newFileScoreboardInfo) {
-              await writeFile(
-                simpleTextPath,
-                newFileScoreboardInfo.p1Name && newFileScoreboardInfo.p2Name
-                  ? `${newFileScoreboardInfo.p1Name} vs ${newFileScoreboardInfo.p2Name}`
-                  : '',
-              );
-            }
-          } else {
-            await writeFile(simpleTextPath, '');
-          }
-        } catch {
-          // just catch
-        }
+async function maybeClearSimpleTextTitle(dolphinId: DolphinId) {
+  const simpleTextPathId = dolphinIdToSimpleTextPathId.get(dolphinId);
+  if (simpleTextPathId) {
+    const simpleTextPath = idToSimpleTextPath.get(simpleTextPathId);
+    if (simpleTextPath) {
+      try {
+        await writeFile(simpleTextPath, '');
+      } catch {
+        // just catch
       }
     }
-  } else {
-    dolphinIds.splice(index, 1);
-    const simpleTextPathIds = Object.values(SimpleTextPathId);
-    if (dolphinIds.length !== simpleTextPathIds.length) {
-      throw new Error('simpleTextDolphinIds/simpleTextPathIds length mismatch');
-    }
-
-    await Promise.all(
-      dolphinIds.map(async (dolphinId, i) => {
-        dolphinIdToSimpleTextPathId.set(dolphinId, simpleTextPathIds[i]);
-        const replayPath = dolphinIdToReplayPath.get(dolphinId);
-        const simpleTextPath = idToSimpleTextPath.get(simpleTextPathIds[i]);
-        if (simpleTextPath) {
-          try {
-            if (replayPath) {
-              const newFileScoreboardInfo = await processNewReplay(replayPath);
-              if (newFileScoreboardInfo) {
-                await writeFile(
-                  simpleTextPath,
-                  newFileScoreboardInfo.p1Name && newFileScoreboardInfo.p2Name
-                    ? `${newFileScoreboardInfo.p1Name} vs ${newFileScoreboardInfo.p2Name}`
-                    : '',
-                );
-              }
-            } else {
-              await writeFile(simpleTextPath, '');
-            }
-          } catch {
-            // just catch
-          }
-        }
-      }),
-    );
   }
+}
 
-  overlayDolphinId = newOverlayDolphinId;
-
-  if (enableOverlay && updateAutomatically && changed) {
-    const replayPath = dolphinIdToReplayPath.get(overlayDolphinId);
-    if (replayPath) {
+async function maybeUpdateSimpleTextTitle(dolphinId: DolphinId) {
+  const simpleTextPathId = dolphinIdToSimpleTextPathId.get(dolphinId);
+  if (simpleTextPathId) {
+    const replayPath = dolphinIdToReplayPath.get(dolphinId);
+    const simpleTextPath = idToSimpleTextPath.get(simpleTextPathId);
+    if (simpleTextPath) {
       try {
-        const newFileScoreboardInfo = await processNewReplay(replayPath);
-        if (newFileScoreboardInfo) {
-          await newFileUpdate(newFileScoreboardInfo);
+        if (replayPath) {
+          const newFileScoreboardInfo = await processNewReplay(replayPath);
+          if (newFileScoreboardInfo) {
+            await writeFile(
+              simpleTextPath,
+              newFileScoreboardInfo.p1Name && newFileScoreboardInfo.p2Name
+                ? `${newFileScoreboardInfo.p1Name} vs ${newFileScoreboardInfo.p2Name}`
+                : '',
+            );
+          }
+        } else {
+          await writeFile(simpleTextPath, '');
         }
       } catch {
         // just catch
       }
     }
   }
+}
+
+export function getDolphinIdToOverlayId() {
+  return dolphinIdToOverlayId;
+}
+
+export function setDolphinOverlayId(
+  dolphinId: DolphinId,
+  overlayId: OverlayId,
+) {
+  const oldSimpleTextPathId = dolphinIdToSimpleTextPathId.get(dolphinId);
+  if (!oldSimpleTextPathId) {
+    throw new Error(`simple text path not found for ${dolphinId}`);
+  }
+
+  const oldDolphinOverlayId = dolphinIdToOverlayId.get(dolphinId) ?? 0;
+  if (oldDolphinOverlayId !== 0) {
+    throw new Error('cannot move from one overlay to another');
+  }
+
+  const dolphinIdToReplace = overlayIdToDolphinId.get(overlayId);
+  if (dolphinIdToReplace) {
+    const newSimpleTextPathId =
+      dolphinIdToSimpleTextPathId.get(dolphinIdToReplace);
+    if (!newSimpleTextPathId) {
+      throw new Error(`simple text path not found for ${newSimpleTextPathId}`);
+    }
+
+    dolphinIdToOverlayId.delete(dolphinIdToReplace);
+    dolphinIdToSimpleTextPathId.set(dolphinIdToReplace, oldSimpleTextPathId);
+    maybeUpdateSimpleTextTitle(dolphinIdToReplace);
+
+    dolphinIdToSimpleTextPathId.set(dolphinId, newSimpleTextPathId);
+  }
+
+  dolphinIdToOverlayId.set(dolphinId, overlayId);
+  overlayIdToDolphinId.set(overlayId, dolphinId);
+  maybeClearSimpleTextTitle(dolphinId);
+
+  const mstOverlay = getMstOverlay(overlayId);
+  if (mstOverlay && updateAutomatically) {
+    const replayPath = dolphinIdToReplayPath.get(dolphinId);
+    if (replayPath) {
+      (async () => {
+        try {
+          const newFileScoreboardInfo = await processNewReplay(replayPath);
+          if (newFileScoreboardInfo) {
+            await mstOverlay.newFileUpdate(newFileScoreboardInfo);
+          }
+        } catch {
+          // just catch
+        }
+      })();
+    }
+  }
+
+  return getDolphinIdToOverlayId();
 }
 
 function refreshBroadcastsInternal() {
@@ -569,131 +596,120 @@ export function connect(port: number) {
           case 'spectating-broadcasts-event':
             (message.spectatingBroadcasts as RemoteSpectate[]).forEach(
               (spectate) => {
-                dolphinIdToSpectating.set(spectate.dolphinId, {
-                  dolphinId: spectate.dolphinId,
-                  broadcastId: spectate.broadcastId,
-                  spectating: true,
-                });
-                spectatingBroadcastIdToDolphinId.set(
-                  spectate.broadcastId,
-                  spectate.dolphinId,
-                );
+                const validDolphinId = getValidDolphinId(spectate.dolphinId);
+                if (validDolphinId) {
+                  dolphinIdToSpectating.set(validDolphinId, {
+                    dolphinId: validDolphinId,
+                    broadcastId: spectate.broadcastId,
+                    spectating: true,
+                  });
+                  spectatingBroadcastIdToDolphinId.set(
+                    spectate.broadcastId,
+                    validDolphinId,
+                  );
+                }
               },
             );
             sendSpectating();
             return;
           case 'dolphin-closed-event': {
-            dolphinIdToReplayPath.delete(message.dolphinId);
+            const validDolphinId = getValidDolphinId(message.dolphinId);
+            if (validDolphinId) {
+              dolphinIdToReplayPath.delete(validDolphinId);
 
-            const broadcastId = dolphinIdToSpectating.get(message.dolphinId)
-              ?.broadcastId;
-            if (broadcastId) {
-              spectatingBroadcastIdToDolphinId.delete(broadcastId);
-            }
-            const simpleTextPathId = dolphinIdToSimpleTextPathId.get(
-              message.dolphinId,
-            );
-            if (simpleTextPathId) {
-              const simpleTextPath = idToSimpleTextPath.get(simpleTextPathId);
-              if (simpleTextPath) {
-                writeFile(simpleTextPath, '').catch(() => {
-                  // just catch
-                });
+              const broadcastId =
+                dolphinIdToSpectating.get(validDolphinId)?.broadcastId;
+              if (broadcastId) {
+                spectatingBroadcastIdToDolphinId.delete(broadcastId);
               }
+              maybeClearSimpleTextTitle(validDolphinId);
+              dolphinIdToSpectating.delete(validDolphinId);
+              sendSpectating();
             }
-            dolphinIdToSpectating.delete(message.dolphinId);
-            sendSpectating();
             return;
           }
-          case 'game-end-event':
-            if (
-              enableOverlay &&
-              updateAutomatically &&
-              overlayDolphinId === message.dolphinId
-            ) {
-              lock.acquire(message.dolphinId, async (release) => {
-                const replayPath = dolphinIdToReplayPath.get(message.dolphinId);
-                if (replayPath) {
-                  try {
-                    const gameEndScoreboardInfo =
-                      await processFinishedReplay(replayPath);
-                    if (gameEndScoreboardInfo) {
-                      await gameEndUpdate(gameEndScoreboardInfo);
+          case 'game-end-event': {
+            const validDolphinId = getValidDolphinId(message.dolphinId);
+            if (validDolphinId) {
+              const overlayId = dolphinIdToOverlayId.get(validDolphinId);
+              if (overlayId) {
+                const mstOverlay = getMstOverlay(overlayId);
+                if (mstOverlay && updateAutomatically) {
+                  lock.acquire(validDolphinId, async (release) => {
+                    const replayPath =
+                      dolphinIdToReplayPath.get(validDolphinId);
+                    if (replayPath) {
+                      try {
+                        const gameEndScoreboardInfo =
+                          await processFinishedReplay(replayPath);
+                        if (gameEndScoreboardInfo) {
+                          await mstOverlay.gameEndUpdate(gameEndScoreboardInfo);
+                        }
+                        dolphinIdToReplayPath.delete(validDolphinId);
+                      } catch {
+                        // just catch
+                      } finally {
+                        release();
+                      }
+                    } else {
+                      release();
                     }
-                    dolphinIdToReplayPath.delete(message.dolphinId);
-                  } catch {
-                    // just catch
-                  } finally {
-                    release();
-                  }
-                } else {
-                  release();
+                  });
                 }
-              });
-            }
+              }
 
-            if (!dolphinIdToSpectating.has(message.dolphinId)) {
-              dolphinIdToSpectating.set(message.dolphinId, {
-                dolphinId: message.dolphinId,
-                broadcastId: message.broadcastId,
-                spectating: true,
-              });
-              spectatingBroadcastIdToDolphinId.set(
-                message.broadcastId,
-                message.dolphinId,
-              );
-              sendSpectating();
+              if (!dolphinIdToSpectating.has(validDolphinId)) {
+                dolphinIdToSpectating.set(validDolphinId, {
+                  dolphinId: validDolphinId,
+                  broadcastId: message.broadcastId,
+                  spectating: true,
+                });
+                spectatingBroadcastIdToDolphinId.set(
+                  message.broadcastId,
+                  validDolphinId,
+                );
+                sendSpectating();
+              }
             }
             return;
+          }
           case 'new-file-event': {
-            dolphinIdToReplayPath.set(message.dolphinId, message.filePath);
-
-            const simpleTextPathId = dolphinIdToSimpleTextPathId.get(
-              message.dolphinId,
-            );
-            const simpleTextPath = simpleTextPathId
-              ? idToSimpleTextPath.get(simpleTextPathId)
-              : undefined;
-            if (
-              enableOverlay &&
-              updateAutomatically &&
-              (overlayDolphinId === message.dolphinId || simpleTextPath)
-            ) {
-              (async () => {
-                try {
-                  const newFileScoreboardInfo = await processNewReplay(
-                    message.filePath,
-                  );
-                  if (newFileScoreboardInfo) {
-                    if (overlayDolphinId === message.dolphinId) {
-                      await newFileUpdate(newFileScoreboardInfo);
-                    } else if (simpleTextPath) {
-                      await writeFile(
-                        simpleTextPath,
-                        newFileScoreboardInfo.p1Name &&
-                          newFileScoreboardInfo.p2Name
-                          ? `${newFileScoreboardInfo.p1Name} vs ${newFileScoreboardInfo.p2Name}`
-                          : '',
+            const validDolphinId = getValidDolphinId(message.dolphinId);
+            if (validDolphinId) {
+              dolphinIdToReplayPath.set(validDolphinId, message.filePath);
+              const overlayId = dolphinIdToOverlayId.get(validDolphinId);
+              if (overlayId) {
+                const mstOverlay = getMstOverlay(overlayId);
+                if (mstOverlay && updateAutomatically) {
+                  (async () => {
+                    try {
+                      const newFileScoreboardInfo = await processNewReplay(
+                        message.filePath,
                       );
+                      if (newFileScoreboardInfo) {
+                        await mstOverlay.newFileUpdate(newFileScoreboardInfo);
+                      }
+                    } catch {
+                      // just catch
                     }
-                  }
-                } catch {
-                  // just catch
+                  })();
                 }
-              })();
-            }
+              } else {
+                maybeUpdateSimpleTextTitle(validDolphinId);
+              }
 
-            if (!dolphinIdToSpectating.has(message.dolphinId)) {
-              dolphinIdToSpectating.set(message.dolphinId, {
-                dolphinId: message.dolphinId,
-                broadcastId: message.broadcastId,
-                spectating: true,
-              });
-              spectatingBroadcastIdToDolphinId.set(
-                message.broadcastId,
-                message.dolphinId,
-              );
-              sendSpectating();
+              if (!dolphinIdToSpectating.has(validDolphinId)) {
+                dolphinIdToSpectating.set(validDolphinId, {
+                  dolphinId: validDolphinId,
+                  broadcastId: message.broadcastId,
+                  spectating: true,
+                });
+                spectatingBroadcastIdToDolphinId.set(
+                  message.broadcastId,
+                  validDolphinId,
+                );
+                sendSpectating();
+              }
             }
             return;
           }
@@ -793,33 +809,28 @@ export function connect(port: number) {
             sendBroadcasts();
             mainWindow?.webContents.send('refreshingBroadcasts', false);
             return;
-          case 'spectate-broadcast-response':
-            dolphinIdToSpectating.set(message.dolphinId, {
-              dolphinId: message.dolphinId,
-              broadcastId: message.broadcastId,
-              spectating: true,
-            });
-            spectatingBroadcastIdToDolphinId.set(
-              message.broadcastId,
-              message.dolphinId,
-            );
-            sendSpectating();
+          case 'spectate-broadcast-response': {
+            const validDolphinId = getValidDolphinId(message.dolphinId);
+            if (validDolphinId) {
+              dolphinIdToSpectating.set(validDolphinId, {
+                dolphinId: validDolphinId,
+                broadcastId: message.broadcastId,
+                spectating: true,
+              });
+              spectatingBroadcastIdToDolphinId.set(
+                message.broadcastId,
+                validDolphinId,
+              );
+              sendSpectating();
+            }
             return;
+          }
           case 'stop-broadcast-response': {
             const dolphinId = spectatingBroadcastIdToDolphinId.get(
               message.broadcastId,
             );
             if (dolphinId) {
-              const simpleTextPathId =
-                dolphinIdToSimpleTextPathId.get(dolphinId);
-              if (simpleTextPathId) {
-                const simpleTextPath = idToSimpleTextPath.get(simpleTextPathId);
-                if (simpleTextPath) {
-                  writeFile(simpleTextPath, '').catch(() => {
-                    // just catch
-                  });
-                }
-              }
+              maybeClearSimpleTextTitle(dolphinId);
               dolphinIdToSpectating.delete(dolphinId);
             }
             spectatingBroadcastIdToDolphinId.delete(message.broadcastId);

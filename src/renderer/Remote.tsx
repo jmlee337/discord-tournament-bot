@@ -7,12 +7,14 @@ import {
   CardContent,
   CardHeader,
   CircularProgress,
-  FormControlLabel,
+  FormControl,
   IconButton,
+  InputLabel,
   List,
   ListItem,
   ListItemText,
-  Radio,
+  MenuItem,
+  Select,
   Stack,
   TextField,
   Tooltip,
@@ -21,8 +23,10 @@ import {
 import { Refresh, Stop } from '@mui/icons-material';
 import {
   Broadcast,
+  DolphinId,
   Highlight,
   HIGHLIGHT_COLOR,
+  OverlayId,
   RemoteState,
   RemoteStatus,
   Spectating,
@@ -314,12 +318,12 @@ function BroadcastWithHighlightListItem({
 }
 
 export default function Remote({
-  overlayEnabled,
+  numMSTs,
   remoteState,
   searchSubstr,
   showErrorDialog,
 }: {
-  overlayEnabled: boolean;
+  numMSTs: 0 | OverlayId;
   remoteState: RemoteState;
   searchSubstr: string;
   showErrorDialog: (messages: string[]) => void;
@@ -328,17 +332,20 @@ export default function Remote({
   const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [requireSet, setRequireSet] = useState(false);
-  const [overlayDolphinId, setOverlayDolphinId] = useState('');
+  const [dolphinIdToOverlayId, setDolphinIdToOverlayId] = useState<
+    Map<DolphinId, OverlayId>
+  >(new Map());
   const [spectating, setSpectating] = useState<Spectating[]>([]);
   const [selectedChipBroadcastId, setSelectedChipBroadcastId] = useState('');
 
   useEffect(() => {
     (async () => {
       const portPromise = window.electron.getRemotePort();
-      const overlayDolphinIdPromise = window.electron.getOverlayDolphinId();
+      const dolphinIdToOverlayIdPromise =
+        window.electron.getDolphinIdToOverlayId();
       const startingRemotePromise = window.electron.getStartingRemote();
       setPort(await portPromise);
-      setOverlayDolphinId(await overlayDolphinIdPromise);
+      setDolphinIdToOverlayId(await dolphinIdToOverlayIdPromise);
       const startingRemote = await startingRemotePromise;
       setBroadcasts(startingRemote.broadcasts);
       setSpectating(startingRemote.spectating);
@@ -370,6 +377,16 @@ export default function Remote({
           .filter((broadcastId) => broadcastId !== undefined),
       ),
     [spectating],
+  );
+
+  const overlayIdToDolphinId = useMemo(
+    () =>
+      new Map(
+        Array.from(dolphinIdToOverlayId.entries()).map(
+          ([dolphinId, overlayId]) => [overlayId, dolphinId],
+        ),
+      ),
+    [dolphinIdToOverlayId],
   );
 
   return (
@@ -514,25 +531,73 @@ export default function Remote({
                     )}
                   </>
                 )}
-                {overlayEnabled && (
-                  <FormControlLabel
-                    label="Overlay"
-                    slotProps={{ typography: { variant: 'caption' } }}
-                    control={
-                      <Radio
-                        checked={overlayDolphinId === spectate.dolphinId}
-                        disabled={!spectate.spectating}
-                        onChange={async (event, checked) => {
-                          if (checked) {
-                            await window.electron.setOverlayDolphinId(
-                              spectate.dolphinId,
-                            );
-                            setOverlayDolphinId(spectate.dolphinId);
-                          }
-                        }}
-                      />
-                    }
-                  />
+                {numMSTs > 0 && (
+                  <FormControl>
+                    <InputLabel
+                      size="small"
+                      id={`${spectate.dolphinId}-overlay-select-id`}
+                    >
+                      Overlay
+                    </InputLabel>
+                    <Select
+                      size="small"
+                      label="Overlay"
+                      disabled={
+                        !spectate.spectating ||
+                        dolphinIdToOverlayId.get(spectate.dolphinId) !==
+                          undefined
+                      }
+                      labelId={`${spectate.dolphinId}-overlay-select-id`}
+                      value={dolphinIdToOverlayId.get(spectate.dolphinId) ?? ''}
+                      onChange={async (event) => {
+                        setDolphinIdToOverlayId(
+                          await window.electron.setDolphinOverlayId(
+                            spectate.dolphinId,
+                            event.target.value,
+                          ),
+                        );
+                      }}
+                    >
+                      <MenuItem value={1}>
+                        Overlay 1
+                        {overlayIdToDolphinId.get(1) && (
+                          <Typography variant="caption">
+                            ({overlayIdToDolphinId.get(1)})
+                          </Typography>
+                        )}
+                      </MenuItem>
+                      {numMSTs > 1 && (
+                        <MenuItem value={2}>
+                          Overlay 2
+                          {overlayIdToDolphinId.get(2) && (
+                            <Typography variant="caption">
+                              ({overlayIdToDolphinId.get(2)})
+                            </Typography>
+                          )}{' '}
+                        </MenuItem>
+                      )}
+                      {numMSTs > 2 && (
+                        <MenuItem value={3}>
+                          Overlay 3
+                          {overlayIdToDolphinId.get(3) && (
+                            <Typography variant="caption">
+                              ({overlayIdToDolphinId.get(3)})
+                            </Typography>
+                          )}
+                        </MenuItem>
+                      )}
+                      {numMSTs > 3 && (
+                        <MenuItem value={4}>
+                          Overlay 4
+                          {overlayIdToDolphinId.get(4) && (
+                            <Typography variant="caption">
+                              ({overlayIdToDolphinId.get(4)})
+                            </Typography>
+                          )}
+                        </MenuItem>
+                      )}
+                    </Select>
+                  </FormControl>
                 )}
               </CardContent>
               <CardActions

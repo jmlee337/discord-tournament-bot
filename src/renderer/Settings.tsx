@@ -1,22 +1,31 @@
 import {
   Alert,
   Button,
+  CircularProgress,
   Dialog,
   DialogContent,
   DialogContentText,
   DialogTitle,
   Divider,
+  FormControlLabel,
   IconButton,
+  InputBase,
   Link,
+  MenuItem,
+  Select,
   Stack,
   TextField,
   Tooltip,
   Typography,
 } from '@mui/material';
-import { ContentCopy, Settings as SettingsIcon } from '@mui/icons-material';
+import {
+  ContentCopy,
+  Settings as SettingsIcon,
+  TextSnippet,
+} from '@mui/icons-material';
 import { useEffect, useMemo, useState } from 'react';
 import { lt, valid } from 'semver';
-import { AdminedTournament } from '../common/types';
+import { AdminedTournament, OverlayId } from '../common/types';
 import LabeledCheckbox from './LabeledCheckbox';
 
 export default function Settings({
@@ -25,6 +34,10 @@ export default function Settings({
   setDiscordApplicationId,
   discordToken,
   setDiscordToken,
+  enableSkinColor,
+  setEnableSkinColor,
+  numMSTs,
+  setNumMSTs,
   setTournaments,
   latestAppVersion,
   gotSettings,
@@ -34,6 +47,10 @@ export default function Settings({
   setDiscordApplicationId: (discordApplicationId: string) => void;
   discordToken: string;
   setDiscordToken: (discordToken: string) => void;
+  enableSkinColor: boolean;
+  setEnableSkinColor: (enableSkinColor: boolean) => void;
+  numMSTs: 0 | OverlayId;
+  setNumMSTs: (numMSTs: 0 | OverlayId) => void;
   setTournaments: (tournaments: AdminedTournament[]) => void;
   latestAppVersion: string;
   gotSettings: boolean;
@@ -41,7 +58,13 @@ export default function Settings({
   const [discordCommandDq, setDiscordCommandDq] = useState(false);
   const [discordCommandReport, setDiscordCommandReport] = useState(false);
   const [discordCommandReset, setDiscordCommandReset] = useState(false);
+  const [enableSggSponsors, setEnableSggSponsors] = useState(false);
+  const [simpleTextPathA, setSimpleTextPathA] = useState('');
+  const [simpleTextPathB, setSimpleTextPathB] = useState('');
+  const [simpleTextPathC, setSimpleTextPathC] = useState('');
+  const [simpleTextPathD, setSimpleTextPathD] = useState('');
   const [startggApiKey, setStartggApiKey] = useState('');
+  const [updateAutomatically, setUpdateAutomatically] = useState(false);
   const [appVersion, setAppVersion] = useState('');
   const [gotSettingsInternal, setGotSettingsInternal] = useState(false);
 
@@ -58,13 +81,26 @@ export default function Settings({
         window.electron.getDiscordCommandReport();
       const discordCommandResetPromise =
         window.electron.getDiscordCommandReset();
+      const enableSggSponsorsPromise = window.electron.getEnableSggSponsors();
+      const simpleTextPathAPromise = window.electron.getSimpleTextPathA();
+      const simpleTextPathBPromise = window.electron.getSimpleTextPathB();
+      const simpleTextPathCPromise = window.electron.getSimpleTextPathC();
+      const simpleTextPathDPromise = window.electron.getSimpleTextPathD();
       const startggApiKeyPromise = window.electron.getStartggApiKey();
+      const updateAutomaticallyPromise =
+        window.electron.getUpdateAutomatically();
       const appVersionPromise = window.electron.getVersion();
 
       setDiscordCommandDq(await discordCommandDqPromise);
       setDiscordCommandReport(await discordCommandReportPromise);
       setDiscordCommandReset(await discordCommandResetPromise);
+      setEnableSggSponsors(await enableSggSponsorsPromise);
+      setSimpleTextPathA(await simpleTextPathAPromise);
+      setSimpleTextPathB(await simpleTextPathBPromise);
+      setSimpleTextPathC(await simpleTextPathCPromise);
+      setSimpleTextPathD(await simpleTextPathDPromise);
       setStartggApiKey(await startggApiKeyPromise);
+      setUpdateAutomatically(await updateAutomaticallyPromise);
       setAppVersion(await appVersionPromise);
       setGotSettingsInternal(true);
     })();
@@ -95,6 +131,11 @@ export default function Settings({
     startggApiKey,
     needUpdate,
   ]);
+
+  const [choosingSimpleTextPathA, setChoosingSimpleTextPathA] = useState(false);
+  const [choosingSimpleTextPathB, setChoosingSimpleTextPathB] = useState(false);
+  const [choosingSimpleTextPathC, setChoosingSimpleTextPathC] = useState(false);
+  const [choosingSimpleTextPathD, setChoosingSimpleTextPathD] = useState(false);
 
   return (
     <>
@@ -251,6 +292,7 @@ export default function Settings({
               <LabeledCheckbox
                 checked={discordCommandDq}
                 label="Enable Discord /dq command"
+                labelPlacement="start"
                 set={async (checked) => {
                   await window.electron.setDiscordCommandDq(checked);
                   setDiscordCommandDq(checked);
@@ -259,6 +301,7 @@ export default function Settings({
               <LabeledCheckbox
                 checked={discordCommandReport}
                 label="Enable Discord /reportset command"
+                labelPlacement="start"
                 set={async (checked) => {
                   await window.electron.setDiscordCommandReport(checked);
                   setDiscordCommandReport(checked);
@@ -267,6 +310,7 @@ export default function Settings({
               <LabeledCheckbox
                 checked={discordCommandReset}
                 label="Enable Discord /resetset command"
+                labelPlacement="start"
                 set={async (checked) => {
                   await window.electron.setDiscordCommandReset(checked);
                   setDiscordCommandReset(checked);
@@ -274,6 +318,201 @@ export default function Settings({
               />
             </Stack>
           )}
+          <Divider
+            textAlign="right"
+            sx={{ margin: '8px 0', typography: 'body2' }}
+          >
+            Overlay
+          </Divider>
+          <Stack marginRight="11px">
+            <FormControlLabel
+              control={
+                <Select
+                  size="small"
+                  style={{ marginLeft: '9px' }}
+                  value={numMSTs}
+                  onChange={async (event) => {
+                    const newNumMSTs = event.target.value;
+                    await window.electron.setNumMSTs(newNumMSTs);
+                    setNumMSTs(newNumMSTs);
+                  }}
+                >
+                  <MenuItem value={0}>0</MenuItem>
+                  <MenuItem value={1}>1</MenuItem>
+                  <MenuItem value={2}>2</MenuItem>
+                  <MenuItem value={3}>3</MenuItem>
+                  <MenuItem value={4}>4</MenuItem>
+                </Select>
+              }
+              disableTypography
+              label="# of overlays"
+              labelPlacement="start"
+              sx={{ typography: 'caption' }}
+            />
+          </Stack>
+          {numMSTs > 0 && (
+            <Stack>
+              <LabeledCheckbox
+                checked={updateAutomatically}
+                label="Update overlay(s) automatically from Slippi/start.gg"
+                labelPlacement="start"
+                set={async (checked) => {
+                  await window.electron.setUpdateAutomatically(checked);
+                  setUpdateAutomatically(checked);
+                }}
+              />
+              <LabeledCheckbox
+                checked={enableSkinColor}
+                label="Enable character colors"
+                labelPlacement="start"
+                set={async (checked) => {
+                  await window.electron.setEnableSkinColor(checked);
+                  setEnableSkinColor(checked);
+                }}
+              />
+              <LabeledCheckbox
+                checked={enableSggSponsors}
+                label="Use sponsor tags from start.gg"
+                labelPlacement="start"
+                set={async (checked) => {
+                  await window.electron.setEnableSggSponsors(checked);
+                  setEnableSggSponsors(checked);
+                }}
+              />
+            </Stack>
+          )}
+          <Stack direction="row" alignItems="center" marginRight="-9px">
+            <InputBase
+              disabled
+              size="small"
+              value={simpleTextPathA || 'Set simple text title file A...'}
+              style={{ flexGrow: 1 }}
+            />
+            <Tooltip placement="left" title="Set simple text title file A">
+              <div>
+                <IconButton
+                  disabled={choosingSimpleTextPathA}
+                  onClick={async () => {
+                    try {
+                      setChoosingSimpleTextPathA(true);
+                      setSimpleTextPathA(
+                        await window.electron.chooseSimpleTextPathA(),
+                      );
+                    } catch (e: any) {
+                      showErrorDialog([e instanceof Error ? e.message : e]);
+                    } finally {
+                      setChoosingSimpleTextPathA(false);
+                    }
+                  }}
+                >
+                  {choosingSimpleTextPathA ? (
+                    <CircularProgress size="24px" />
+                  ) : (
+                    <TextSnippet />
+                  )}
+                </IconButton>
+              </div>
+            </Tooltip>
+          </Stack>
+          <Stack direction="row" alignItems="center" marginRight="-9px">
+            <InputBase
+              disabled
+              size="small"
+              value={simpleTextPathB || 'Set simple text title file B...'}
+              style={{ flexGrow: 1 }}
+            />
+            <Tooltip placement="left" title="Set simple text title file B">
+              <div>
+                <IconButton
+                  disabled={choosingSimpleTextPathB}
+                  onClick={async () => {
+                    try {
+                      setChoosingSimpleTextPathB(true);
+                      setSimpleTextPathB(
+                        await window.electron.chooseSimpleTextPathB(),
+                      );
+                    } catch (e: any) {
+                      showErrorDialog([e instanceof Error ? e.message : e]);
+                    } finally {
+                      setChoosingSimpleTextPathB(false);
+                    }
+                  }}
+                >
+                  {choosingSimpleTextPathB ? (
+                    <CircularProgress size="24px" />
+                  ) : (
+                    <TextSnippet />
+                  )}
+                </IconButton>
+              </div>
+            </Tooltip>
+          </Stack>
+          <Stack direction="row" alignItems="center" marginRight="-9px">
+            <InputBase
+              disabled
+              size="small"
+              value={simpleTextPathC || 'Set simple text title file C...'}
+              style={{ flexGrow: 1 }}
+            />
+            <Tooltip placement="left" title="Set simple text title file C">
+              <div>
+                <IconButton
+                  disabled={choosingSimpleTextPathC}
+                  onClick={async () => {
+                    try {
+                      setChoosingSimpleTextPathC(true);
+                      setSimpleTextPathC(
+                        await window.electron.chooseSimpleTextPathC(),
+                      );
+                    } catch (e: any) {
+                      showErrorDialog([e instanceof Error ? e.message : e]);
+                    } finally {
+                      setChoosingSimpleTextPathC(false);
+                    }
+                  }}
+                >
+                  {choosingSimpleTextPathC ? (
+                    <CircularProgress size="24px" />
+                  ) : (
+                    <TextSnippet />
+                  )}
+                </IconButton>
+              </div>
+            </Tooltip>
+          </Stack>
+          <Stack direction="row" alignItems="center" marginRight="-9px">
+            <InputBase
+              disabled
+              size="small"
+              value={simpleTextPathD || 'Set simple text title file D...'}
+              style={{ flexGrow: 1 }}
+            />
+            <Tooltip placement="left" title="Set simple text title file D">
+              <div>
+                <IconButton
+                  disabled={choosingSimpleTextPathD}
+                  onClick={async () => {
+                    try {
+                      setChoosingSimpleTextPathD(true);
+                      setSimpleTextPathD(
+                        await window.electron.chooseSimpleTextPathD(),
+                      );
+                    } catch (e: any) {
+                      showErrorDialog([e instanceof Error ? e.message : e]);
+                    } finally {
+                      setChoosingSimpleTextPathD(false);
+                    }
+                  }}
+                >
+                  {choosingSimpleTextPathD ? (
+                    <CircularProgress size="24px" />
+                  ) : (
+                    <TextSnippet />
+                  )}
+                </IconButton>
+              </div>
+            </Tooltip>
+          </Stack>
           {needUpdate && (
             <Alert severity="warning">
               Update available!{' '}

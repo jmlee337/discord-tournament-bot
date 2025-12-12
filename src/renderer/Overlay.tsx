@@ -15,7 +15,6 @@ import {
   Rating,
   Select,
   Stack,
-  Switch,
   Table,
   TableBody,
   TableCell,
@@ -31,14 +30,15 @@ import {
   DisplaySettings,
   OpenInBrowser,
   Restore,
-  TextSnippet,
 } from '@mui/icons-material';
 import { blue, green, grey, red, yellow } from '@mui/material/colors';
 import styled from '@emotion/styled';
+import { IpcRendererEvent } from 'electron';
 import {
   MSTBestOf,
   MSTCharacter,
   MSTCharacterToSkinColors,
+  MSTManualUpdateScoreboardInfo,
   MSTPortColor,
   MSTScoreboardInfo,
   MSTSkinColor,
@@ -46,7 +46,6 @@ import {
   SHEIK_SKIN_TO_ZELDA_SKIN,
   ZELDA_SKIN_TO_SHEIK_SKIN,
 } from '../common/mst';
-import LabeledCheckbox from './LabeledCheckbox';
 
 const StyledRating = styled(Rating)({
   '& .MuiRating-iconFilled': {
@@ -58,49 +57,48 @@ const StyledRating = styled(Rating)({
 });
 
 export default function Overlay({
-  enableMST,
-  resourcesPath,
-  gotSettings,
+  enableSkinColor,
+  windowGetResourcesPath,
+  windowChooseResourcesPath,
+  windowGetEnableSggRound,
+  windowSetEnableSggRound,
+  windowGetScoreboardInfo,
+  windowSetScoreboardInfo,
+  windowOnScoreboardInfo,
   sggTournamentName,
-  setEnableMST,
-  setResourcesPath,
   showErrorDialog,
 }: {
-  enableMST: boolean;
-  resourcesPath: string;
-  gotSettings: boolean;
+  enableSkinColor: boolean;
+  windowGetResourcesPath: () => Promise<string>;
+  windowChooseResourcesPath: () => Promise<string>;
+  windowGetEnableSggRound: () => Promise<boolean>;
+  windowSetEnableSggRound: (enableSggRound: boolean) => Promise<void>;
+  windowGetScoreboardInfo: () => Promise<MSTScoreboardInfo>;
+  windowSetScoreboardInfo: (
+    scoreboardInfo: MSTManualUpdateScoreboardInfo,
+  ) => Promise<void>;
+  windowOnScoreboardInfo: (
+    callback: (
+      event: IpcRendererEvent,
+      scoreboardInfo: MSTScoreboardInfo,
+    ) => void,
+  ) => void;
   sggTournamentName: string;
-  setEnableMST: (newEnableMST: boolean) => void;
-  setResourcesPath: (newResourcesPath: string) => void;
   showErrorDialog: (errors: string[]) => void;
 }) {
-  const [enableSkinColor, setEnableSkinColor] = useState(false);
-  const [enableSggSponsors, setEnableSggSponsors] = useState(false);
+  const [resourcesPath, setResourcesPath] = useState('');
   const [enableSggRound, setEnableSggRound] = useState(false);
-  const [simpleTextPathA, setSimpleTextPathA] = useState('');
-  const [simpleTextPathB, setSimpleTextPathB] = useState('');
-  const [simpleTextPathC, setSimpleTextPathC] = useState('');
-  const [updateAutomatically, setUpdateAutomatically] = useState(false);
+  const [got, setGot] = useState(false);
 
   useEffect(() => {
     (async () => {
-      const enableSkinColorPromise = window.electron.getEnableSkinColor();
-      const enableSggSponsorsPromise = window.electron.getEnableSggSponsors();
-      const enableSggRoundPromise = window.electron.getEnableSggRound();
-      const simpleTextPathAPromise = window.electron.getSimpleTextPathA();
-      const simpleTextPathBPromise = window.electron.getSimpleTextPathB();
-      const simpleTextPathCPromise = window.electron.getSimpleTextPathC();
-      const updateAutomaticallyPromise =
-        window.electron.getUpdateAutomatically();
-      setEnableSkinColor(await enableSkinColorPromise);
-      setEnableSggSponsors(await enableSggSponsorsPromise);
+      const resourcesPathPromise = windowGetResourcesPath();
+      const enableSggRoundPromise = windowGetEnableSggRound();
+      setResourcesPath(await resourcesPathPromise);
       setEnableSggRound(await enableSggRoundPromise);
-      setSimpleTextPathA(await simpleTextPathAPromise);
-      setSimpleTextPathB(await simpleTextPathBPromise);
-      setSimpleTextPathC(await simpleTextPathCPromise);
-      setUpdateAutomatically(await updateAutomaticallyPromise);
+      setGot(true);
     })();
-  }, []);
+  }, [windowGetEnableSggRound, windowGetResourcesPath]);
 
   const [p1Name, setP1Name] = useState('');
   const [p1Team, setP1Team] = useState('');
@@ -157,40 +155,37 @@ export default function Overlay({
 
   useEffect(() => {
     (async () => {
-      if (gotSettings && enableMST && resourcesPath) {
+      if (got && resourcesPath) {
         try {
-          setScoreboardInfo(await window.electron.getScoreboardInfo());
+          setScoreboardInfo(await windowGetScoreboardInfo());
         } catch (e: any) {
           showErrorDialog([e instanceof Error ? e.message : e]);
         }
       }
     })();
   }, [
-    enableMST,
+    got,
     resourcesPath,
-    gotSettings,
     setScoreboardInfo,
     showErrorDialog,
+    windowGetScoreboardInfo,
   ]);
 
   useEffect(() => {
-    window.electron.onScoreboardInfo((event, newScoreboardInfo) => {
+    windowOnScoreboardInfo((event, newScoreboardInfo) => {
       setScoreboardInfo(newScoreboardInfo);
     });
-  }, [setScoreboardInfo]);
+  }, [windowOnScoreboardInfo, setScoreboardInfo]);
 
   const [open, setOpen] = useState(false);
   const [choosingResourcesPath, setChoosingResourcesPath] = useState(false);
-  const [choosingSimpleTextPathA, setChoosingSimpleTextPathA] = useState(false);
-  const [choosingSimpleTextPathB, setChoosingSimpleTextPathB] = useState(false);
-  const [choosingSimpleTextPathC, setChoosingSimpleTextPathC] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [updating, setUpdating] = useState(false);
 
   const updateFunc = useCallback(async () => {
     try {
       setUpdating(true);
-      await window.electron.setScoreboardInfo({
+      await windowSetScoreboardInfo({
         p1Name,
         p1Team,
         p1Character,
@@ -245,6 +240,7 @@ export default function Overlay({
     caster2Twitter,
     caster2Twitch,
     showErrorDialog,
+    windowSetScoreboardInfo,
   ]);
 
   return (
@@ -256,23 +252,7 @@ export default function Overlay({
           setOpen(false);
         }}
       >
-        <Stack
-          alignItems="center"
-          direction="row"
-          justifyContent="space-between"
-          marginRight="14px"
-        >
-          <DialogTitle>Melee Stream Tool Integration</DialogTitle>
-          <Tooltip placement="left" title="Enabled">
-            <Switch
-              checked={enableMST}
-              onChange={async (event, checked) => {
-                await window.electron.setEnableMST(checked);
-                setEnableMST(checked);
-              }}
-            />
-          </Tooltip>
-        </Stack>
+        <DialogTitle>Melee Stream Tool Integration</DialogTitle>
         <DialogContent sx={{ pt: 0 }}>
           <Stack direction="row" alignItems="center" marginRight="-9px">
             <InputBase
@@ -286,21 +266,15 @@ export default function Overlay({
             />
             <Tooltip
               placement="left"
-              title={
-                enableMST
-                  ? 'Set Melee Stream Tool/Melee Ghost Streamer Resources folder'
-                  : 'Melee Stream Tool/Melee Ghost Streamer overlay disabled'
-              }
+              title="Set Melee Stream Tool/Melee Ghost Streamer Resources folder"
             >
               <div>
                 <IconButton
-                  disabled={!enableMST || choosingResourcesPath}
+                  disabled={choosingResourcesPath}
                   onClick={async () => {
                     try {
                       setChoosingResourcesPath(true);
-                      setResourcesPath(
-                        await window.electron.chooseResourcesPath(),
-                      );
+                      setResourcesPath(await windowChooseResourcesPath());
                     } catch (e: any) {
                       showErrorDialog([e instanceof Error ? e.message : e]);
                     } finally {
@@ -312,158 +286,6 @@ export default function Overlay({
                     <CircularProgress size="24px" />
                   ) : (
                     <DisplaySettings />
-                  )}
-                </IconButton>
-              </div>
-            </Tooltip>
-          </Stack>
-          <Stack alignItems="end">
-            <LabeledCheckbox
-              checked={updateAutomatically}
-              disabled={!enableMST || !resourcesPath}
-              label="Update automatically from Slippi/start.gg"
-              labelPlacement="start"
-              set={async (checked) => {
-                await window.electron.setUpdateAutomatically(checked);
-                setUpdateAutomatically(checked);
-              }}
-            />
-            <LabeledCheckbox
-              checked={enableSkinColor}
-              disabled={!enableMST || !resourcesPath}
-              label="Enable character colors"
-              labelPlacement="start"
-              set={async (checked) => {
-                await window.electron.setEnableSkinColor(checked);
-                setEnableSkinColor(checked);
-              }}
-            />
-            <LabeledCheckbox
-              checked={enableSggSponsors}
-              disabled={!enableMST || !resourcesPath}
-              label="Use sponsor tags from start.gg"
-              labelPlacement="start"
-              set={async (checked) => {
-                await window.electron.setEnableSggSponsors(checked);
-                setEnableSggSponsors(checked);
-              }}
-            />
-          </Stack>
-          <Stack direction="row" alignItems="center" marginRight="-9px">
-            <InputBase
-              disabled
-              size="small"
-              value={simpleTextPathA || 'Set simple text file A...'}
-              style={{ flexGrow: 1 }}
-            />
-            <Tooltip
-              placement="left"
-              title={
-                enableMST
-                  ? 'Set simple text file A'
-                  : 'Melee Stream Tool/Melee Ghost Streamer overlay disabled'
-              }
-            >
-              <div>
-                <IconButton
-                  disabled={!enableMST || choosingSimpleTextPathA}
-                  onClick={async () => {
-                    try {
-                      setChoosingSimpleTextPathA(true);
-                      setSimpleTextPathA(
-                        await window.electron.chooseSimpleTextPathA(),
-                      );
-                    } catch (e: any) {
-                      showErrorDialog([e instanceof Error ? e.message : e]);
-                    } finally {
-                      setChoosingSimpleTextPathA(false);
-                    }
-                  }}
-                >
-                  {choosingSimpleTextPathA ? (
-                    <CircularProgress size="24px" />
-                  ) : (
-                    <TextSnippet />
-                  )}
-                </IconButton>
-              </div>
-            </Tooltip>
-          </Stack>
-          <Stack direction="row" alignItems="center" marginRight="-9px">
-            <InputBase
-              disabled
-              size="small"
-              value={simpleTextPathB || 'Set simple text file B...'}
-              style={{ flexGrow: 1 }}
-            />
-            <Tooltip
-              placement="left"
-              title={
-                enableMST
-                  ? 'Set simple text file B'
-                  : 'Melee Stream Tool/Melee Ghost Streamer overlay disabled'
-              }
-            >
-              <div>
-                <IconButton
-                  disabled={!enableMST || choosingSimpleTextPathB}
-                  onClick={async () => {
-                    try {
-                      setChoosingSimpleTextPathB(true);
-                      setSimpleTextPathB(
-                        await window.electron.chooseSimpleTextPathB(),
-                      );
-                    } catch (e: any) {
-                      showErrorDialog([e instanceof Error ? e.message : e]);
-                    } finally {
-                      setChoosingSimpleTextPathB(false);
-                    }
-                  }}
-                >
-                  {choosingSimpleTextPathB ? (
-                    <CircularProgress size="24px" />
-                  ) : (
-                    <TextSnippet />
-                  )}
-                </IconButton>
-              </div>
-            </Tooltip>
-          </Stack>
-          <Stack direction="row" alignItems="center" marginRight="-9px">
-            <InputBase
-              disabled
-              size="small"
-              value={simpleTextPathC || 'Set simple text file C...'}
-              style={{ flexGrow: 1 }}
-            />
-            <Tooltip
-              placement="left"
-              title={
-                enableMST
-                  ? 'Set simple text file C'
-                  : 'Melee Stream Tool/Melee Ghost Streamer overlay disabled'
-              }
-            >
-              <div>
-                <IconButton
-                  disabled={!enableMST || choosingSimpleTextPathC}
-                  onClick={async () => {
-                    try {
-                      setChoosingSimpleTextPathC(true);
-                      setSimpleTextPathC(
-                        await window.electron.chooseSimpleTextPathC(),
-                      );
-                    } catch (e: any) {
-                      showErrorDialog([e instanceof Error ? e.message : e]);
-                    } finally {
-                      setChoosingSimpleTextPathC(false);
-                    }
-                  }}
-                >
-                  {choosingSimpleTextPathC ? (
-                    <CircularProgress size="24px" />
-                  ) : (
-                    <TextSnippet />
                   )}
                 </IconButton>
               </div>
@@ -486,7 +308,7 @@ export default function Overlay({
           <Stack flexBasis="50%" spacing="8px">
             <Stack direction="row" spacing="8px">
               <TextField
-                disabled={!enableMST || !resourcesPath}
+                disabled={!resourcesPath}
                 variant="outlined"
                 size="small"
                 style={{ width: '89px' }}
@@ -504,7 +326,7 @@ export default function Overlay({
                 }}
               />
               <TextField
-                disabled={!enableMST || !resourcesPath}
+                disabled={!resourcesPath}
                 variant="outlined"
                 size="small"
                 label="Player 1"
@@ -522,7 +344,7 @@ export default function Overlay({
               />
               <Tooltip placement="top" title="Port Color">
                 <Select
-                  disabled={!enableMST || !resourcesPath}
+                  disabled={!resourcesPath}
                   size="small"
                   value={p1Color}
                   onChange={(event) => {
@@ -573,7 +395,7 @@ export default function Overlay({
             </Stack>
             <Stack direction="row" spacing="8px">
               <FormControlLabel
-                disabled={!enableMST || !resourcesPath}
+                disabled={!resourcesPath}
                 label="Wins"
                 labelPlacement="start"
                 slotProps={{ typography: { style: { marginRight: '4px' } } }}
@@ -591,7 +413,7 @@ export default function Overlay({
                 }
               />
               <ToggleButtonGroup
-                disabled={!enableMST || !resourcesPath}
+                disabled={!resourcesPath}
                 aria-label="Winners/Losers"
                 exclusive
                 size="small"
@@ -615,7 +437,7 @@ export default function Overlay({
                   Character
                 </InputLabel>
                 <Select
-                  disabled={!enableMST || !resourcesPath}
+                  disabled={!resourcesPath}
                   size="small"
                   style={{ width: '177px' }}
                   label="Character"
@@ -671,7 +493,7 @@ export default function Overlay({
                     Color
                   </InputLabel>
                   <Select
-                    disabled={!enableMST || !resourcesPath}
+                    disabled={!resourcesPath}
                     size="small"
                     style={{ width: '142px' }}
                     label="Color"
@@ -696,7 +518,7 @@ export default function Overlay({
           <Stack flexBasis="50%" spacing="8px">
             <Stack direction="row" spacing="8px">
               <TextField
-                disabled={!enableMST || !resourcesPath}
+                disabled={!resourcesPath}
                 variant="outlined"
                 size="small"
                 style={{ width: '89px' }}
@@ -714,7 +536,7 @@ export default function Overlay({
                 }}
               />
               <TextField
-                disabled={!enableMST || !resourcesPath}
+                disabled={!resourcesPath}
                 variant="outlined"
                 size="small"
                 label="Player 2"
@@ -732,7 +554,7 @@ export default function Overlay({
               />
               <Tooltip placement="top" title="Port Color">
                 <Select
-                  disabled={!enableMST || !resourcesPath}
+                  disabled={!resourcesPath}
                   size="small"
                   value={p2Color}
                   onChange={(event) => {
@@ -783,7 +605,7 @@ export default function Overlay({
             </Stack>
             <Stack direction="row" spacing="8px">
               <FormControlLabel
-                disabled={!enableMST || !resourcesPath}
+                disabled={!resourcesPath}
                 label="Wins"
                 labelPlacement="start"
                 slotProps={{ typography: { style: { marginRight: '4px' } } }}
@@ -801,7 +623,7 @@ export default function Overlay({
                 }
               />
               <ToggleButtonGroup
-                disabled={!enableMST || !resourcesPath}
+                disabled={!resourcesPath}
                 aria-label="Winners/Losers"
                 exclusive
                 size="small"
@@ -825,7 +647,7 @@ export default function Overlay({
                   Character
                 </InputLabel>
                 <Select
-                  disabled={!enableMST || !resourcesPath}
+                  disabled={!resourcesPath}
                   size="small"
                   style={{ width: '177px' }}
                   label="Character"
@@ -881,7 +703,7 @@ export default function Overlay({
                     Color
                   </InputLabel>
                   <Select
-                    disabled={!enableMST || !resourcesPath}
+                    disabled={!resourcesPath}
                     size="small"
                     style={{ width: '142px' }}
                     label="Color"
@@ -925,7 +747,7 @@ export default function Overlay({
                   height="40px"
                 >
                   <ToggleButtonGroup
-                    disabled={!enableMST || !resourcesPath}
+                    disabled={!resourcesPath}
                     aria-label="Best Of"
                     exclusive
                     size="small"
@@ -938,7 +760,7 @@ export default function Overlay({
                     <ToggleButton value="Bo5">BO5</ToggleButton>
                   </ToggleButtonGroup>
                   <ToggleButtonGroup
-                    disabled={!enableMST || !resourcesPath}
+                    disabled={!resourcesPath}
                     aria-label="Auto Round"
                     exclusive
                     size="small"
@@ -947,7 +769,7 @@ export default function Overlay({
                     }}
                     value={enableSggRound}
                     onChange={async (event, value) => {
-                      await window.electron.setEnableSggRound(value);
+                      await windowSetEnableSggRound(value);
                       setEnableSggRound(value);
                     }}
                   >
@@ -967,7 +789,7 @@ export default function Overlay({
               </TableCell>
               <TableCell style={{ border: 'none' }}>
                 <TextField
-                  disabled={!enableMST || !resourcesPath}
+                  disabled={!resourcesPath}
                   variant="outlined"
                   size="small"
                   style={{ minWidth: '210px' }}
@@ -995,7 +817,7 @@ export default function Overlay({
               </TableCell>
               <TableCell style={{ border: 'none', position: 'relative' }}>
                 <TextField
-                  disabled={!enableMST || !resourcesPath}
+                  disabled={!resourcesPath}
                   variant="outlined"
                   size="small"
                   style={{ minWidth: '210px' }}
@@ -1031,7 +853,7 @@ export default function Overlay({
             <TableRow>
               <TableCell style={{ border: 'none' }}>
                 <TextField
-                  disabled={!enableMST || !resourcesPath}
+                  disabled={!resourcesPath}
                   variant="outlined"
                   size="small"
                   style={{ minWidth: '210px' }}
@@ -1051,7 +873,7 @@ export default function Overlay({
               </TableCell>
               <TableCell style={{ border: 'none' }}>
                 <TextField
-                  disabled={!enableMST || !resourcesPath}
+                  disabled={!resourcesPath}
                   variant="outlined"
                   size="small"
                   style={{ minWidth: '210px' }}
@@ -1071,7 +893,7 @@ export default function Overlay({
               </TableCell>
               <TableCell style={{ border: 'none' }}>
                 <TextField
-                  disabled={!enableMST || !resourcesPath}
+                  disabled={!resourcesPath}
                   variant="outlined"
                   size="small"
                   style={{ minWidth: '210px' }}
@@ -1093,7 +915,7 @@ export default function Overlay({
             <TableRow>
               <TableCell style={{ border: 'none' }}>
                 <TextField
-                  disabled={!enableMST || !resourcesPath}
+                  disabled={!resourcesPath}
                   variant="outlined"
                   size="small"
                   style={{ minWidth: '210px' }}
@@ -1106,7 +928,7 @@ export default function Overlay({
               </TableCell>
               <TableCell style={{ border: 'none' }}>
                 <TextField
-                  disabled={!enableMST || !resourcesPath}
+                  disabled={!resourcesPath}
                   variant="outlined"
                   size="small"
                   style={{ minWidth: '210px' }}
@@ -1126,7 +948,7 @@ export default function Overlay({
               </TableCell>
               <TableCell style={{ border: 'none' }}>
                 <TextField
-                  disabled={!enableMST || !resourcesPath}
+                  disabled={!resourcesPath}
                   variant="outlined"
                   size="small"
                   style={{ minWidth: '210px' }}
@@ -1151,13 +973,13 @@ export default function Overlay({
           <Button
             variant="contained"
             color="warning"
-            disabled={resetting || !(enableMST && resourcesPath)}
+            disabled={resetting || !resourcesPath}
             endIcon={resetting ? <CircularProgress size="20" /> : <Restore />}
             style={{ width: '109px' }}
             onClick={async () => {
               try {
                 setResetting(true);
-                setScoreboardInfo(await window.electron.getScoreboardInfo());
+                setScoreboardInfo(await windowGetScoreboardInfo());
               } catch (e: any) {
                 showErrorDialog([e instanceof Error ? e.message : e]);
               } finally {
@@ -1170,7 +992,7 @@ export default function Overlay({
           <Button
             variant="contained"
             color="success"
-            disabled={updating || !(enableMST && resourcesPath)}
+            disabled={updating || !resourcesPath}
             endIcon={
               updating ? <CircularProgress size="20" /> : <OpenInBrowser />
             }

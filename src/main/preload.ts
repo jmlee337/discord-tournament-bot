@@ -9,6 +9,8 @@ import {
   DiscordServer,
   DiscordStatus,
   DiscordToPing,
+  DolphinId,
+  OverlayId,
   ParticipantConnections,
   RemoteState,
   Sets,
@@ -49,21 +51,36 @@ const electronHandler = {
     ipcRenderer.invoke('startSpectating', broadcastId, dolphinId),
   stopSpectating: (broadcastId: string): Promise<void> =>
     ipcRenderer.invoke('stopSpectating', broadcastId),
-  getOverlayDolphinId: (): Promise<string> =>
-    ipcRenderer.invoke('getOverlayDolphinId'),
-  setOverlayDolphinId: (overlayDolphinId: string): Promise<void> =>
-    ipcRenderer.invoke('setOverlayDolphinId', overlayDolphinId),
-  getEnableMST: (): Promise<boolean> => ipcRenderer.invoke('getEnableMST'),
-  setEnableMST: (enableMST: boolean): Promise<void> =>
-    ipcRenderer.invoke('setEnableMST', enableMST),
-  getResourcesPath: (): Promise<string> =>
-    ipcRenderer.invoke('getResourcesPath'),
-  chooseResourcesPath: (): Promise<string> =>
-    ipcRenderer.invoke('chooseResourcesPath'),
+  getDolphinIdToOverlayId: (): Promise<Map<DolphinId, OverlayId>> =>
+    ipcRenderer.invoke('getDolphinIdToOverlayId'),
+  setDolphinOverlayId: (
+    dolphinId: DolphinId,
+    overlayId: OverlayId,
+  ): Promise<Map<DolphinId, OverlayId>> =>
+    ipcRenderer.invoke('setDolphinOverlayId', dolphinId, overlayId),
   getUpdateAutomatically: (): Promise<boolean> =>
     ipcRenderer.invoke('getUpdateAutomatically'),
   setUpdateAutomatically: (updateAutomatically: boolean): Promise<void> =>
     ipcRenderer.invoke('setUpdateAutomatically', updateAutomatically),
+  getNumMSTs: (): Promise<0 | OverlayId> => ipcRenderer.invoke('getNumMSTs'),
+  setNumMSTs: (numMSTs: 0 | OverlayId): Promise<void> =>
+    ipcRenderer.invoke('setNumMSTs', numMSTs),
+  getResourcesPath1: (): Promise<string> =>
+    ipcRenderer.invoke('getResourcesPath1'),
+  chooseResourcesPath1: (): Promise<string> =>
+    ipcRenderer.invoke('chooseResourcesPath1'),
+  getResourcesPath2: (): Promise<string> =>
+    ipcRenderer.invoke('getResourcesPath2'),
+  chooseResourcesPath2: (): Promise<string> =>
+    ipcRenderer.invoke('chooseResourcesPath2'),
+  getResourcesPath3: (): Promise<string> =>
+    ipcRenderer.invoke('getResourcesPath3'),
+  chooseResourcesPath3: (): Promise<string> =>
+    ipcRenderer.invoke('chooseResourcesPath3'),
+  getResourcesPath4: (): Promise<string> =>
+    ipcRenderer.invoke('getResourcesPath4'),
+  chooseResourcesPath4: (): Promise<string> =>
+    ipcRenderer.invoke('chooseResourcesPath4'),
   getEnableSkinColor: (): Promise<boolean> =>
     ipcRenderer.invoke('getEnableSkinColor'),
   setEnableSkinColor: (enableSkinColor: boolean): Promise<void> =>
@@ -72,10 +89,22 @@ const electronHandler = {
     ipcRenderer.invoke('getEnableSggSponsors'),
   setEnableSggSponsors: (enableSggSponsors: boolean): Promise<void> =>
     ipcRenderer.invoke('setEnableSggSponsors', enableSggSponsors),
-  getEnableSggRound: (): Promise<boolean> =>
-    ipcRenderer.invoke('getEnableSggRound'),
-  setEnableSggRound: (enableSggRound: boolean): Promise<void> =>
-    ipcRenderer.invoke('setEnableSggRound', enableSggRound),
+  getEnableSggRound1: (): Promise<boolean> =>
+    ipcRenderer.invoke('getEnableSggRound1'),
+  setEnableSggRound1: (enableSggRound: boolean): Promise<void> =>
+    ipcRenderer.invoke('setEnableSggRound1', enableSggRound),
+  getEnableSggRound2: (): Promise<boolean> =>
+    ipcRenderer.invoke('getEnableSggRound2'),
+  setEnableSggRound2: (enableSggRound: boolean): Promise<void> =>
+    ipcRenderer.invoke('setEnableSggRound2', enableSggRound),
+  getEnableSggRound3: (): Promise<boolean> =>
+    ipcRenderer.invoke('getEnableSggRound3'),
+  setEnableSggRound3: (enableSggRound: boolean): Promise<void> =>
+    ipcRenderer.invoke('setEnableSggRound3', enableSggRound),
+  getEnableSggRound4: (): Promise<boolean> =>
+    ipcRenderer.invoke('getEnableSggRound4'),
+  setEnableSggRound4: (enableSggRound: boolean): Promise<void> =>
+    ipcRenderer.invoke('setEnableSggRound4', enableSggRound),
   getSimpleTextPathA: (): Promise<string> =>
     ipcRenderer.invoke('getSimpleTextPathA'),
   chooseSimpleTextPathA: (): Promise<string> =>
@@ -88,11 +117,30 @@ const electronHandler = {
     ipcRenderer.invoke('getSimpleTextPathC'),
   chooseSimpleTextPathC: (): Promise<string> =>
     ipcRenderer.invoke('chooseSimpleTextPathC'),
-  getScoreboardInfo: (): Promise<MSTScoreboardInfo> =>
-    ipcRenderer.invoke('getScoreboardInfo'),
-  setScoreboardInfo: (
+  getSimpleTextPathD: (): Promise<string> =>
+    ipcRenderer.invoke('getSimpleTextPathD'),
+  chooseSimpleTextPathD: (): Promise<string> =>
+    ipcRenderer.invoke('chooseSimpleTextPathD'),
+  getScoreboardInfo1: (): Promise<MSTScoreboardInfo> =>
+    ipcRenderer.invoke('getScoreboardInfo1'),
+  getScoreboardInfo2: (): Promise<MSTScoreboardInfo> =>
+    ipcRenderer.invoke('getScoreboardInfo2'),
+  getScoreboardInfo3: (): Promise<MSTScoreboardInfo> =>
+    ipcRenderer.invoke('getScoreboardInfo3'),
+  getScoreboardInfo4: (): Promise<MSTScoreboardInfo> =>
+    ipcRenderer.invoke('getScoreboardInfo4'),
+  setScoreboardInfo1: (
     scoreboardInfo: MSTManualUpdateScoreboardInfo,
-  ): Promise<void> => ipcRenderer.invoke('setScoreboardInfo', scoreboardInfo),
+  ): Promise<void> => ipcRenderer.invoke('setScoreboardInfo1', scoreboardInfo),
+  setScoreboardInfo2: (
+    scoreboardInfo: MSTManualUpdateScoreboardInfo,
+  ): Promise<void> => ipcRenderer.invoke('setScoreboardInfo2', scoreboardInfo),
+  setScoreboardInfo3: (
+    scoreboardInfo: MSTManualUpdateScoreboardInfo,
+  ): Promise<void> => ipcRenderer.invoke('setScoreboardInfo3', scoreboardInfo),
+  setScoreboardInfo4: (
+    scoreboardInfo: MSTManualUpdateScoreboardInfo,
+  ): Promise<void> => ipcRenderer.invoke('setScoreboardInfo4', scoreboardInfo),
   getStartggApiKey: (): Promise<string> =>
     ipcRenderer.invoke('getStartggApiKey'),
   setStartggApiKey: (startggApiKey: string): Promise<void> =>
@@ -194,14 +242,41 @@ const electronHandler = {
     ipcRenderer.removeAllListeners('spectating');
     ipcRenderer.on('spectating', callback);
   },
-  onScoreboardInfo: (
+  onScoreboardInfo1: (
     callback: (
       event: IpcRendererEvent,
       scoreboardInfo: MSTScoreboardInfo,
     ) => void,
   ) => {
-    ipcRenderer.removeAllListeners('scoreboardInfo');
-    ipcRenderer.on('scoreboardInfo', callback);
+    ipcRenderer.removeAllListeners('scoreboardInfo1');
+    ipcRenderer.on('scoreboardInfo1', callback);
+  },
+  onScoreboardInfo2: (
+    callback: (
+      event: IpcRendererEvent,
+      scoreboardInfo: MSTScoreboardInfo,
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('scoreboardInfo2');
+    ipcRenderer.on('scoreboardInfo2', callback);
+  },
+  onScoreboardInfo3: (
+    callback: (
+      event: IpcRendererEvent,
+      scoreboardInfo: MSTScoreboardInfo,
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('scoreboardInfo3');
+    ipcRenderer.on('scoreboardInfo3', callback);
+  },
+  onScoreboardInfo4: (
+    callback: (
+      event: IpcRendererEvent,
+      scoreboardInfo: MSTScoreboardInfo,
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('scoreboardInfo4');
+    ipcRenderer.on('scoreboardInfo4', callback);
   },
   isMac: process.platform === 'darwin',
   // exposed for dev only
