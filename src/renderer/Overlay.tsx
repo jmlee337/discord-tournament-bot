@@ -259,14 +259,13 @@ export default function Overlay({
               disabled
               size="small"
               value={
-                resourcesPath ||
-                'Set Melee Stream Tool/Melee Ghost Streamer Resources folder...'
+                resourcesPath || 'Set Melee Stream Tool Resources folder...'
               }
               style={{ flexGrow: 1 }}
             />
             <Tooltip
               placement="left"
-              title="Set Melee Stream Tool/Melee Ghost Streamer Resources folder"
+              title="Set Melee Stream Tool Resources folder"
             >
               <div>
                 <IconButton

@@ -30,7 +30,7 @@ Nicolet's Netplay Tournament Suite offers TOs a range of helpful tools for runni
 
 ### Broadcast
 
-You must update Slippi Launcher to version 2.12.0 (TBD) to use the NTS Broadcasts tab.
+You must have Slippi Launcher version 2.12.0 or later to use the NTS Broadcasts tab.
 
 Enable Spectate Remote Control in Slippi Launcher Settings:  
 <img width="400" alt="Screenshot 2025-12-07 at 13 40 21" src="https://github.com/user-attachments/assets/2244f52d-0798-481f-88bd-f1c36da83783" />
@@ -43,11 +43,9 @@ Then you should be able to connect and manage your broadcasts from the NTS Broad
 ### Overlay
 
 Requires [Melee Stream Tool](https://github.com/Readek/Melee-Stream-Tool/releases/latest).
-This should also work with Melee Ghost Streamer but the pronouns field will not be updatable.
 
-Enable Melee Stream Tool integration and set your Melee Stream Tool `Resources` folder in the settings dialog on the NTS Overlay tab: 
+Enable Melee Stream Tool integration and set your Melee Stream Tool `Resources` folder in the settings dialog on the NTS Overlay tab:
 <img width="600" alt="Screenshot 2025-12-07 162249" src="https://github.com/user-attachments/assets/d43cb0fd-2219-47ca-8615-87da25e0e67b" />
-
 
 ### Discord
 
