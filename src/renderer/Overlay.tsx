@@ -432,12 +432,11 @@ export default function Overlay({
               </ToggleButtonGroup>
             </Stack>
             <Stack direction="row" spacing="8px">
-              <FormControl>
+              <FormControl disabled={!resourcesPath}>
                 <InputLabel id="p1-character-select-label" size="small">
                   Character
                 </InputLabel>
                 <Select
-                  disabled={!resourcesPath}
                   size="small"
                   style={{ width: '177px' }}
                   label="Character"
@@ -488,12 +487,11 @@ export default function Overlay({
                 </Select>
               </FormControl>
               {enableSkinColor && (
-                <FormControl>
+                <FormControl disabled={!resourcesPath}>
                   <InputLabel id="p1-skin-select-label" size="small">
                     Color
                   </InputLabel>
                   <Select
-                    disabled={!resourcesPath}
                     size="small"
                     style={{ width: '142px' }}
                     label="Color"
@@ -642,12 +640,11 @@ export default function Overlay({
               </ToggleButtonGroup>
             </Stack>
             <Stack direction="row" spacing="8px">
-              <FormControl>
+              <FormControl disabled={!resourcesPath}>
                 <InputLabel id="p2-character-select-label" size="small">
                   Character
                 </InputLabel>
                 <Select
-                  disabled={!resourcesPath}
                   size="small"
                   style={{ width: '177px' }}
                   label="Character"
@@ -698,12 +695,11 @@ export default function Overlay({
                 </Select>
               </FormControl>
               {enableSkinColor && (
-                <FormControl>
+                <FormControl disabled={!resourcesPath}>
                   <InputLabel id="p2-skin-select-label" size="small">
                     Color
                   </InputLabel>
                   <Select
-                    disabled={!resourcesPath}
                     size="small"
                     style={{ width: '142px' }}
                     label="Color"

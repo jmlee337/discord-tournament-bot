@@ -278,14 +278,13 @@ function Hello() {
                 style={{ paddingTop: 0, paddingRight: '8px', paddingBottom: 0 }}
                 slotProps={{ icon: { style: { alignItems: 'center' } } }}
               >
-                <FormControl>
+                <FormControl disabled={refreshingDiscordServers}>
                   <InputLabel id="discord-server-select-id" size="small">
                     {discordServerId
                       ? 'Discord Server'
                       : 'Select Discord Server...'}
                   </InputLabel>
                   <Select
-                    disabled={refreshingDiscordServers}
                     label={
                       discordServerId
                         ? 'Discord Server'
