@@ -348,7 +348,7 @@ function OverlaySelect({
       <FormControl
         ref={selectRef}
         style={{ marginTop: '8px' }}
-        disabled={!spectate.spectating || overlayId !== undefined}
+        disabled={!spectate.broadcast || overlayId !== undefined}
       >
         <InputLabel size="small" id={`${dolphinId}-overlay-select-id`}>
           Overlay
@@ -585,7 +585,7 @@ export default function Remote({
             <Card
               key={spectate.dolphinId}
               sx={
-                spectate.spectating
+                spectate.broadcast
                   ? undefined
                   : {
                       backgroundColor: (theme) =>
@@ -602,15 +602,11 @@ export default function Remote({
                   paddingBottom: 0,
                 }}
               >
-                {spectate.spectating && (
-                  <>
-                    {spectate.broadcast === undefined && (
-                      <Typography variant="caption">
-                        unknown broadcast
-                      </Typography>
-                    )}
-                    {spectate.broadcast && (
-                      <Typography variant="caption">
+                {spectate.broadcast && (
+                  <Typography variant="caption">
+                    {spectate.broadcast.connectCode &&
+                    spectate.broadcast.slippiName ? (
+                      <>
                         {spectate.broadcast.sets.length > 0 &&
                           `${
                             spectate.broadcast.gamerTag
@@ -621,9 +617,11 @@ export default function Remote({
                           (spectate.broadcast.gamerTag
                             ? spectate.broadcast.gamerTag
                             : `${spectate.broadcast.connectCode} (${spectate.broadcast.slippiName})`)}
-                      </Typography>
+                      </>
+                    ) : (
+                      'unknown broadcast'
                     )}
-                  </>
+                  </Typography>
                 )}
                 <OverlaySelect
                   spectate={spectate}
@@ -652,7 +650,7 @@ export default function Remote({
                     setSelectedChipBroadcastId('');
                   }}
                 />
-                {spectate.spectating && (
+                {spectate.broadcast && (
                   <>
                     <Tooltip title="Stop" style={{ zIndex: 2 }}>
                       <IconButton

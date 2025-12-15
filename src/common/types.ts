@@ -154,7 +154,6 @@ export type DolphinId =
 export type Spectating = {
   dolphinId: DolphinId;
   broadcast?: Broadcast;
-  spectating: boolean;
 };
 
 export type DiscordServer = {

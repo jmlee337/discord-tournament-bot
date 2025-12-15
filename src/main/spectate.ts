@@ -51,7 +51,6 @@ enum SimpleTextPathId {
 type SpectatingInternal = {
   dolphinId: DolphinId;
   broadcastId: string;
-  spectating: boolean;
 };
 
 let timeoutId: NodeJS.Timeout | undefined;
@@ -156,16 +155,23 @@ export function getSpectating() {
   return getDolphinIds().map((dolphinId): Spectating => {
     const spectatingInternal = dolphinIdToSpectating.get(dolphinId);
     if (spectatingInternal) {
+      let broadcast = idToBroadcast.get(spectatingInternal.broadcastId);
+      if (!broadcast) {
+        broadcast = {
+          id: spectatingInternal.broadcastId,
+          connectCode: '',
+          sets: [],
+          slippiName: '',
+        };
+      }
       return {
         dolphinId,
-        broadcast: idToBroadcast.get(spectatingInternal.broadcastId),
-        spectating: spectatingInternal.spectating,
+        broadcast,
       };
     }
     return {
       dolphinId,
       broadcast: undefined,
-      spectating: false,
     };
   });
 }
@@ -614,7 +620,6 @@ export function connect(port: number) {
                   dolphinIdToSpectating.set(validDolphinId, {
                     dolphinId: validDolphinId,
                     broadcastId: spectate.broadcastId,
-                    spectating: true,
                   });
                   spectatingBroadcastIdToDolphinId.set(
                     spectate.broadcastId,
@@ -675,7 +680,6 @@ export function connect(port: number) {
                 dolphinIdToSpectating.set(validDolphinId, {
                   dolphinId: validDolphinId,
                   broadcastId: message.broadcastId,
-                  spectating: true,
                 });
                 spectatingBroadcastIdToDolphinId.set(
                   message.broadcastId,
@@ -732,7 +736,6 @@ export function connect(port: number) {
                 dolphinIdToSpectating.set(validDolphinId, {
                   dolphinId: validDolphinId,
                   broadcastId: message.broadcastId,
-                  spectating: true,
                 });
                 spectatingBroadcastIdToDolphinId.set(
                   message.broadcastId,
@@ -845,7 +848,6 @@ export function connect(port: number) {
               dolphinIdToSpectating.set(validDolphinId, {
                 dolphinId: validDolphinId,
                 broadcastId: message.broadcastId,
-                spectating: true,
               });
               spectatingBroadcastIdToDolphinId.set(
                 message.broadcastId,
