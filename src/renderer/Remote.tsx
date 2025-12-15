@@ -411,6 +411,132 @@ function OverlaySelect({
   );
 }
 
+function OverlayCard({
+  spectate,
+  numMSTs,
+  overlayIdToDolphinId,
+  dolphinIdToOverlayId,
+  setDolphinIdToOverlayId,
+  selectedChipBroadcastId,
+  setSelectedChipBroadcastId,
+}: {
+  spectate: Spectating;
+  numMSTs: number;
+  overlayIdToDolphinId: Map<OverlayId, DolphinId>;
+  dolphinIdToOverlayId: Map<DolphinId, OverlayId>;
+  setDolphinIdToOverlayId: (
+    dolphinIdToOverlayId: Map<DolphinId, OverlayId>,
+  ) => void;
+  selectedChipBroadcastId: string;
+  setSelectedChipBroadcastId: (selectedChipBroadcastId: string) => void;
+}) {
+  const lastReplaySet = useMemo(() => {
+    if (
+      !spectate.broadcast ||
+      spectate.broadcast.sets.length === 0 ||
+      !spectate.lastReplaySetId
+    ) {
+      return undefined;
+    }
+
+    return spectate.broadcast.sets.find(
+      (set) => set.id === spectate.lastReplaySetId,
+    );
+  }, [spectate]);
+
+  return (
+    <Card
+      key={spectate.dolphinId}
+      sx={
+        spectate.broadcast
+          ? undefined
+          : {
+              backgroundColor: (theme) =>
+                theme.palette.action.disabledBackground,
+            }
+      }
+    >
+      <CardHeader title={spectate.dolphinId} />
+      <CardContent
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          paddingTop: 0,
+          paddingBottom: 0,
+        }}
+      >
+        {spectate.broadcast && (
+          <Typography variant="caption">
+            {spectate.broadcast.connectCode && spectate.broadcast.slippiName ? (
+              <>
+                {lastReplaySet &&
+                  `${spectate.broadcast.gamerTag} vs ${lastReplaySet.opponentName}`}
+                {!lastReplaySet &&
+                  spectate.broadcast.sets.length > 0 &&
+                  `${spectate.broadcast.gamerTag} vs ${spectate.broadcast.sets
+                    .map((set) => set.opponentName)
+                    .join(', ')}`}
+                {!lastReplaySet &&
+                  spectate.broadcast.sets.length === 0 &&
+                  (spectate.broadcast.gamerTag
+                    ? spectate.broadcast.gamerTag
+                    : `${spectate.broadcast.connectCode} (${spectate.broadcast.slippiName})`)}
+              </>
+            ) : (
+              'unknown broadcast'
+            )}
+          </Typography>
+        )}
+        <OverlaySelect
+          spectate={spectate}
+          numMSTs={numMSTs}
+          dolphinIdToOverlayId={dolphinIdToOverlayId}
+          overlayIdToDolphinId={overlayIdToDolphinId}
+          setDolphinIdToOverlayId={setDolphinIdToOverlayId}
+        />
+      </CardContent>
+      <CardActions
+        disableSpacing
+        style={{
+          justifyContent: 'space-between',
+          position: 'relative',
+        }}
+      >
+        <DroppableChip
+          selectedChipBroadcastId={selectedChipBroadcastId}
+          onClickOrDrop={async (broadcastId) => {
+            if (broadcastId !== spectate.broadcast?.id) {
+              await window.electron.startSpectating(
+                broadcastId,
+                spectate.dolphinId,
+              );
+            }
+            setSelectedChipBroadcastId('');
+          }}
+        />
+        {spectate.broadcast && (
+          <>
+            <Tooltip title="Stop" style={{ zIndex: 2 }}>
+              <IconButton
+                onClick={async () => {
+                  await window.electron.stopSpectating(spectate.broadcast!.id);
+                }}
+              >
+                <Stop />
+              </IconButton>
+            </Tooltip>
+            <CircularProgress
+              enableTrackSlot
+              color="success"
+              style={{ position: 'absolute', right: '8px' }}
+            />
+          </>
+        )}
+      </CardActions>
+    </Card>
+  );
+}
+
 export default function Remote({
   numMSTs,
   remoteState,
@@ -582,96 +708,15 @@ export default function Remote({
         </Stack>
         <Stack spacing="8px" style={{ marginTop: '8px', marginBottom: '24px' }}>
           {spectating.map((spectate) => (
-            <Card
-              key={spectate.dolphinId}
-              sx={
-                spectate.broadcast
-                  ? undefined
-                  : {
-                      backgroundColor: (theme) =>
-                        theme.palette.action.disabledBackground,
-                    }
-              }
-            >
-              <CardHeader title={spectate.dolphinId} />
-              <CardContent
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  paddingTop: 0,
-                  paddingBottom: 0,
-                }}
-              >
-                {spectate.broadcast && (
-                  <Typography variant="caption">
-                    {spectate.broadcast.connectCode &&
-                    spectate.broadcast.slippiName ? (
-                      <>
-                        {spectate.broadcast.sets.length > 0 &&
-                          `${
-                            spectate.broadcast.gamerTag
-                          } vs ${spectate.broadcast.sets
-                            .map((set) => set.opponentName)
-                            .join(', ')}`}
-                        {spectate.broadcast.sets.length === 0 &&
-                          (spectate.broadcast.gamerTag
-                            ? spectate.broadcast.gamerTag
-                            : `${spectate.broadcast.connectCode} (${spectate.broadcast.slippiName})`)}
-                      </>
-                    ) : (
-                      'unknown broadcast'
-                    )}
-                  </Typography>
-                )}
-                <OverlaySelect
-                  spectate={spectate}
-                  numMSTs={numMSTs}
-                  dolphinIdToOverlayId={dolphinIdToOverlayId}
-                  overlayIdToDolphinId={overlayIdToDolphinId}
-                  setDolphinIdToOverlayId={setDolphinIdToOverlayId}
-                />
-              </CardContent>
-              <CardActions
-                disableSpacing
-                style={{
-                  justifyContent: 'space-between',
-                  position: 'relative',
-                }}
-              >
-                <DroppableChip
-                  selectedChipBroadcastId={selectedChipBroadcastId}
-                  onClickOrDrop={async (broadcastId) => {
-                    if (broadcastId !== spectate.broadcast?.id) {
-                      await window.electron.startSpectating(
-                        broadcastId,
-                        spectate.dolphinId,
-                      );
-                    }
-                    setSelectedChipBroadcastId('');
-                  }}
-                />
-                {spectate.broadcast && (
-                  <>
-                    <Tooltip title="Stop" style={{ zIndex: 2 }}>
-                      <IconButton
-                        onClick={async () => {
-                          await window.electron.stopSpectating(
-                            spectate.broadcast!.id,
-                          );
-                        }}
-                      >
-                        <Stop />
-                      </IconButton>
-                    </Tooltip>
-                    <CircularProgress
-                      enableTrackSlot
-                      color="success"
-                      style={{ position: 'absolute', right: '8px' }}
-                    />
-                  </>
-                )}
-              </CardActions>
-            </Card>
+            <OverlayCard
+              spectate={spectate}
+              numMSTs={numMSTs}
+              overlayIdToDolphinId={overlayIdToDolphinId}
+              dolphinIdToOverlayId={dolphinIdToOverlayId}
+              setDolphinIdToOverlayId={setDolphinIdToOverlayId}
+              selectedChipBroadcastId={selectedChipBroadcastId}
+              setSelectedChipBroadcastId={setSelectedChipBroadcastId}
+            />
           ))}
         </Stack>
       </Stack>
