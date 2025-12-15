@@ -72,6 +72,7 @@ const dolphinIdToOverlayId = new Map<DolphinId, OverlayId>();
 const overlayIdToDolphinId = new Map<OverlayId, DolphinId>();
 let participantIdToPendingSets = new Map<number, ParticipantSet[]>();
 const dolphinIdToLastReplaySetId = new Map<DolphinId, number>();
+const gameEndedReplayPaths = new Set<string>();
 
 export function initSpectate(newMainWindow: BrowserWindow) {
   remoteErr = '';
@@ -97,6 +98,10 @@ export function initSpectate(newMainWindow: BrowserWindow) {
   ]);
   dolphinIdToOverlayId.clear();
   overlayIdToDolphinId.clear();
+  participantIdToPendingSets.clear();
+  dolphinIdToLastReplaySetId.clear();
+  gameEndedReplayPaths.clear();
+
   mainWindow = newMainWindow;
 }
 
@@ -708,17 +713,16 @@ export function connect(port: number) {
               if (overlayId) {
                 const mstOverlay = getMstOverlay(overlayId);
                 if (mstOverlay && updateAutomatically) {
+                  const replayPath = dolphinIdToReplayPath.get(validDolphinId);
                   lock.acquire(validDolphinId, async (release) => {
-                    const replayPath =
-                      dolphinIdToReplayPath.get(validDolphinId);
-                    if (replayPath) {
+                    if (replayPath && !gameEndedReplayPaths.has(replayPath)) {
                       try {
                         const gameEndScoreboardInfo =
                           await processFinishedReplay(replayPath);
                         if (gameEndScoreboardInfo) {
                           await mstOverlay.gameEndUpdate(gameEndScoreboardInfo);
                         }
-                        dolphinIdToReplayPath.delete(validDolphinId);
+                        gameEndedReplayPaths.add(replayPath);
                       } catch {
                         // just catch
                       } finally {
@@ -924,6 +928,7 @@ export function connect(port: number) {
             );
             if (dolphinId) {
               maybeClearSimpleTextTitle(dolphinId);
+              dolphinIdToReplayPath.delete(dolphinId);
               dolphinIdToSpectating.delete(dolphinId);
               dolphinIdToLastReplaySetId.delete(dolphinId);
             }
