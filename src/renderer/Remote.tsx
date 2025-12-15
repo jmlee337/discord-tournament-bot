@@ -348,7 +348,7 @@ function OverlaySelect({
       <FormControl
         ref={selectRef}
         style={{ marginTop: '8px' }}
-        disabled={!spectate.broadcast || overlayId !== undefined}
+        disabled={!spectate.broadcast}
       >
         <InputLabel size="small" id={`${dolphinId}-overlay-select-id`}>
           Overlay
