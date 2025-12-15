@@ -489,10 +489,15 @@ export function setDolphinOverlayId(
       dolphinIdToOverlayId.delete(dolphinIdToReplace);
     }
 
+    // if replaced dolphin has set
+    //   update replaced dolphin dest overlay
+    //   update replaced dolphin dest simple text title
+    // replaced dolphin doesn't have set
+    //   leave replaced dolphin dest overlay
+    //   clear replaced dolphin dest simple text title
     const dolphinToReplaceReplayPath =
       dolphinIdToReplayPath.get(dolphinIdToReplace);
     if (dolphinToReplaceReplayPath) {
-      // Update dolphinToReplace overlay, simple text title, overlaySetId
       const dolphinToReplaceSimpleTextPath =
         getSimpleTextPath(dolphinIdToReplace);
       let oldMstOverlay: MSTOverlay | undefined;
@@ -511,12 +516,6 @@ export function setDolphinOverlayId(
             // just catch
           }
           if (newFileScoreboardInfo) {
-            if (newFileScoreboardInfo.setData) {
-              dolphinIdToLastReplaySetId.set(
-                dolphinIdToReplace,
-                newFileScoreboardInfo.setData.setId,
-              );
-            }
             const promises: Promise<void>[] = [];
             if (oldMstOverlay) {
               promises.push(oldMstOverlay.newFileUpdate(newFileScoreboardInfo));
@@ -543,6 +542,12 @@ export function setDolphinOverlayId(
   overlayIdToDolphinId.set(overlayId, dolphinId);
 
   // Update dolphin overlay, simple text title, overlaySetId
+  // if dolphin has set
+  //   update dolphin dest overlay
+  //   update dolphin dest simple text title
+  // dolphin doesn't have set
+  //   leave dolphin dest overlay
+  //   leave dolphin dest simple text title
   const replayPath = dolphinIdToReplayPath.get(dolphinId);
   if (replayPath) {
     let mstOverlay: MSTOverlay | undefined;
@@ -560,12 +565,6 @@ export function setDolphinOverlayId(
           // just catch
         }
         if (newFileScoreboardInfo) {
-          if (newFileScoreboardInfo.setData) {
-            dolphinIdToLastReplaySetId.set(
-              dolphinId,
-              newFileScoreboardInfo.setData.setId,
-            );
-          }
           const promises: Promise<void>[] = [];
           if (mstOverlay) {
             promises.push(mstOverlay.newFileUpdate(newFileScoreboardInfo));
