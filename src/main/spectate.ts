@@ -23,7 +23,7 @@ import {
   MSTWL,
 } from '../common/mst';
 import { REFRESH_CADENCE_MS } from '../common/constants';
-import { getMstOverlay } from './mst';
+import { getMstOverlay, MSTOverlay } from './mst';
 
 const lock = new AsyncLock();
 
@@ -427,29 +427,42 @@ async function maybeClearSimpleTextTitle(dolphinId: DolphinId) {
   }
 }
 
-async function maybeUpdateSimpleTextTitle(dolphinId: DolphinId) {
+function getSimpleTextPath(dolphinId: DolphinId) {
   const simpleTextPathId = dolphinIdToSimpleTextPathId.get(dolphinId);
   if (simpleTextPathId) {
-    const replayPath = dolphinIdToReplayPath.get(dolphinId);
     const simpleTextPath = idToSimpleTextPath.get(simpleTextPathId);
-    if (simpleTextPath) {
-      try {
-        if (replayPath) {
-          const newFileScoreboardInfo = await processNewReplay(replayPath);
-          if (newFileScoreboardInfo) {
-            await writeFile(
-              simpleTextPath,
-              newFileScoreboardInfo.p1Name && newFileScoreboardInfo.p2Name
-                ? `${newFileScoreboardInfo.p1Name} vs ${newFileScoreboardInfo.p2Name}`
-                : '',
-            );
-          }
-        } else {
-          await writeFile(simpleTextPath, '');
+    return simpleTextPath;
+  }
+  return undefined;
+}
+
+function writeSimpleText(
+  newFileScoreboardInfo: MSTNewFileScoreboardInfo,
+  simpleTextPath: string,
+) {
+  return writeFile(
+    simpleTextPath,
+    newFileScoreboardInfo.p1Name && newFileScoreboardInfo.p2Name
+      ? `${newFileScoreboardInfo.p1Name} vs ${newFileScoreboardInfo.p2Name}`
+      : '',
+  );
+}
+
+async function maybeUpdateSimpleTextTitle(dolphinId: DolphinId) {
+  const simpleTextPath = getSimpleTextPath(dolphinId);
+  if (simpleTextPath) {
+    const replayPath = dolphinIdToReplayPath.get(dolphinId);
+    try {
+      if (replayPath) {
+        const newFileScoreboardInfo = await processNewReplay(replayPath);
+        if (newFileScoreboardInfo) {
+          await writeSimpleText(newFileScoreboardInfo, simpleTextPath);
+          return;
         }
-      } catch {
-        // just catch
       }
+      await writeFile(simpleTextPath, '');
+    } catch {
+      // just catch
     }
   }
 }
@@ -677,25 +690,42 @@ export function connect(port: number) {
             const validDolphinId = getValidDolphinId(message.dolphinId);
             if (validDolphinId) {
               dolphinIdToReplayPath.set(validDolphinId, message.filePath);
-              const overlayId = dolphinIdToOverlayId.get(validDolphinId);
-              if (overlayId) {
-                const mstOverlay = getMstOverlay(overlayId);
-                if (mstOverlay && updateAutomatically) {
-                  (async () => {
-                    try {
-                      const newFileScoreboardInfo = await processNewReplay(
-                        message.filePath,
-                      );
-                      if (newFileScoreboardInfo) {
-                        await mstOverlay.newFileUpdate(newFileScoreboardInfo);
-                      }
-                    } catch {
-                      // just catch
-                    }
-                  })();
+
+              let mstOverlay: MSTOverlay | undefined;
+              if (updateAutomatically) {
+                const overlayId = dolphinIdToOverlayId.get(validDolphinId);
+                if (overlayId) {
+                  mstOverlay = getMstOverlay(overlayId);
                 }
-              } else {
-                maybeUpdateSimpleTextTitle(validDolphinId);
+              }
+
+              const simpleTextPath = getSimpleTextPath(validDolphinId);
+              if (mstOverlay || simpleTextPath) {
+                (async () => {
+                  let newFileScoreboardInfo: MSTNewFileScoreboardInfo | null =
+                    null;
+                  try {
+                    newFileScoreboardInfo = await processNewReplay(
+                      message.filePath,
+                    );
+                  } catch {
+                    // just catch
+                  }
+                  if (newFileScoreboardInfo) {
+                    const promises: Promise<void>[] = [];
+                    if (mstOverlay) {
+                      promises.push(
+                        mstOverlay.newFileUpdate(newFileScoreboardInfo),
+                      );
+                    }
+                    if (simpleTextPath) {
+                      promises.push(
+                        writeSimpleText(newFileScoreboardInfo, simpleTextPath),
+                      );
+                    }
+                    await Promise.allSettled(promises);
+                  }
+                })();
               }
 
               if (!dolphinIdToSpectating.has(validDolphinId)) {
