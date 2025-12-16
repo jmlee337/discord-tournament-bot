@@ -8,9 +8,10 @@ import {
   MSTGameEndScoreboardInfo,
   MSTManualUpdateScoreboardInfo,
   MSTNewFileScoreboardInfo,
+  MSTPendingSetsScoreboardInfo,
   MSTScoreboardInfo,
 } from '../common/mst';
-import { OverlayId, ParticipantSet } from '../common/types';
+import { OverlayId } from '../common/types';
 
 // global
 export function getScoreboardInfoJSONPath(resourcesPath: string) {
@@ -43,13 +44,7 @@ export class MSTOverlay {
 
   private enableSggRound: boolean;
 
-  private p1ParticipantId: number | undefined;
-
-  private p2ParticipantId: number | undefined;
-
   private resourcesPath: string;
-
-  private setId: number | undefined;
 
   private scoreboardInfo: MSTScoreboardInfo;
 
@@ -58,10 +53,6 @@ export class MSTOverlay {
     this.enableSggRound = enableSggRound;
     this.resourcesPath = resourcesPath;
     this.scoreboardInfo = EMPTY_SCOREBOARD_INFO;
-
-    this.p1ParticipantId = undefined;
-    this.p2ParticipantId = undefined;
-    this.setId = undefined;
   }
 
   public async setResourcesPath(newResourcesPath: string, canUpdate: boolean) {
@@ -114,15 +105,6 @@ export class MSTOverlay {
   }
 
   public async newFileUpdate(newFileScoreboardInfo: MSTNewFileScoreboardInfo) {
-    const entrantsChanged =
-      newFileScoreboardInfo.p1ParticipantId !== this.p1ParticipantId ||
-      newFileScoreboardInfo.p2ParticipantId !== this.p2ParticipantId;
-    this.p1ParticipantId = newFileScoreboardInfo.p1ParticipantId;
-    this.p2ParticipantId = newFileScoreboardInfo.p2ParticipantId;
-
-    const setChanged = newFileScoreboardInfo.setData?.setId !== this.setId;
-    this.setId = newFileScoreboardInfo.setData?.setId;
-
     this.scoreboardInfo.p1Character = newFileScoreboardInfo.p1Character;
     this.scoreboardInfo.p1Skin = newFileScoreboardInfo.p1Skin;
     this.scoreboardInfo.p2Character = newFileScoreboardInfo.p2Character;
@@ -130,23 +112,35 @@ export class MSTOverlay {
 
     if (newFileScoreboardInfo.p1Name) {
       this.scoreboardInfo.p1Name = newFileScoreboardInfo.p1Name;
-    } else if (setChanged || entrantsChanged) {
+    } else if (
+      newFileScoreboardInfo.setChanged ||
+      newFileScoreboardInfo.participantsChanged
+    ) {
       this.scoreboardInfo.p1Name = '';
     }
     if (newFileScoreboardInfo.p2Name) {
       this.scoreboardInfo.p2Name = newFileScoreboardInfo.p2Name;
-    } else if (setChanged || entrantsChanged) {
+    } else if (
+      newFileScoreboardInfo.setChanged ||
+      newFileScoreboardInfo.participantsChanged
+    ) {
       this.scoreboardInfo.p2Name = '';
     }
     if (enableSggSponsors) {
       if (newFileScoreboardInfo.p1Team) {
         this.scoreboardInfo.p1Team = newFileScoreboardInfo.p1Team;
-      } else if (setChanged || entrantsChanged) {
+      } else if (
+        newFileScoreboardInfo.setChanged ||
+        newFileScoreboardInfo.participantsChanged
+      ) {
         this.scoreboardInfo.p1Team = '';
       }
       if (newFileScoreboardInfo.p2Team) {
         this.scoreboardInfo.p2Team = newFileScoreboardInfo.p2Team;
-      } else if (setChanged || entrantsChanged) {
+      } else if (
+        newFileScoreboardInfo.setChanged ||
+        newFileScoreboardInfo.participantsChanged
+      ) {
         this.scoreboardInfo.p2Team = '';
       }
     } else {
@@ -166,19 +160,22 @@ export class MSTOverlay {
         this.scoreboardInfo.p2WL = newFileScoreboardInfo.setData.p2WL;
       }
       if (
-        setChanged ||
+        newFileScoreboardInfo.setChanged ||
         newFileScoreboardInfo.setData.p1Score > this.scoreboardInfo.p1Score
       ) {
         this.scoreboardInfo.p1Score = newFileScoreboardInfo.setData.p1Score;
       }
       if (
-        setChanged ||
+        newFileScoreboardInfo.setChanged ||
         newFileScoreboardInfo.setData.p2Score > this.scoreboardInfo.p2Score
       ) {
         this.scoreboardInfo.p2Score = newFileScoreboardInfo.setData.p2Score;
       }
     } else {
-      if (setChanged || entrantsChanged) {
+      if (
+        newFileScoreboardInfo.setChanged ||
+        newFileScoreboardInfo.participantsChanged
+      ) {
         this.scoreboardInfo.p1Score = 0;
         this.scoreboardInfo.p2Score = 0;
         if (this.enableSggRound) {
@@ -194,88 +191,45 @@ export class MSTOverlay {
   }
 
   public async pendingSetsUpdate(
-    participantIdToPendingSets: Map<number, ParticipantSet[]>,
+    pendingSetsScoreboardInfo: MSTPendingSetsScoreboardInfo,
   ) {
-    if (
-      this.p1ParticipantId === undefined ||
-      this.p2ParticipantId === undefined
-    ) {
-      return;
+    this.scoreboardInfo.p1Name = pendingSetsScoreboardInfo.p1Name;
+    this.scoreboardInfo.p2Name = pendingSetsScoreboardInfo.p2Name;
+
+    if (enableSggSponsors) {
+      this.scoreboardInfo.p1Team = pendingSetsScoreboardInfo.p1Team;
+      this.scoreboardInfo.p2Team = pendingSetsScoreboardInfo.p2Team;
+    } else {
+      this.scoreboardInfo.p1Team = '';
+      this.scoreboardInfo.p2Team = '';
     }
 
-    const p1PendingSets = participantIdToPendingSets.get(this.p1ParticipantId);
-    const p2PendingSets = participantIdToPendingSets.get(this.p2ParticipantId);
     if (
-      p1PendingSets &&
-      p1PendingSets.length > 0 &&
-      p2PendingSets &&
-      p2PendingSets.length > 0
+      pendingSetsScoreboardInfo.setChanged ||
+      pendingSetsScoreboardInfo.p1Score > this.scoreboardInfo.p1Score
     ) {
-      const intersectionSets = p1PendingSets.filter((pendingSet) =>
-        p2PendingSets.find(
-          (otherPendingSet) => pendingSet.id === otherPendingSet.id,
-        ),
-      );
-      if (intersectionSets.length === 1) {
-        const [p1Set] = intersectionSets;
-        const setChanged = p1Set.id !== this.setId;
-        this.setId = p1Set.id;
-
-        this.scoreboardInfo.bestOf = p1Set.bestOf === 5 ? 'Bo5' : 'Bo3';
-        if (this.enableSggRound) {
-          this.scoreboardInfo.round = p1Set.fullRoundText;
-        }
-
-        this.scoreboardInfo.p1Name = p1Set.isParticipantEntrant1
-          ? p1Set.entrant1Name
-          : p1Set.entrant2Name;
-        this.scoreboardInfo.p2Name = p1Set.isParticipantEntrant1
-          ? p1Set.entrant2Name
-          : p1Set.entrant1Name;
-
-        if (p1Set.fullRoundText === 'Grand Final Reset') {
-          this.scoreboardInfo.p1WL = 'L';
-          this.scoreboardInfo.p2WL = 'L';
-        } else if (p1Set.fullRoundText === 'Grand Final') {
-          this.scoreboardInfo.p1WL =
-            !p1Set.isParticipantEntrant1 &&
-            p1Set.fullRoundText === 'Grand Final'
-              ? 'L'
-              : 'W';
-          this.scoreboardInfo.p2WL =
-            p1Set.isParticipantEntrant1 && p1Set.fullRoundText === 'Grand Final'
-              ? 'L'
-              : 'W';
-        }
-
-        if (enableSggSponsors) {
-          this.scoreboardInfo.p1Team = p1Set.isParticipantEntrant1
-            ? p1Set.entrant1Sponsor
-            : p1Set.entrant2Sponsor;
-          this.scoreboardInfo.p2Team = p1Set.isParticipantEntrant1
-            ? p1Set.entrant2Sponsor
-            : p1Set.entrant1Sponsor;
-        } else {
-          this.scoreboardInfo.p1Team = '';
-          this.scoreboardInfo.p2Team = '';
-        }
-
-        const newP1Score = p1Set.isParticipantEntrant1
-          ? p1Set.entrant1Score
-          : p1Set.entrant2Score;
-        if (setChanged || newP1Score > this.scoreboardInfo.p1Score) {
-          this.scoreboardInfo.p1Score = newP1Score;
-        }
-        const newP2Score = p1Set.isParticipantEntrant1
-          ? p1Set.entrant2Score
-          : p1Set.entrant1Score;
-        if (setChanged || newP2Score > this.scoreboardInfo.p2Score) {
-          this.scoreboardInfo.p2Score = newP2Score;
-        }
-
-        await this.writeScoreboardInfo();
-      }
+      this.scoreboardInfo.p1Score = pendingSetsScoreboardInfo.p1Score;
     }
+    if (
+      pendingSetsScoreboardInfo.setChanged ||
+      pendingSetsScoreboardInfo.p2Score > this.scoreboardInfo.p2Score
+    ) {
+      this.scoreboardInfo.p2Score = pendingSetsScoreboardInfo.p2Score;
+    }
+
+    if (pendingSetsScoreboardInfo.p1WL) {
+      this.scoreboardInfo.p1WL = pendingSetsScoreboardInfo.p1WL;
+    }
+    if (pendingSetsScoreboardInfo.p2WL) {
+      this.scoreboardInfo.p2WL = pendingSetsScoreboardInfo.p2WL;
+    }
+
+    this.scoreboardInfo.bestOf = pendingSetsScoreboardInfo.bestOf;
+    if (this.enableSggRound) {
+      this.scoreboardInfo.round = pendingSetsScoreboardInfo.round;
+    }
+
+    await this.writeScoreboardInfo();
   }
 
   public async gameEndUpdate(gameEndScoreboardInfo: MSTGameEndScoreboardInfo) {

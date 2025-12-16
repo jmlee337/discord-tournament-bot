@@ -404,13 +404,6 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       });
     });
     setParticipantIdToPendingSets(participantIdToPendingSets);
-    if (updateAutomatically) {
-      forEachMstOverlay((mstOverlay) => {
-        mstOverlay.pendingSetsUpdate(participantIdToPendingSets).catch(() => {
-          // just catch
-        });
-      });
-    }
     mainWindow.webContents.send('sets', getTournamentRet.sets);
     sets = getTournamentRet.sets;
   };

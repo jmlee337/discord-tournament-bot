@@ -1,7 +1,7 @@
 import WebSocket from 'ws';
 import { BrowserWindow } from 'electron';
 import AsyncLock from 'async-lock';
-import { writeFile } from 'fs/promises';
+import { readFile, writeFile } from 'fs/promises';
 import {
   Broadcast,
   ConnectCode,
@@ -18,6 +18,8 @@ import {
   MSTCharacter,
   MSTGameEndScoreboardInfo,
   MSTNewFileScoreboardInfo,
+  MSTPendingSetsScoreboardInfo,
+  MSTScoreboardInfo,
   MSTSetData,
   MSTSkinColor,
   MSTWL,
@@ -51,7 +53,22 @@ enum SimpleTextPathId {
 type SpectatingInternal = {
   dolphinId: DolphinId;
   broadcastId: string;
+  setId?: number;
+  p1ParticipantId?: number;
+  p2ParticipantId?: number;
 };
+
+function writeSimpleText(
+  newFileScoreboardInfo: MSTNewFileScoreboardInfo,
+  simpleTextPath: string,
+) {
+  return writeFile(
+    simpleTextPath,
+    newFileScoreboardInfo.p1Name && newFileScoreboardInfo.p2Name
+      ? `${newFileScoreboardInfo.p1Name} vs ${newFileScoreboardInfo.p2Name}`
+      : '',
+  );
+}
 
 let timeoutId: NodeJS.Timeout | undefined;
 const idToBroadcast = new Map<string, Broadcast>();
@@ -71,7 +88,6 @@ let dolphinIdToSimpleTextPathId = new Map<DolphinId, SimpleTextPathId>();
 const dolphinIdToOverlayId = new Map<DolphinId, OverlayId>();
 const overlayIdToDolphinId = new Map<OverlayId, DolphinId>();
 let participantIdToPendingSets = new Map<number, ParticipantSet[]>();
-const dolphinIdToLastReplaySetId = new Map<DolphinId, number>();
 const gameEndedReplayPaths = new Set<string>();
 
 export function initSpectate(newMainWindow: BrowserWindow) {
@@ -99,7 +115,6 @@ export function initSpectate(newMainWindow: BrowserWindow) {
   dolphinIdToOverlayId.clear();
   overlayIdToDolphinId.clear();
   participantIdToPendingSets.clear();
-  dolphinIdToLastReplaySetId.clear();
   gameEndedReplayPaths.clear();
 
   mainWindow = newMainWindow;
@@ -141,10 +156,6 @@ function sendState() {
   mainWindow?.webContents.send('remoteState', getRemoteState());
 }
 
-function getDolphinIds(): DolphinId[] {
-  return ['spectate-1', 'spectate-2', 'spectate-3', 'spectate-4'];
-}
-
 function getValidDolphinId(maybeDolphinId: any): DolphinId | null {
   if (
     maybeDolphinId === 'spectate-1' ||
@@ -155,6 +166,19 @@ function getValidDolphinId(maybeDolphinId: any): DolphinId | null {
     return maybeDolphinId;
   }
   return null;
+}
+
+function getSimpleTextPath(dolphinId: DolphinId) {
+  const simpleTextPathId = dolphinIdToSimpleTextPathId.get(dolphinId);
+  if (simpleTextPathId) {
+    const simpleTextPath = idToSimpleTextPath.get(simpleTextPathId);
+    return simpleTextPath;
+  }
+  return undefined;
+}
+
+function getDolphinIds(): DolphinId[] {
+  return ['spectate-1', 'spectate-2', 'spectate-3', 'spectate-4'];
 }
 
 export function getSpectating() {
@@ -173,7 +197,7 @@ export function getSpectating() {
       return {
         dolphinId,
         broadcast,
-        lastReplaySetId: dolphinIdToLastReplaySetId.get(dolphinId),
+        lastReplaySetId: spectatingInternal.setId,
       };
     }
     return {
@@ -258,14 +282,127 @@ export function setConnectCodes(connectCodes: ConnectCode[]) {
   recalculateAndSendBroadcasts();
 }
 
+function getIntersectingSet(
+  p1ParticipantId: number,
+  p2ParticipantId: number,
+  setId: number | undefined,
+) {
+  const p1PendingSets = participantIdToPendingSets.get(p1ParticipantId);
+  const p2PendingSets = participantIdToPendingSets.get(p2ParticipantId);
+  if (
+    p1PendingSets &&
+    p1PendingSets.length > 0 &&
+    p2PendingSets &&
+    p2PendingSets.length > 0
+  ) {
+    const intersectionSets = p1PendingSets.filter((pendingSet) =>
+      p2PendingSets.find(
+        (otherPendingSet) => pendingSet.id === otherPendingSet.id,
+      ),
+    );
+    if (intersectionSets.length === 1) {
+      const [p1Set] = intersectionSets;
+      const setChanged = p1Set.id !== setId;
+
+      let p1WL: MSTWL | undefined;
+      let p2WL: MSTWL | undefined;
+      if (p1Set.fullRoundText === 'Grand Final Reset') {
+        p1WL = 'L';
+        p2WL = 'L';
+      } else if (p1Set.fullRoundText === 'Grand Final') {
+        p1WL =
+          !p1Set.isParticipantEntrant1 && p1Set.fullRoundText === 'Grand Final'
+            ? 'L'
+            : 'W';
+        p2WL =
+          p1Set.isParticipantEntrant1 && p1Set.fullRoundText === 'Grand Final'
+            ? 'L'
+            : 'W';
+      }
+      const pendingSetsScoreboardInfo: MSTPendingSetsScoreboardInfo & {
+        setId: number;
+      } = {
+        setId: p1Set.id,
+        setChanged,
+        p1Name: p1Set.isParticipantEntrant1
+          ? p1Set.entrant1Name
+          : p1Set.entrant2Name,
+        p1Team: p1Set.isParticipantEntrant1
+          ? p1Set.entrant1Sponsor
+          : p1Set.entrant2Sponsor,
+        p1Score: p1Set.isParticipantEntrant1
+          ? p1Set.entrant1Score
+          : p1Set.entrant2Score,
+        p1WL,
+        p2Name: p1Set.isParticipantEntrant1
+          ? p1Set.entrant2Name
+          : p1Set.entrant1Name,
+        p2Team: p1Set.isParticipantEntrant1
+          ? p1Set.entrant2Sponsor
+          : p1Set.entrant1Sponsor,
+        p2Score: p1Set.isParticipantEntrant1
+          ? p1Set.entrant2Score
+          : p1Set.entrant1Score,
+        p2WL,
+        bestOf: p1Set.bestOf === 5 ? 'Bo5' : 'Bo3',
+        round: p1Set.fullRoundText,
+      };
+      return pendingSetsScoreboardInfo;
+    }
+  }
+  return null;
+}
+
 export function setParticipantIdToPendingSets(
   newParticipantIdToPendingSets: Map<number, ParticipantSet[]>,
 ) {
   participantIdToPendingSets = newParticipantIdToPendingSets;
   recalculateAndSendBroadcasts();
+
+  Array.from(dolphinIdToSpectating.values()).forEach((spectating) => {
+    if (
+      spectating.p1ParticipantId === undefined ||
+      spectating.p2ParticipantId === undefined
+    ) {
+      return;
+    }
+
+    const pendingSetsScoreboardInfo = getIntersectingSet(
+      spectating.p1ParticipantId,
+      spectating.p2ParticipantId,
+      spectating.setId,
+    );
+    if (pendingSetsScoreboardInfo) {
+      spectating.setId = pendingSetsScoreboardInfo.setId;
+      if (updateAutomatically) {
+        const overlayId = dolphinIdToOverlayId.get(spectating.dolphinId);
+        if (overlayId) {
+          const mstOverlay = getMstOverlay(overlayId);
+          if (mstOverlay) {
+            mstOverlay
+              .pendingSetsUpdate(pendingSetsScoreboardInfo)
+              .catch(() => {
+                // just catch
+              });
+          }
+        }
+      }
+      if (pendingSetsScoreboardInfo.setChanged) {
+        const simpleTextPath = getSimpleTextPath(spectating.dolphinId);
+        if (simpleTextPath) {
+          writeFile(
+            simpleTextPath,
+            `${pendingSetsScoreboardInfo.p1Name} vs ${pendingSetsScoreboardInfo.p2Name}`,
+          ).catch(() => {
+            // just catch
+          });
+        }
+      }
+    }
+  });
 }
 
-export async function processNewReplay(replayPath: string) {
+async function processNewReplay(dolphinId: DolphinId, replayPath: string) {
   const gameStartInfos = await getGameStartInfos(replayPath);
   const emptyInfos = gameStartInfos.filter(
     (gameStartInfo) => gameStartInfo.playerType === 3,
@@ -314,73 +451,43 @@ export async function processNewReplay(replayPath: string) {
   let p2Name = mstInfos[1].participant?.gamerTag;
   let p2Team = mstInfos[1].participant?.prefix;
 
-  let setData: MSTSetData | undefined;
-  const p1PendingSets = mstInfos[0].participant
-    ? participantIdToPendingSets.get(mstInfos[0].participant.id)
-    : undefined;
-  const p2PendingSets = mstInfos[1].participant
-    ? participantIdToPendingSets.get(mstInfos[1].participant.id)
-    : undefined;
-  if (
-    p1PendingSets &&
-    p1PendingSets.length > 0 &&
-    p2PendingSets &&
-    p2PendingSets.length > 0
-  ) {
-    const intersectionSets = p1PendingSets.filter((pendingSet) =>
-      p2PendingSets.find(
-        (otherPendingSet) => pendingSet.id === otherPendingSet.id,
-      ),
-    );
-    if (intersectionSets.length === 1) {
-      const [p1Set] = intersectionSets;
-      p1Name = p1Set.isParticipantEntrant1
-        ? p1Set.entrant1Name
-        : p1Set.entrant2Name;
-      p1Team = p1Set.isParticipantEntrant1
-        ? p1Set.entrant1Sponsor
-        : p1Set.entrant2Sponsor;
-      p2Name = p1Set.isParticipantEntrant1
-        ? p1Set.entrant2Name
-        : p1Set.entrant1Name;
-      p2Team = p1Set.isParticipantEntrant1
-        ? p1Set.entrant2Sponsor
-        : p1Set.entrant1Sponsor;
+  const p1ParticipantId = mstInfos[0].participant?.id;
+  const p2ParticipantId = mstInfos[1].participant?.id;
+  const spectating = dolphinIdToSpectating.get(dolphinId);
+  if (!spectating) {
+    throw new Error('unreachable');
+  }
 
-      let p1WL: MSTWL | undefined;
-      let p2WL: MSTWL | undefined;
-      if (p1Set.fullRoundText === 'Grand Final Reset') {
-        p1WL = 'L';
-        p2WL = 'L';
-      } else if (p1Set.fullRoundText === 'Grand Final') {
-        p1WL =
-          !p1Set.isParticipantEntrant1 && p1Set.fullRoundText === 'Grand Final'
-            ? 'L'
-            : 'W';
-        p2WL =
-          p1Set.isParticipantEntrant1 && p1Set.fullRoundText === 'Grand Final'
-            ? 'L'
-            : 'W';
-      }
-      setData = {
-        setId: p1Set.id,
-        bestOf: p1Set.bestOf === 5 ? 'Bo5' : 'Bo3',
-        round: p1Set.fullRoundText,
-        p1Score: p1Set.isParticipantEntrant1
-          ? p1Set.entrant1Score
-          : p1Set.entrant2Score,
-        p1WL,
-        p2Score: p1Set.isParticipantEntrant1
-          ? p1Set.entrant2Score
-          : p1Set.entrant1Score,
-        p2WL,
-      };
+  let setId: number | undefined;
+  let setData: MSTSetData | undefined;
+  if (p1ParticipantId && p2ParticipantId) {
+    const pendingSetsScoreboardInfo = getIntersectingSet(
+      p1ParticipantId,
+      p2ParticipantId,
+      spectating.setId,
+    );
+    if (pendingSetsScoreboardInfo) {
+      setId = pendingSetsScoreboardInfo.setId;
+      p1Name = pendingSetsScoreboardInfo.p1Name;
+      p1Team = pendingSetsScoreboardInfo.p1Team;
+      p2Name = pendingSetsScoreboardInfo.p2Name;
+      p2Team = pendingSetsScoreboardInfo.p2Team;
+      setData = pendingSetsScoreboardInfo;
     }
   }
 
+  const participantsChanged =
+    p1ParticipantId !== spectating.p1ParticipantId ||
+    p2ParticipantId !== spectating.p2ParticipantId;
+  spectating.p1ParticipantId = p1ParticipantId;
+  spectating.p2ParticipantId = p2ParticipantId;
+
+  const setChanged = setId !== spectating.setId;
+  spectating.setId = setId;
+
   const newFileScoreboardInfo: MSTNewFileScoreboardInfo = {
-    p1ParticipantId: mstInfos[0].participant?.id,
-    p2ParticipantId: mstInfos[1].participant?.id,
+    participantsChanged,
+    setChanged,
     p1Name,
     p1Team,
     p1Character: mstInfos[0].character,
@@ -439,32 +546,11 @@ async function maybeClearSimpleTextTitle(dolphinId: DolphinId) {
   }
 }
 
-function getSimpleTextPath(dolphinId: DolphinId) {
-  const simpleTextPathId = dolphinIdToSimpleTextPathId.get(dolphinId);
-  if (simpleTextPathId) {
-    const simpleTextPath = idToSimpleTextPath.get(simpleTextPathId);
-    return simpleTextPath;
-  }
-  return undefined;
-}
-
-function writeSimpleText(
-  newFileScoreboardInfo: MSTNewFileScoreboardInfo,
-  simpleTextPath: string,
-) {
-  return writeFile(
-    simpleTextPath,
-    newFileScoreboardInfo.p1Name && newFileScoreboardInfo.p2Name
-      ? `${newFileScoreboardInfo.p1Name} vs ${newFileScoreboardInfo.p2Name}`
-      : '',
-  );
-}
-
 export function getDolphinIdToOverlayId() {
   return dolphinIdToOverlayId;
 }
 
-export function setDolphinOverlayId(
+export async function setDolphinOverlayId(
   dolphinId: DolphinId,
   overlayId: OverlayId,
 ) {
@@ -473,119 +559,66 @@ export function setDolphinOverlayId(
     throw new Error(`simple text path not found for ${dolphinId}`);
   }
 
-  const dolphinIdToReplace = overlayIdToDolphinId.get(overlayId);
-  if (dolphinIdToReplace) {
+  let oldOverlayScoreboardInfo: MSTScoreboardInfo | undefined;
+  let oldOverlay: MSTOverlay | undefined;
+  const oldOverlayId = dolphinIdToOverlayId.get(dolphinId);
+  if (oldOverlayId) {
+    oldOverlay = getMstOverlay(oldOverlayId);
+    if (oldOverlay) {
+      oldOverlayScoreboardInfo = await oldOverlay.readScoreboardInfo();
+    }
+  }
+
+  let oldSimpleText = '';
+  const oldSimpleTextPath = idToSimpleTextPath.get(oldSimpleTextPathId);
+  if (oldSimpleTextPath) {
+    oldSimpleText = await readFile(oldSimpleTextPath, { encoding: 'utf8' });
+  }
+
+  const newOverlay = getMstOverlay(overlayId);
+  if (!newOverlay) {
+    throw new Error(`no overlay for id: ${overlayId}`);
+  }
+
+  const dolphinToReplaceId = overlayIdToDolphinId.get(overlayId);
+  if (dolphinToReplaceId) {
     const newSimpleTextPathId =
-      dolphinIdToSimpleTextPathId.get(dolphinIdToReplace);
+      dolphinIdToSimpleTextPathId.get(dolphinToReplaceId);
     if (!newSimpleTextPathId) {
       throw new Error(`simple text path not found for ${newSimpleTextPathId}`);
     }
 
-    // Swap simple text paths
+    // Swap simple texts
     dolphinIdToSimpleTextPathId.set(dolphinId, newSimpleTextPathId);
-    dolphinIdToSimpleTextPathId.set(dolphinIdToReplace, oldSimpleTextPathId);
-
-    // Transfer overlay to dolphinToReplay
-    const oldDolphinOverlayId = dolphinIdToOverlayId.get(dolphinId);
-    if (oldDolphinOverlayId) {
-      dolphinIdToOverlayId.set(dolphinIdToReplace, oldDolphinOverlayId);
-      overlayIdToDolphinId.set(oldDolphinOverlayId, dolphinIdToReplace);
-    } else {
-      dolphinIdToOverlayId.delete(dolphinIdToReplace);
+    dolphinIdToSimpleTextPathId.set(dolphinToReplaceId, oldSimpleTextPathId);
+    let newSimpleText = '';
+    const newSimpleTextPath = idToSimpleTextPath.get(newSimpleTextPathId);
+    if (newSimpleTextPath) {
+      newSimpleText = await readFile(newSimpleTextPath, { encoding: 'utf8' });
+      await writeFile(newSimpleTextPath, oldSimpleText);
+    }
+    if (oldSimpleTextPath) {
+      await writeFile(oldSimpleTextPath, newSimpleText);
     }
 
-    // if replaced dolphin has set
-    //   update replaced dolphin dest overlay
-    //   update replaced dolphin dest simple text title
-    // replaced dolphin doesn't have set
-    //   leave replaced dolphin dest overlay
-    //   clear replaced dolphin dest simple text title
-    const dolphinToReplaceReplayPath =
-      dolphinIdToReplayPath.get(dolphinIdToReplace);
-    if (dolphinToReplaceReplayPath) {
-      const dolphinToReplaceSimpleTextPath =
-        getSimpleTextPath(dolphinIdToReplace);
-      let oldMstOverlay: MSTOverlay | undefined;
-      if (updateAutomatically && oldDolphinOverlayId) {
-        oldMstOverlay = getMstOverlay(oldDolphinOverlayId);
-      }
-
-      if (oldMstOverlay || dolphinToReplaceSimpleTextPath) {
-        (async () => {
-          let newFileScoreboardInfo: MSTNewFileScoreboardInfo | null = null;
-          try {
-            newFileScoreboardInfo = await processNewReplay(
-              dolphinToReplaceReplayPath,
-            );
-          } catch {
-            // just catch
-          }
-          if (newFileScoreboardInfo) {
-            const promises: Promise<void>[] = [];
-            if (oldMstOverlay) {
-              promises.push(oldMstOverlay.newFileUpdate(newFileScoreboardInfo));
-            }
-            if (dolphinToReplaceSimpleTextPath) {
-              promises.push(
-                writeSimpleText(
-                  newFileScoreboardInfo,
-                  dolphinToReplaceSimpleTextPath,
-                ),
-              );
-            }
-            await Promise.allSettled(promises);
-          }
-        })();
-      }
+    // Transfer overlay to dolphinToReplace
+    if (oldOverlayId) {
+      dolphinIdToOverlayId.set(dolphinToReplaceId, oldOverlayId);
+      overlayIdToDolphinId.set(oldOverlayId, dolphinToReplaceId);
+      const newOverlayScoreboardInfo = await newOverlay.readScoreboardInfo();
+      oldOverlay?.manualUpdate(newOverlayScoreboardInfo);
     } else {
-      maybeClearSimpleTextTitle(dolphinIdToReplace);
+      dolphinIdToOverlayId.delete(dolphinToReplaceId);
     }
   }
 
   // Transfer overlay to dolphin
   dolphinIdToOverlayId.set(dolphinId, overlayId);
   overlayIdToDolphinId.set(overlayId, dolphinId);
-
-  // Update dolphin overlay, simple text title, overlaySetId
-  // if dolphin has set
-  //   update dolphin dest overlay
-  //   update dolphin dest simple text title
-  // dolphin doesn't have set
-  //   leave dolphin dest overlay
-  //   leave dolphin dest simple text title
-  const replayPath = dolphinIdToReplayPath.get(dolphinId);
-  if (replayPath) {
-    let mstOverlay: MSTOverlay | undefined;
-    if (updateAutomatically) {
-      mstOverlay = getMstOverlay(overlayId);
-    }
-
-    const simpleTextPath = getSimpleTextPath(dolphinId);
-    if (mstOverlay || simpleTextPath) {
-      (async () => {
-        let newFileScoreboardInfo: MSTNewFileScoreboardInfo | null = null;
-        try {
-          newFileScoreboardInfo = await processNewReplay(replayPath);
-        } catch {
-          // just catch
-        }
-        if (newFileScoreboardInfo) {
-          const promises: Promise<void>[] = [];
-          if (mstOverlay) {
-            promises.push(mstOverlay.newFileUpdate(newFileScoreboardInfo));
-          }
-          if (simpleTextPath) {
-            promises.push(
-              writeSimpleText(newFileScoreboardInfo, simpleTextPath),
-            );
-          }
-          await Promise.allSettled(promises);
-        }
-      })();
-    }
+  if (oldOverlayScoreboardInfo) {
+    newOverlay.manualUpdate(oldOverlayScoreboardInfo);
   }
 
-  sendSpectating();
   return getDolphinIdToOverlayId();
 }
 
@@ -701,7 +734,6 @@ export function connect(port: number) {
               }
               maybeClearSimpleTextTitle(validDolphinId);
               dolphinIdToSpectating.delete(validDolphinId);
-              dolphinIdToLastReplaySetId.delete(validDolphinId);
               sendSpectating();
             }
             return;
@@ -754,48 +786,44 @@ export function connect(port: number) {
             if (validDolphinId) {
               dolphinIdToReplayPath.set(validDolphinId, message.filePath);
 
-              let mstOverlay: MSTOverlay | undefined;
-              if (updateAutomatically) {
-                const overlayId = dolphinIdToOverlayId.get(validDolphinId);
-                if (overlayId) {
-                  mstOverlay = getMstOverlay(overlayId);
+              (async () => {
+                let newFileScoreboardInfo: MSTNewFileScoreboardInfo | null =
+                  null;
+                try {
+                  newFileScoreboardInfo = await processNewReplay(
+                    validDolphinId,
+                    message.filePath,
+                  );
+                } catch {
+                  // just catch
                 }
-              }
-
-              const simpleTextPath = getSimpleTextPath(validDolphinId);
-              if (mstOverlay || simpleTextPath) {
-                (async () => {
-                  let newFileScoreboardInfo: MSTNewFileScoreboardInfo | null =
-                    null;
-                  try {
-                    newFileScoreboardInfo = await processNewReplay(
-                      message.filePath,
-                    );
-                  } catch {
-                    // just catch
+                if (newFileScoreboardInfo) {
+                  const promises: Promise<void>[] = [];
+                  if (updateAutomatically) {
+                    const overlayId = dolphinIdToOverlayId.get(validDolphinId);
+                    if (overlayId) {
+                      const mstOverlay = getMstOverlay(overlayId);
+                      if (mstOverlay) {
+                        promises.push(
+                          mstOverlay.newFileUpdate(newFileScoreboardInfo),
+                        );
+                      }
+                    }
                   }
-                  if (newFileScoreboardInfo) {
-                    if (newFileScoreboardInfo.setData) {
-                      dolphinIdToLastReplaySetId.set(
-                        validDolphinId,
-                        newFileScoreboardInfo.setData.setId,
-                      );
-                    }
-                    const promises: Promise<void>[] = [];
-                    if (mstOverlay) {
-                      promises.push(
-                        mstOverlay.newFileUpdate(newFileScoreboardInfo),
-                      );
-                    }
+                  if (
+                    newFileScoreboardInfo.participantsChanged ||
+                    newFileScoreboardInfo.setChanged
+                  ) {
+                    const simpleTextPath = getSimpleTextPath(validDolphinId);
                     if (simpleTextPath) {
                       promises.push(
                         writeSimpleText(newFileScoreboardInfo, simpleTextPath),
                       );
                     }
-                    await Promise.allSettled(promises);
                   }
-                })();
-              }
+                  await Promise.allSettled(promises);
+                }
+              })();
 
               if (!dolphinIdToSpectating.has(validDolphinId)) {
                 dolphinIdToSpectating.set(validDolphinId, {
@@ -930,7 +958,6 @@ export function connect(port: number) {
               maybeClearSimpleTextTitle(dolphinId);
               dolphinIdToReplayPath.delete(dolphinId);
               dolphinIdToSpectating.delete(dolphinId);
-              dolphinIdToLastReplaySetId.delete(dolphinId);
             }
             spectatingBroadcastIdToDolphinId.delete(message.broadcastId);
             sendSpectating();

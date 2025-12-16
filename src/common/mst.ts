@@ -52,8 +52,21 @@ export type MSTSkinColor =
 export type MSTWL = 'Nada' | 'W' | 'L';
 export type MSTBestOf = 'Bo3' | 'Bo5';
 
+export type MSTPendingSetsScoreboardInfo = {
+  setChanged: boolean;
+  p1Name: string;
+  p1Team: string;
+  p1Score: number;
+  p1WL?: MSTWL;
+  p2Name: string;
+  p2Team: string;
+  p2Score: number;
+  p2WL?: MSTWL;
+  bestOf: MSTBestOf;
+  round: string;
+};
+
 export type MSTSetData = {
-  setId: number;
   p1Score: number;
   p1WL?: MSTWL;
   p2Score: number;
@@ -63,8 +76,8 @@ export type MSTSetData = {
 };
 
 export type MSTNewFileScoreboardInfo = {
-  p1ParticipantId?: number;
-  p2ParticipantId?: number;
+  participantsChanged: boolean;
+  setChanged: boolean;
   p1Name?: string;
   p1Team?: string;
   p1Character: MSTCharacter;
