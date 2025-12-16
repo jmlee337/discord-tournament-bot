@@ -569,12 +569,6 @@ export async function setDolphinOverlayId(
     }
   }
 
-  let oldSimpleText = '';
-  const oldSimpleTextPath = idToSimpleTextPath.get(oldSimpleTextPathId);
-  if (oldSimpleTextPath) {
-    oldSimpleText = await readFile(oldSimpleTextPath, { encoding: 'utf8' });
-  }
-
   const newOverlay = getMstOverlay(overlayId);
   if (!newOverlay) {
     throw new Error(`no overlay for id: ${overlayId}`);
@@ -591,6 +585,11 @@ export async function setDolphinOverlayId(
     // Swap simple texts
     dolphinIdToSimpleTextPathId.set(dolphinId, newSimpleTextPathId);
     dolphinIdToSimpleTextPathId.set(dolphinToReplaceId, oldSimpleTextPathId);
+    let oldSimpleText = '';
+    const oldSimpleTextPath = idToSimpleTextPath.get(oldSimpleTextPathId);
+    if (oldSimpleTextPath) {
+      oldSimpleText = await readFile(oldSimpleTextPath, { encoding: 'utf8' });
+    }
     let newSimpleText = '';
     const newSimpleTextPath = idToSimpleTextPath.get(newSimpleTextPathId);
     if (newSimpleTextPath) {
@@ -619,6 +618,21 @@ export async function setDolphinOverlayId(
   overlayIdToDolphinId.set(overlayId, dolphinId);
   if (oldOverlayScoreboardInfo) {
     await newOverlay.manualUpdate(oldOverlayScoreboardInfo);
+  } else if (updateAutomatically) {
+    const replayPath = dolphinIdToReplayPath.get(dolphinId);
+    if (replayPath) {
+      try {
+        const newFileScoreboardInfo = await processNewReplay(
+          dolphinId,
+          replayPath,
+        );
+        if (newFileScoreboardInfo) {
+          await newOverlay.newFileUpdate(newFileScoreboardInfo);
+        }
+      } catch {
+        // just catch
+      }
+    }
   }
 
   return getDolphinIdToOverlayId();
