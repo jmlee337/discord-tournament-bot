@@ -606,17 +606,19 @@ export async function setDolphinOverlayId(
       dolphinIdToOverlayId.set(dolphinToReplaceId, oldOverlayId);
       overlayIdToDolphinId.set(oldOverlayId, dolphinToReplaceId);
       const newOverlayScoreboardInfo = await newOverlay.readScoreboardInfo();
-      oldOverlay?.manualUpdate(newOverlayScoreboardInfo);
+      await oldOverlay?.manualUpdate(newOverlayScoreboardInfo);
     } else {
       dolphinIdToOverlayId.delete(dolphinToReplaceId);
     }
+  } else if (oldOverlayId) {
+    overlayIdToDolphinId.delete(oldOverlayId);
   }
 
   // Transfer overlay to dolphin
   dolphinIdToOverlayId.set(dolphinId, overlayId);
   overlayIdToDolphinId.set(overlayId, dolphinId);
   if (oldOverlayScoreboardInfo) {
-    newOverlay.manualUpdate(oldOverlayScoreboardInfo);
+    await newOverlay.manualUpdate(oldOverlayScoreboardInfo);
   }
 
   return getDolphinIdToOverlayId();
@@ -821,6 +823,7 @@ export function connect(port: number) {
                       );
                     }
                   }
+                  sendSpectating();
                   await Promise.allSettled(promises);
                 }
               })();
@@ -834,8 +837,8 @@ export function connect(port: number) {
                   message.broadcastId,
                   validDolphinId,
                 );
+                sendSpectating();
               }
-              sendSpectating();
             }
             return;
           }
