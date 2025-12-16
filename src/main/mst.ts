@@ -96,7 +96,7 @@ export class MSTOverlay {
     ) {
       this.scoreboardInfo.p2Character = MSTCharacter.SHEIK;
     }
-    return this.scoreboardInfo;
+    return { ...this.scoreboardInfo };
   }
 
   public async tournamentNameUpdate(newTournamentName: string) {
