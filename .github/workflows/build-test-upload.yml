@@ -28,10 +28,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm run package
           npm run lint
           npm exec tsc
           npm test
+          npm run package
 
       - name: upload
         uses: actions/upload-artifact@v4
@@ -60,10 +60,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm run package
           npm run lint
           npm exec tsc
           npm test
+          npm run package
 
       - name: upload
         uses: actions/upload-artifact@v4
@@ -92,10 +92,10 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          npm run package
           npm run lint
           npm exec tsc
           npm test
+          npm run package
 
       - name: upload
         uses: actions/upload-artifact@v4
