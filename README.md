@@ -43,8 +43,10 @@ Then you should be able to connect and manage your broadcasts from the NTS Broad
 ### Overlay
 
 Requires [Melee Stream Tool](https://github.com/Readek/Melee-Stream-Tool/releases/latest).
+I recommend patching in my updated [Game Scoreboard.js](https://github.com/jmlee337/Melee-Stream-Tool/releases/tag/offscreen1).
 
 Enable Melee Stream Tool integration and set your Melee Stream Tool `Resources` folder in the settings dialog on the NTS Overlay tab:
+
 <img width="600" alt="Screenshot 2025-12-07 162249" src="https://github.com/user-attachments/assets/d43cb0fd-2219-47ca-8615-87da25e0e67b" />
 
 ### Discord
