@@ -83,7 +83,8 @@ const connectCodeToParticipant = new Map<
   string,
   { id: number; gamerTag: string; prefix: string }
 >();
-const dolphinIdToReplayPath = new Map<DolphinId, string>();
+const dolphinIdToLastReplayPath = new Map<DolphinId, string>();
+const replayIsCurrentDolphinIds = new Set<DolphinId>();
 let dolphinIdToSimpleTextPathId = new Map<DolphinId, SimpleTextPathId>();
 const dolphinIdToOverlayId = new Map<DolphinId, OverlayId>();
 const overlayIdToDolphinId = new Map<OverlayId, DolphinId>();
@@ -105,7 +106,8 @@ export function initSpectate(newMainWindow: BrowserWindow) {
   spectatingBroadcastIdToDolphinId.clear();
   connectCodeMisses.clear();
   connectCodeToParticipant.clear();
-  dolphinIdToReplayPath.clear();
+  dolphinIdToLastReplayPath.clear();
+  replayIsCurrentDolphinIds.clear();
   dolphinIdToSimpleTextPathId = new Map([
     ['spectate-1', SimpleTextPathId.A],
     ['spectate-2', SimpleTextPathId.B],
@@ -597,7 +599,11 @@ export async function setDolphinOverlayId(
       await writeFile(newSimpleTextPath, oldSimpleText);
     }
     if (oldSimpleTextPath) {
-      await writeFile(oldSimpleTextPath, newSimpleText);
+      if (!replayIsCurrentDolphinIds.has(dolphinToReplaceId) && !oldOverlayId) {
+        await writeFile(oldSimpleTextPath, '');
+      } else {
+        await writeFile(oldSimpleTextPath, newSimpleText);
+      }
     }
 
     // Transfer overlay to dolphinToReplace
@@ -619,7 +625,7 @@ export async function setDolphinOverlayId(
   if (oldOverlayScoreboardInfo) {
     await newOverlay.manualUpdate(oldOverlayScoreboardInfo);
   } else if (updateAutomatically) {
-    const replayPath = dolphinIdToReplayPath.get(dolphinId);
+    const replayPath = dolphinIdToLastReplayPath.get(dolphinId);
     if (replayPath) {
       try {
         const newFileScoreboardInfo = await processNewReplay(
@@ -741,7 +747,8 @@ export function connect(port: number) {
           case 'dolphin-closed-event': {
             const validDolphinId = getValidDolphinId(message.dolphinId);
             if (validDolphinId) {
-              dolphinIdToReplayPath.delete(validDolphinId);
+              dolphinIdToLastReplayPath.delete(validDolphinId);
+              replayIsCurrentDolphinIds.delete(validDolphinId);
 
               const broadcastId =
                 dolphinIdToSpectating.get(validDolphinId)?.broadcastId;
@@ -761,9 +768,11 @@ export function connect(port: number) {
               if (overlayId) {
                 const mstOverlay = getMstOverlay(overlayId);
                 if (mstOverlay && updateAutomatically) {
-                  const replayPath = dolphinIdToReplayPath.get(validDolphinId);
+                  const replayPath =
+                    dolphinIdToLastReplayPath.get(validDolphinId);
                   lock.acquire(validDolphinId, async (release) => {
                     if (replayPath && !gameEndedReplayPaths.has(replayPath)) {
+                      replayIsCurrentDolphinIds.delete(validDolphinId);
                       try {
                         const gameEndScoreboardInfo =
                           await processFinishedReplay(replayPath);
@@ -800,7 +809,8 @@ export function connect(port: number) {
           case 'new-file-event': {
             const validDolphinId = getValidDolphinId(message.dolphinId);
             if (validDolphinId) {
-              dolphinIdToReplayPath.set(validDolphinId, message.filePath);
+              dolphinIdToLastReplayPath.set(validDolphinId, message.filePath);
+              replayIsCurrentDolphinIds.add(validDolphinId);
 
               (async () => {
                 let newFileScoreboardInfo: MSTNewFileScoreboardInfo | null =
@@ -973,7 +983,8 @@ export function connect(port: number) {
             );
             if (dolphinId) {
               maybeClearSimpleTextTitle(dolphinId);
-              dolphinIdToReplayPath.delete(dolphinId);
+              dolphinIdToLastReplayPath.delete(dolphinId);
+              replayIsCurrentDolphinIds.delete(dolphinId);
               dolphinIdToSpectating.delete(dolphinId);
             }
             spectatingBroadcastIdToDolphinId.delete(message.broadcastId);
