@@ -313,79 +313,90 @@ export async function getTournamentSets(
                 number,
                 { name: string; sponsor: string }
               >();
-              groupJson.entities.entrants.forEach((entrant) => {
-                const participants = Object.values(
-                  entrant.mutations.participants,
-                );
-                idToEntrant.set(entrant.id, {
-                  id: entrant.id,
-                  participantsIds: participants.map(
-                    (participant) => participant.id,
-                  ),
-                });
+              if (
+                Array.isArray(groupJson.entities.entrants) &&
+                groupJson.entities.entrants.length > 0
+              ) {
+                groupJson.entities.entrants.forEach((entrant) => {
+                  const participants = Object.values(
+                    entrant.mutations.participants,
+                  );
+                  idToEntrant.set(entrant.id, {
+                    id: entrant.id,
+                    participantsIds: participants.map(
+                      (participant) => participant.id,
+                    ),
+                  });
 
-                const name = participants
-                  .map((participant) => participant.gamerTag)
-                  .join(' / ');
-                const sponsor = participants
-                  .filter((participant) => participant.prefix)
-                  .map((participant) => participant.prefix!)
-                  .join(' / ');
-                entrantIdToNameAndSponsor.set(entrant.id, { name, sponsor });
-              });
+                  const name = participants
+                    .map((participant) => participant.gamerTag)
+                    .join(' / ');
+                  const sponsor = participants
+                    .filter((participant) => participant.prefix)
+                    .map((participant) => participant.prefix!)
+                    .join(' / ');
+                  entrantIdToNameAndSponsor.set(entrant.id, { name, sponsor });
+                });
+              }
               const pendingSets: StartggSet[] = [];
               const completedSets: StartggSet[] = [];
-              groupJson.entities.sets.forEach((set) => {
-                setIdToBestOf.set(set.id, set.bestOf);
-              });
-              groupJson.entities.sets
-                .filter(
-                  (set) =>
-                    !set.unreachable &&
-                    Number.isInteger(set.entrant1Id) &&
-                    Number.isInteger(set.entrant2Id),
-                )
-                .map((set): StartggSet => {
-                  const existingSet = idToSet.get(set.id);
-                  if (existingSet && existingSet.updatedAt > set.updatedAt) {
-                    return existingSet;
-                  }
-
-                  const { name: entrant1Name, sponsor: entrant1Sponsor } =
-                    entrantIdToNameAndSponsor.get(set.entrant1Id!)!;
-                  const { name: entrant2Name, sponsor: entrant2Sponsor } =
-                    entrantIdToNameAndSponsor.get(set.entrant2Id!)!;
-
-                  const newSet: StartggSet = {
-                    id: set.id,
-                    bestOf: set.bestOf,
-                    completedAt: set.completedAt,
-                    isDQ: set.entrant1Score === -1 || set.entrant2Score === -1,
-                    entrant1Id: set.entrant1Id!,
-                    entrant1Name,
-                    entrant1Sponsor,
-                    entrant1Score: set.entrant1Score || 0,
-                    entrant2Id: set.entrant2Id!,
-                    entrant2Name,
-                    entrant2Sponsor,
-                    entrant2Score: set.entrant2Score || 0,
-                    fullRoundText: set.fullRoundText,
-                    round: set.round,
-                    startedAt: set.startedAt,
-                    state: set.state,
-                    updatedAt: set.updatedAt,
-                    winnerId: set.winnerId,
-                  };
-                  idToSet.set(set.id, newSet);
-                  return newSet;
-                })
-                .forEach((set) => {
-                  if (set.state === 3) {
-                    completedSets.push(set);
-                  } else {
-                    pendingSets.push(set);
-                  }
+              if (
+                Array.isArray(groupJson.entities.sets) &&
+                groupJson.entities.sets.length > 0
+              ) {
+                groupJson.entities.sets.forEach((set) => {
+                  setIdToBestOf.set(set.id, set.bestOf);
                 });
+                groupJson.entities.sets
+                  .filter(
+                    (set) =>
+                      !set.unreachable &&
+                      Number.isInteger(set.entrant1Id) &&
+                      Number.isInteger(set.entrant2Id),
+                  )
+                  .map((set): StartggSet => {
+                    const existingSet = idToSet.get(set.id);
+                    if (existingSet && existingSet.updatedAt > set.updatedAt) {
+                      return existingSet;
+                    }
+
+                    const { name: entrant1Name, sponsor: entrant1Sponsor } =
+                      entrantIdToNameAndSponsor.get(set.entrant1Id!)!;
+                    const { name: entrant2Name, sponsor: entrant2Sponsor } =
+                      entrantIdToNameAndSponsor.get(set.entrant2Id!)!;
+
+                    const newSet: StartggSet = {
+                      id: set.id,
+                      bestOf: set.bestOf,
+                      completedAt: set.completedAt,
+                      isDQ:
+                        set.entrant1Score === -1 || set.entrant2Score === -1,
+                      entrant1Id: set.entrant1Id!,
+                      entrant1Name,
+                      entrant1Sponsor,
+                      entrant1Score: set.entrant1Score || 0,
+                      entrant2Id: set.entrant2Id!,
+                      entrant2Name,
+                      entrant2Sponsor,
+                      entrant2Score: set.entrant2Score || 0,
+                      fullRoundText: set.fullRoundText,
+                      round: set.round,
+                      startedAt: set.startedAt,
+                      state: set.state,
+                      updatedAt: set.updatedAt,
+                      winnerId: set.winnerId,
+                    };
+                    idToSet.set(set.id, newSet);
+                    return newSet;
+                  })
+                  .forEach((set) => {
+                    if (set.state === 3) {
+                      completedSets.push(set);
+                    } else {
+                      pendingSets.push(set);
+                    }
+                  });
+              }
 
               const name = `Pool ${group.displayIdentifier}`;
               const completed: StartggPhaseGroup = {
