@@ -32,6 +32,7 @@ export type StartggSet = {
   entrant2Score: number;
   fullRoundText: string;
   round: number;
+  // called or started
   startedAt: number | null;
   state: number;
   updatedAt: number;
