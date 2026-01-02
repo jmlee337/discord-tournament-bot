@@ -306,8 +306,8 @@ function getIntersectingSet(
       const [p1Set] = intersectionSets;
       const setChanged = p1Set.id !== setId;
 
-      let p1WL: MSTWL | undefined;
-      let p2WL: MSTWL | undefined;
+      let p1WL: MSTWL = 'Nada';
+      let p2WL: MSTWL = 'Nada';
       if (p1Set.fullRoundText === 'Grand Final Reset') {
         p1WL = 'L';
         p2WL = 'L';

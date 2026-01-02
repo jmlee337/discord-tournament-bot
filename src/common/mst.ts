@@ -57,20 +57,20 @@ export type MSTPendingSetsScoreboardInfo = {
   p1Name: string;
   p1Team: string;
   p1Score: number;
-  p1WL?: MSTWL;
+  p1WL: MSTWL;
   p2Name: string;
   p2Team: string;
   p2Score: number;
-  p2WL?: MSTWL;
+  p2WL: MSTWL;
   bestOf: MSTBestOf;
   round: string;
 };
 
 export type MSTSetData = {
   p1Score: number;
-  p1WL?: MSTWL;
+  p1WL: MSTWL;
   p2Score: number;
-  p2WL?: MSTWL;
+  p2WL: MSTWL;
   bestOf: MSTBestOf;
   round: string;
 };

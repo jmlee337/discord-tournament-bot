@@ -149,15 +149,11 @@ export class MSTOverlay {
     }
 
     if (newFileScoreboardInfo.setData) {
+      this.scoreboardInfo.p1WL = newFileScoreboardInfo.setData.p1WL;
+      this.scoreboardInfo.p2WL = newFileScoreboardInfo.setData.p2WL;
       this.scoreboardInfo.bestOf = newFileScoreboardInfo.setData.bestOf;
       if (this.enableSggRound) {
         this.scoreboardInfo.round = newFileScoreboardInfo.setData.round;
-      }
-      if (newFileScoreboardInfo.setData.p1WL) {
-        this.scoreboardInfo.p1WL = newFileScoreboardInfo.setData.p1WL;
-      }
-      if (newFileScoreboardInfo.setData.p2WL) {
-        this.scoreboardInfo.p2WL = newFileScoreboardInfo.setData.p2WL;
       }
       if (
         newFileScoreboardInfo.setChanged ||
@@ -217,13 +213,8 @@ export class MSTOverlay {
       this.scoreboardInfo.p2Score = pendingSetsScoreboardInfo.p2Score;
     }
 
-    if (pendingSetsScoreboardInfo.p1WL) {
-      this.scoreboardInfo.p1WL = pendingSetsScoreboardInfo.p1WL;
-    }
-    if (pendingSetsScoreboardInfo.p2WL) {
-      this.scoreboardInfo.p2WL = pendingSetsScoreboardInfo.p2WL;
-    }
-
+    this.scoreboardInfo.p1WL = pendingSetsScoreboardInfo.p1WL;
+    this.scoreboardInfo.p2WL = pendingSetsScoreboardInfo.p2WL;
     this.scoreboardInfo.bestOf = pendingSetsScoreboardInfo.bestOf;
     if (this.enableSggRound) {
       this.scoreboardInfo.round = pendingSetsScoreboardInfo.round;
