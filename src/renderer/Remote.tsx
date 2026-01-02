@@ -709,6 +709,7 @@ export default function Remote({
         <Stack spacing="8px" style={{ marginTop: '8px', marginBottom: '24px' }}>
           {spectating.map((spectate) => (
             <OverlayCard
+              key={spectate.dolphinId}
               spectate={spectate}
               numMSTs={numMSTs}
               overlayIdToDolphinId={overlayIdToDolphinId}

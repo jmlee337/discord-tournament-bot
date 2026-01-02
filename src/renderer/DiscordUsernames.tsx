@@ -14,7 +14,7 @@ import {
   Tooltip,
   Typography,
 } from '@mui/material';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ContentCopy } from '@mui/icons-material';
 import {
   HIGHLIGHT_COLOR,
@@ -45,46 +45,49 @@ export default function DiscordUsernames({
   const searchInputRef = useRef<HTMLInputElement>();
   const [searchSubstr, setSearchSubstr] = useState('');
 
-  const discordUsernamesWithHighlights: DiscordUsernameWithHighlight[] = [];
-  discordUsernames.forEach((discordUsername) => {
-    if (!searchSubstr) {
-      discordUsernamesWithHighlights.push({
-        highlights: [],
-        discordUsername,
-      });
-      return;
-    }
+  const discordUsernamesWithHighlights = useMemo(() => {
+    const arr: DiscordUsernameWithHighlight[] = [];
+    discordUsernames.forEach((discordUsername) => {
+      if (!searchSubstr) {
+        arr.push({
+          highlights: [],
+          discordUsername,
+        });
+        return;
+      }
 
-    const highlights: Highlight[] = [];
-    let include = false;
-    const includeStr = searchSubstr.toLowerCase();
-    const gamerTagStart = discordUsername.gamerTag
-      .toLowerCase()
-      .indexOf(includeStr);
-    if (gamerTagStart >= 0) {
-      include = true;
-      highlights[0] = {
-        start: gamerTagStart,
-        end: gamerTagStart + includeStr.length,
-      };
-    }
-    const usernameStart = discordUsername.username
-      .toLowerCase()
-      .indexOf(includeStr);
-    if (usernameStart >= 0) {
-      include = true;
-      highlights[1] = {
-        start: usernameStart,
-        end: usernameStart + includeStr.length,
-      };
-    }
-    if (include) {
-      discordUsernamesWithHighlights.push({
-        highlights,
-        discordUsername,
-      });
-    }
-  });
+      const highlights: Highlight[] = [];
+      let include = false;
+      const includeStr = searchSubstr.toLowerCase();
+      const gamerTagStart = discordUsername.gamerTag
+        .toLowerCase()
+        .indexOf(includeStr);
+      if (gamerTagStart >= 0) {
+        include = true;
+        highlights[0] = {
+          start: gamerTagStart,
+          end: gamerTagStart + includeStr.length,
+        };
+      }
+      const usernameStart = discordUsername.username
+        .toLowerCase()
+        .indexOf(includeStr);
+      if (usernameStart >= 0) {
+        include = true;
+        highlights[1] = {
+          start: usernameStart,
+          end: usernameStart + includeStr.length,
+        };
+      }
+      if (include) {
+        arr.push({
+          highlights,
+          discordUsername,
+        });
+      }
+    });
+    return arr;
+  }, [discordUsernames, searchSubstr]);
 
   return (
     <>

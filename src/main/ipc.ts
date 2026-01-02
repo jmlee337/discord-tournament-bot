@@ -444,7 +444,21 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     });
     connectCodes.sort((a, b) => a.gamerTag.localeCompare(b.gamerTag));
     setConnectCodes(connectCodes);
-    discordUsernames.sort((a, b) => a.gamerTag.localeCompare(b.gamerTag));
+    discordUsernames.sort((a, b) => {
+      if (!a.username && b.username) {
+        return -1;
+      }
+      if (a.username && !b.username) {
+        return 1;
+      }
+      if (!a.isDiscordServerMember && b.isDiscordServerMember) {
+        return -1;
+      }
+      if (a.isDiscordServerMember && !b.isDiscordServerMember) {
+        return 1;
+      }
+      return a.gamerTag.localeCompare(b.gamerTag);
+    });
   };
   const findResettableSet = (participantId: number) => {
     const completedSet = participantIdToCompletedSets
