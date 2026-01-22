@@ -193,8 +193,10 @@ async function getGameEndInfoInner(
   }
 
   const definite =
-    (gameEnd[1] === 2 || gameEnd[1] === 3) && gameEnd[2] === 0xff;
+    (gameEnd[1] === 1 || gameEnd[1] === 2 || gameEnd[1] === 3) &&
+    gameEnd[2] === 0xff;
   const placings = [gameEnd[3], gameEnd[4], gameEnd[5], gameEnd[6]];
+  // does not account for ties either by time or dying on the same frame
   return {
     definite,
     placings,
