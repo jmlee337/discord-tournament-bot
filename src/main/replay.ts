@@ -150,7 +150,7 @@ async function getGameEndInfoInner(
 ): Promise<GameEndInfo | undefined> {
   const replay = await getReplay(filePath);
   if (!replay) {
-    return replay;
+    return undefined;
   }
 
   const length = replay.readUint32BE(11);
