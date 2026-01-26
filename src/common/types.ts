@@ -196,6 +196,7 @@ export type GameEndInfo = {
   definite: boolean;
   placings: number[];
   playerTypes: number[];
+  tie: boolean;
 };
 
 export type GetTournamentRet = {

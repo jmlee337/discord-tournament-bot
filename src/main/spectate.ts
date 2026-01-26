@@ -505,7 +505,7 @@ async function processNewReplay(dolphinId: DolphinId, replayPath: string) {
 
 async function processFinishedReplay(replayPath: string) {
   const gameEndInfo = await getGameEndInfo(replayPath);
-  if (!gameEndInfo.definite) {
+  if (!gameEndInfo.definite || gameEndInfo.tie) {
     return null;
   }
 

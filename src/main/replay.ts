@@ -172,8 +172,16 @@ async function getGameEndInfoInner(
   if (!gameStartSize) {
     throw new Error('replay corrupted');
   }
-  const gameEndSize = payloadSizeAndSizes.payloadSizes.get(0x39);
+  const postFrameUpdateSize = payloadSizes.get(0x38);
+  if (!postFrameUpdateSize) {
+    throw new Error('replay corrupted');
+  }
+  const gameEndSize = payloadSizes.get(0x39);
   if (!gameEndSize) {
+    throw new Error('replay corrupted');
+  }
+  const frameBookendSize = payloadSizes.get(0x3c);
+  if (!frameBookendSize) {
     throw new Error('replay corrupted');
   }
 
@@ -181,26 +189,78 @@ async function getGameEndInfoInner(
   if (!gameStart) {
     throw new Error('unreachable');
   }
-
   const playerTypes = [0, 1, 2, 3].map((i) => {
     const gameInfoOffset = i * 36 + 101;
     return gameStart[gameInfoOffset + 1];
   });
 
-  const gameEnd = replay.subarray(totalLength - gameEndSize, totalLength);
+  const gameEndStart = totalLength - gameEndSize;
+  const gameEnd = replay.subarray(gameEndStart, totalLength);
   if (gameEnd[0] !== 0x39) {
     throw new Error('replay corrupted');
   }
-
   const definite =
     (gameEnd[1] === 1 || gameEnd[1] === 2 || gameEnd[1] === 3) &&
     gameEnd[2] === 0xff;
   const placings = [gameEnd[3], gameEnd[4], gameEnd[5], gameEnd[6]];
-  // does not account for ties either by time or dying on the same frame
+
+  const frameBookendStart = gameEndStart - frameBookendSize;
+  const frameBookend = replay.subarray(frameBookendStart, gameEndStart);
+  if (frameBookend[0] !== 0x3c) {
+    throw new Error('replay corrupted');
+  }
+  const lastFrameNum = frameBookend.readInt32BE(0x1);
+
+  const numPlayers = playerTypes.filter(
+    (playerType) => playerType === 0 || playerType === 1,
+  ).length;
+  let currentPostFrameUpdateStart = frameBookendStart - postFrameUpdateSize;
+  let postFrameUpdatesSeen = 0;
+  const postFramePlayers: { percent: number; stocks: number }[] = [];
+  while (postFrameUpdatesSeen < numPlayers) {
+    const postFrameUpdate = replay.subarray(
+      currentPostFrameUpdateStart,
+      currentPostFrameUpdateStart + postFrameUpdateSize,
+    );
+    if (
+      postFrameUpdate[0] !== 0x38 ||
+      postFrameUpdate.readInt32BE(0x1) !== lastFrameNum
+    ) {
+      break;
+    }
+
+    if (postFrameUpdate[0x6] === 0) {
+      postFramePlayers.push({
+        percent: postFrameUpdate.readFloatBE(0x16),
+        stocks: postFrameUpdate[0x21],
+      });
+      postFrameUpdatesSeen += 1;
+    }
+    currentPostFrameUpdateStart -= postFrameUpdateSize;
+  }
+
+  let tie = false;
+  if (postFrameUpdatesSeen === numPlayers && postFramePlayers.length > 1) {
+    const { stocks } = postFramePlayers[0];
+    const percent = Math.trunc(postFramePlayers[0].percent);
+    tie = true;
+    for (let i = 1; i < postFramePlayers.length; i += 1) {
+      const player = postFramePlayers[i];
+      if (
+        player.stocks !== stocks ||
+        (stocks !== 0 && Math.trunc(player.percent) !== percent)
+      ) {
+        tie = false;
+        break;
+      }
+    }
+  }
+
   return {
     definite,
     placings,
     playerTypes,
+    tie,
   };
 }
 
