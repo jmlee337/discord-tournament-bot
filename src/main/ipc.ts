@@ -98,7 +98,10 @@ import {
   setRequestGetTournamentSets,
 } from './mst';
 import { MSTManualUpdateScoreboardInfo } from '../common/mst';
-import { REFRESH_CADENCE_MS } from '../common/constants';
+import {
+  CHECKIN_MESSAGE_DEFAULT,
+  REFRESH_CADENCE_MS,
+} from '../common/constants';
 
 const CONFIRMATION_TIMEOUT_MS = 30000;
 const STARTGG_BLACK = '#031221';
@@ -192,6 +195,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   initStartgg();
   initSpectate(mainWindow);
   const store = new Store<{
+    checkinMessage: string;
     discordConfig: DiscordConfig;
     discordCommandDq: boolean;
     discordCommandReport: boolean;
@@ -216,6 +220,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     startggApiKey: string;
     updateAutomatically: boolean;
   }>();
+  let checkinMessage = store.get('checkinMessage', CHECKIN_MESSAGE_DEFAULT);
   let discordConfig = store.get('discordConfig', {
     applicationId: '',
     token: '',
@@ -1963,6 +1968,16 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
+  ipcMain.removeHandler('getCheckinMessage');
+  ipcMain.handle('getCheckinMessage', () => checkinMessage);
+  ipcMain.removeHandler('setCheckinMessage');
+  ipcMain.handle('setCheckinMessage', (event, newCheckinMessage: string) => {
+    if (checkinMessage !== newCheckinMessage) {
+      store.set('checkinMessage', newCheckinMessage);
+      checkinMessage = newCheckinMessage;
+    }
+  });
+
   ipcMain.removeHandler('pingDiscords');
   ipcMain.handle(
     'pingDiscords',
@@ -1989,9 +2004,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       }
 
       const tags = discordIds.map((discordId) => `<@${discordId}>`).join(' ');
-      const msg =
-        discordIds.length === 1 ? 'your set is up!' : 'your sets are up!';
-      channel.send(`${tags} ${msg}`);
+      channel.send(`${tags} ${checkinMessage}`);
     },
   );
 

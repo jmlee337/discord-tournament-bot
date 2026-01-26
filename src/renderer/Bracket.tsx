@@ -18,6 +18,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  TextField,
   Typography,
 } from '@mui/material';
 import { JSX, useEffect, useMemo, useState } from 'react';
@@ -35,6 +36,7 @@ import {
 } from '../common/types';
 import DiscordIcon from './DiscordIcon';
 import getColor from './getColor';
+import { CHECKIN_MESSAGE_DEFAULT } from '../common/constants';
 
 type SetWithHighlight = {
   entrant1Highlight?: Highlight;
@@ -351,10 +353,14 @@ export default function Bracket({
   const [discordChannelId, setDiscordChannelId] = useState('');
   const [discordCheckinPingsDialogOpen, setDiscordCheckinPingsDialogOpen] =
     useState(false);
+  const [checkinMessage, setCheckinMessage] = useState('');
 
   useEffect(() => {
     (async () => {
-      setSets(await window.electron.getStartingSets());
+      const startingSetsPromise = window.electron.getStartingSets();
+      const checkinMessagePromise = window.electron.getCheckinMessage();
+      setSets(await startingSetsPromise);
+      setCheckinMessage(await checkinMessagePromise);
     })();
   }, []);
 
@@ -438,7 +444,18 @@ export default function Bracket({
               }}
             >
               <DialogTitle>Ping players who have not checked in?</DialogTitle>
-              <DialogContent>
+              <DialogContent style={{ paddingTop: '8px' }}>
+                <TextField
+                  size="small"
+                  label="Messsage"
+                  variant="outlined"
+                  placeholder={CHECKIN_MESSAGE_DEFAULT}
+                  style={{ width: '100%' }}
+                  value={checkinMessage}
+                  onChange={(event) => {
+                    setCheckinMessage(event.target.value);
+                  }}
+                />
                 {discordCheckinPings.channels.length === 0 ? (
                   <Alert severity="error">
                     No channels in which we can ping
@@ -502,6 +519,14 @@ export default function Bracket({
                   variant="contained"
                   disabled={pingDisabled}
                   onClick={async () => {
+                    if (checkinMessage) {
+                      await window.electron.setCheckinMessage(checkinMessage);
+                    } else {
+                      await window.electron.setCheckinMessage(
+                        CHECKIN_MESSAGE_DEFAULT,
+                      );
+                      setCheckinMessage(CHECKIN_MESSAGE_DEFAULT);
+                    }
                     await window.electron.pingDiscords(
                       discordChannelId,
                       discordCheckinPings.discords.map(

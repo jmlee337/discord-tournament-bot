@@ -164,6 +164,10 @@ const electronHandler = {
     channels: DiscordChannel[];
     discords: DiscordToPing[];
   }> => ipcRenderer.invoke('getDiscordCheckinPings'),
+  getCheckinMessage: (): Promise<string> =>
+    ipcRenderer.invoke('getCheckinMessage'),
+  setCheckinMessage: (checkinMessage: string): Promise<void> =>
+    ipcRenderer.invoke('setCheckinMessage', checkinMessage),
   pingDiscords: (channelId: string, discordIds: string[]): Promise<void> =>
     ipcRenderer.invoke('pingDiscords', channelId, discordIds),
   getStartingState: (): Promise<StartingState> =>
