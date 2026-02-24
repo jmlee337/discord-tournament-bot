@@ -306,7 +306,7 @@ export async function getTournamentSets(
           const startggPhaseGroups = await Promise.all(
             phaseJson.entities.groups.map(async (group) => {
               const groupResponse = await wrappedFetch(
-                `https://api.start.gg/phase_group/${group.id}?expand[]=sets&expand[]=entrants`,
+                `https://api.start.gg/phase_group/${group.id}?expand[]=sets&expand[]=entrants&bustCache=true`,
               );
               const groupJson = (await groupResponse.json()) as GroupJSON;
               const entrantIdToNameAndSponsor = new Map<
