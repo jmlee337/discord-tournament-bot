@@ -445,10 +445,12 @@ export async function getTournamentSets(
         }
       });
       const completed: StartggEvent = {
+        id: event.id,
         name: event.name,
         phases: completedPhases.sort(phaseSortPred),
       };
       const pending: StartggEvent = {
+        id: event.id,
         name: event.name,
         phases: pendingPhases.sort(phaseSortPred),
       };
@@ -475,31 +477,59 @@ export async function getTournamentSets(
   };
 }
 
-export async function getNotCheckedInParticipantIds(setId: number) {
-  const setResponse = await wrappedFetch(
-    `https://api.start.gg/set/${setId}?expand[]=setTask`,
-  );
+export async function getNotCheckedInParticipantIds(
+  slug: string,
+  eventIds: number[],
+) {
+  const participantIds = new Set<number>();
+  let page = 1;
+  // eslint-disable-next-line no-constant-condition
+  while (true) {
+    // eslint-disable-next-line no-await-in-loop
+    const setsResponse = await wrappedFetch(
+      `https://api.start.gg/sets/tournament/${slug}?page=${page}&per_page=100&filter={"isPlayable":true,"eventId":[${eventIds.join(
+        ',',
+      )}]}&isAdmin=true&expand[]=setTask&bustCache=true`,
+    );
+    // eslint-disable-next-line no-await-in-loop
+    const setsJson = await setsResponse.json();
+    if (Array.isArray(setsJson.items?.entities?.sets)) {
+      const pendingSetIds = new Set(
+        (setsJson.items.entities.sets as any[])
+          .filter((set) => set.state === 1 || set.state === 6)
+          .map((set) => set.id),
+      );
+      if (Array.isArray(setsJson.items.entities.setTask)) {
+        (setsJson.items.entities.setTask as any[])
+          .filter(
+            (setTask) =>
+              setTask.type === 1 &&
+              setTask.active &&
+              !setTask.isCompleted &&
+              pendingSetIds.has(setTask.setId),
+          )
+          .forEach((setTask) => {
+            Object.entries(setTask.metadata.checkins).forEach(
+              ([participantId, checkedIn]) => {
+                if (checkedIn === false) {
+                  participantIds.add(Number.parseInt(participantId, 10));
+                }
+              },
+            );
+          });
+      }
+    }
 
-  const participantIds: number[] = [];
-  const setJson = await setResponse.json();
-  const setTasks = setJson.entities?.setTask;
-  if (Array.isArray(setTasks)) {
-    setTasks
-      .filter(
-        (setTask) =>
-          setTask.type === 1 && setTask.active && !setTask.isCompleted,
-      )
-      .forEach((checkinTask) => {
-        Object.entries(checkinTask.metadata.checkins).forEach(
-          ([participantId, checkedIn]) => {
-            if (checkedIn === false) {
-              participantIds.push(Number.parseInt(participantId, 10));
-            }
-          },
-        );
-      });
+    if (
+      !Number.isInteger(setsJson.total_count) ||
+      setsJson.total_count <= page * 100
+    ) {
+      break;
+    }
+    page += 1;
   }
-  return participantIds;
+
+  return Array.from(participantIds.keys());
 }
 
 const GQL_SET_INNER = `

@@ -51,6 +51,7 @@ export type StartggPhase = {
 };
 
 export type StartggEvent = {
+  id: number;
   name: string;
   phases: StartggPhase[];
 };

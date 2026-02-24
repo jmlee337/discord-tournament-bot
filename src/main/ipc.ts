@@ -1933,29 +1933,13 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
           name: channel.name,
         }));
 
-      await preemptGetTournamentSets();
-      const pendingSets: StartggSet[] = [];
-      sets.pending.forEach((event) => {
-        event.phases.forEach((phase) => {
-          phase.phaseGroups.forEach((group) => {
-            pendingSets.push(
-              ...group.sets.filter((set) => set.state === 1 || set.state === 6),
-            );
-          });
-        });
-      });
-      const participantIds = new Set<number>();
-      await Promise.all(
-        pendingSets.map(async (set) => {
-          (await getNotCheckedInParticipantIds(set.id)).forEach(
-            (participantId) => {
-              participantIds.add(participantId);
-            },
-          );
-        }),
-      );
       const discords: DiscordToPing[] = [];
-      Array.from(participantIds).forEach((participantId) => {
+      (
+        await getNotCheckedInParticipantIds(
+          startggTournament.slug,
+          sets.pending.map((event) => event.id),
+        )
+      ).forEach((participantId) => {
         const discord = participantIdToDiscordToPing.get(participantId);
         if (discord) {
           discords.push(discord);
