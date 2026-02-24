@@ -494,15 +494,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     timeoutId = setTimeout(async () => {
       try {
         mainWindow.webContents.send('gettingSets', true);
-        const newParticipantsPromise = getTournamentParticipants(
+        const newParticipants = await getTournamentParticipants(
           startggTournament.slug,
           startggApiKey,
         );
-        const newSetsPromise = getTournamentSets(startggTournament.slug);
-        const [newParticipants, newSets] = await Promise.all([
-          newParticipantsPromise,
-          newSetsPromise,
-        ]);
+        const newSets = await getTournamentSets(startggTournament.slug);
 
         updateParticipants(newParticipants);
         updateParticipantIdToSet(newSets);
@@ -525,15 +521,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     clearTimeout(timeoutId);
     try {
       mainWindow.webContents.send('gettingSets', true);
-      const newParticipantsPromise = getTournamentParticipants(
+      const newParticipants = await getTournamentParticipants(
         startggTournament.slug,
         startggApiKey,
       );
-      const newSetsPromise = getTournamentSets(startggTournament.slug);
-      const [newParticipants, newSets] = await Promise.all([
-        newParticipantsPromise,
-        newSetsPromise,
-      ]);
+      const newSets = await getTournamentSets(startggTournament.slug);
 
       updateParticipants(newParticipants);
       updateParticipantIdToSet(newSets);
@@ -1751,14 +1743,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
 
       try {
         mainWindow.webContents.send('gettingSets', true);
-        const participantsPromise = getTournamentParticipants(
+        const participants = await getTournamentParticipants(
           slug,
           startggApiKey,
         );
-        const getTournamentRetPromise = getTournamentSets(slug);
-        // await both, we don't want to proceed if either throws
-        const participants = await participantsPromise;
-        const getTournamentRet = await getTournamentRetPromise;
+        const getTournamentRet = await getTournamentSets(slug);
         updateParticipants(participants);
         updateParticipantIdToSet(getTournamentRet);
         startggTournament = getTournamentRet.tournament;
