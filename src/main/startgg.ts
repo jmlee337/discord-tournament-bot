@@ -193,29 +193,34 @@ type EventJSON = {
   name: string;
   state: number;
 };
-type TournamentJSON = {
-  entities: {
-    event: EventJSON[];
-    tournament: {
-      name: string;
-      slug: string;
-    };
-  };
-};
-type EntrantJSON = {
-  id: number;
-  participantIds: number[];
-};
-type GroupJSON = {
-  id: number;
-  displayIdentifier: string;
-  state: number;
-};
 type PhaseJSON = {
   id: number;
+  eventId: number;
   name: string;
   phaseOrder: number;
   state: number;
+};
+type GroupJSON = {
+  id: number;
+  phaseId: number;
+  displayIdentifier: string;
+  state: number;
+};
+type EntrantJSON = {
+  id: number;
+  eventId: number;
+  participantIds: number[];
+};
+type TournamentJSON = {
+  entities: {
+    event: EventJSON[];
+    phase: PhaseJSON[];
+    groups: GroupJSON[];
+    entrants: EntrantJSON[];
+    tournament: {
+      name: string;
+    };
+  };
 };
 type SetJSON = {
   id: number;
@@ -267,7 +272,7 @@ export async function getTournamentSets(
   slug: string,
 ): Promise<GetTournamentRet> {
   const tournamentResponse = await wrappedFetch(
-    `https://api.start.gg/tournament/${slug}?expand[]=event`,
+    `https://api.start.gg/tournament/${slug}?expand[]=event&expand[]=phase&expand[]=groups&expand[]=entrants`,
   );
   const tournamentJson = (await tournamentResponse.json()) as TournamentJSON;
   const eventIds: number[] = [];
@@ -278,63 +283,50 @@ export async function getTournamentSets(
       eventIds.push(event.id);
       idToEvent.set(event.id, event);
     });
-
+  const phaseIds: number[] = [];
+  const idToPhase = new Map<number, PhaseJSON>();
+  tournamentJson.entities.phase
+    .filter((phase) => idToEvent.has(phase.eventId) && phase.state !== 1)
+    .forEach((phase) => {
+      phaseIds.push(phase.id);
+      idToPhase.set(phase.id, phase);
+    });
+  const groupIds: number[] = [];
+  const idToGroup = new Map<number, GroupJSON>();
+  tournamentJson.entities.groups
+    .filter((group) => idToPhase.has(group.phaseId) && group.state !== 1)
+    .forEach((group) => {
+      groupIds.push(group.id);
+      idToGroup.set(group.id, group);
+    });
   const idToEntrant = new Map<number, StartggEntrant>();
   const entrantIdToNameAndSponsor = new Map<
     number,
     { name: string; sponsor: string }
   >();
-  const groupIds: number[] = [];
-  const idToGroup = new Map<number, GroupJSON>();
-  const phaseIds: number[] = [];
-  const idToPhase = new Map<number, PhaseJSON>();
-  await Promise.all(
-    eventIds.map(async (eventId) => {
-      const eventResponse = await wrappedFetch(
-        `https://api.start.gg/event/${eventId}?expand[]=phase&expand[]=groups&expand[]=entrants`,
-      );
-      const eventJson = (await eventResponse.json()) as {
-        entities: {
-          entrants: EntrantJSON[];
-          groups: GroupJSON[];
-          phase: PhaseJSON[];
-        };
-      };
-      eventJson.entities.entrants.forEach((entrant) => {
-        idToEntrant.set(entrant.id, {
-          id: entrant.id,
-          participantsIds: entrant.participantIds,
-        });
-        const participants: StartggParticipant[] = [];
-        entrant.participantIds.forEach((participantId) => {
-          const participant = idToParticipant.get(participantId);
-          if (participant) {
-            participants.push(participant);
-          }
-        });
-        entrantIdToNameAndSponsor.set(entrant.id, {
-          name: participants
-            .map((participant) => participant.gamerTag)
-            .join(' / '),
-          sponsor: participants
-            .map((participant) => participant.prefix)
-            .join(' / '),
-        });
+  tournamentJson.entities.entrants
+    .filter((entrant) => idToEvent.has(entrant.eventId))
+    .forEach((entrant) => {
+      idToEntrant.set(entrant.id, {
+        id: entrant.id,
+        participantsIds: entrant.participantIds,
       });
-      eventJson.entities.groups
-        .filter((group) => group.state !== 1)
-        .forEach((group) => {
-          groupIds.push(group.id);
-          idToGroup.set(group.id, group);
-        });
-      eventJson.entities.phase
-        .filter((phase) => phase.state !== 1)
-        .forEach((phase) => {
-          phaseIds.push(phase.id);
-          idToPhase.set(phase.id, phase);
-        });
-    }),
-  );
+      const participants: StartggParticipant[] = [];
+      entrant.participantIds.forEach((participantId) => {
+        const participant = idToParticipant.get(participantId);
+        if (participant) {
+          participants.push(participant);
+        }
+      });
+      entrantIdToNameAndSponsor.set(entrant.id, {
+        name: participants
+          .map((participant) => participant.gamerTag)
+          .join(' / '),
+        sponsor: participants
+          .map((participant) => participant.prefix)
+          .join(' / '),
+      });
+    });
 
   const pendingSets: SetJSON[] = [];
   const completedSets: SetJSON[] = [];
