@@ -338,42 +338,44 @@ export async function getTournamentSets(
 
   const pendingSets: SetJSON[] = [];
   const completedSets: SetJSON[] = [];
-  let page = 1;
-  // eslint-disable-next-line no-constant-condition
-  while (true) {
-    const url = `https://api.start.gg/sets/tournament/${slug}?page=${page}&per_page=100&filter={"eventId":[${eventIds.join(
-      ',',
-    )}],"phaseId":[${phaseIds.join(',')}],"phaseGroupId":[${groupIds.join(
-      ',',
-    )}]}&isAdmin=true&expand[]=setTask&bustCache=true`;
-    // eslint-disable-next-line no-await-in-loop
-    const setsResponse = await wrappedFetch(url);
-    // eslint-disable-next-line no-await-in-loop
-    const pageJson = await setsResponse.json();
+  if (eventIds.length > 0 && phaseIds.length > 0 && groupIds.length > 0) {
+    let page = 1;
+    // eslint-disable-next-line no-constant-condition
+    while (true) {
+      const url = `https://api.start.gg/sets/tournament/${slug}?page=${page}&per_page=100&filter={"eventId":[${eventIds.join(
+        ',',
+      )}],"phaseId":[${phaseIds.join(',')}],"phaseGroupId":[${groupIds.join(
+        ',',
+      )}]}&isAdmin=true&expand[]=setTask&bustCache=true`;
+      // eslint-disable-next-line no-await-in-loop
+      const setsResponse = await wrappedFetch(url);
+      // eslint-disable-next-line no-await-in-loop
+      const pageJson = await setsResponse.json();
 
-    if (Array.isArray(pageJson.items?.entities?.sets)) {
-      const setsJson = pageJson.items.entities.sets as SetJSON[];
-      setsJson.forEach((set) => {
-        setIdToBestOf.set(set.id, set.bestOf);
-      });
-      setsJson
-        .filter((set) => set.entrant1Id && set.entrant2Id && !set.unreachable)
-        .forEach((set) => {
-          if (set.state === 3) {
-            completedSets.push(set);
-          } else {
-            pendingSets.push(set);
-          }
+      if (Array.isArray(pageJson.items?.entities?.sets)) {
+        const setsJson = pageJson.items.entities.sets as SetJSON[];
+        setsJson.forEach((set) => {
+          setIdToBestOf.set(set.id, set.bestOf);
         });
-    }
+        setsJson
+          .filter((set) => set.entrant1Id && set.entrant2Id && !set.unreachable)
+          .forEach((set) => {
+            if (set.state === 3) {
+              completedSets.push(set);
+            } else {
+              pendingSets.push(set);
+            }
+          });
+      }
 
-    if (
-      !Number.isInteger(pageJson.total_count) ||
-      pageJson.total_count <= page * 100
-    ) {
-      break;
+      if (
+        !Number.isInteger(pageJson.total_count) ||
+        pageJson.total_count <= page * 100
+      ) {
+        break;
+      }
+      page += 1;
     }
-    page += 1;
   }
 
   const toStartggSet = (set: SetJSON): StartggSet => {
