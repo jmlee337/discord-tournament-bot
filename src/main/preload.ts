@@ -10,6 +10,7 @@ import {
   DiscordStatus,
   DiscordToPing,
   DolphinId,
+  GameEndInfo,
   OverlayId,
   ParticipantConnections,
   RemoteState,
@@ -286,6 +287,8 @@ const electronHandler = {
   // exposed for dev only
   registerSlashCommands: (): Promise<void> =>
     ipcRenderer.invoke('registerSlashCommands'),
+  getGameEndInfo: (replayPath: string): Promise<GameEndInfo | null> =>
+    ipcRenderer.invoke('getGameEndInfo', replayPath),
 };
 
 contextBridge.exposeInMainWorld('electron', electronHandler);

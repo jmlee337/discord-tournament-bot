@@ -6,13 +6,8 @@ const RAW_HEADER_START = Buffer.from([
   0x7b, 0x55, 0x03, 0x72, 0x61, 0x77, 0x5b, 0x24, 0x55, 0x23, 0x6c,
 ]);
 
-async function getReplay(filePath: string): Promise<Buffer | undefined> {
-  let replay: Buffer | undefined;
-  try {
-    replay = await readFile(filePath);
-  } catch (e: any) {
-    throw new Error(e instanceof Error ? e.message : e);
-  }
+async function getReplay(filePath: string) {
+  const replay = await readFile(filePath);
 
   // raw header
   if (replay.length < 15) {
@@ -145,44 +140,55 @@ export async function getGameStartInfos(
   throw new Error('timed out');
 }
 
-async function getGameEndInfoInner(
-  filePath: string,
-): Promise<GameEndInfo | undefined> {
+class GameEndInfoError extends Error {
+  private retriable: boolean;
+
+  constructor(retriable: boolean, message?: string, options?: ErrorOptions) {
+    super(message, options);
+    this.retriable = retriable;
+  }
+
+  public isRetriable() {
+    return this.retriable;
+  }
+}
+
+async function getGameEndInfoInner(filePath: string) {
   const replay = await getReplay(filePath);
   if (!replay) {
-    return undefined;
+    throw new GameEndInfoError(true, 'no replay yet');
   }
 
   const length = replay.readUint32BE(11);
   if (length === 0) {
-    return undefined;
+    throw new GameEndInfoError(true, 'no replay yet');
   }
   const totalLength = 15 + length;
   if (replay.length < totalLength) {
-    throw new Error('replay corrupted');
+    throw new GameEndInfoError(false, 'replay corrupted');
   }
 
   const payloadSizeAndSizes = getPayloadSizes(replay);
   if (!payloadSizeAndSizes) {
-    return undefined;
+    throw new GameEndInfoError(true, 'no replay yet');
   }
 
   const { payloadsSize, payloadSizes } = payloadSizeAndSizes;
   const gameStartSize = payloadSizes.get(0x36);
   if (!gameStartSize) {
-    throw new Error('replay corrupted');
+    throw new GameEndInfoError(false, 'replay corrupted');
   }
   const postFrameUpdateSize = payloadSizes.get(0x38);
   if (!postFrameUpdateSize) {
-    throw new Error('replay corrupted');
+    throw new GameEndInfoError(false, 'replay corrupted');
   }
   const gameEndSize = payloadSizes.get(0x39);
   if (!gameEndSize) {
-    throw new Error('replay corrupted');
+    throw new GameEndInfoError(false, 'replay corrupted');
   }
   const frameBookendSize = payloadSizes.get(0x3c);
   if (!frameBookendSize) {
-    throw new Error('replay corrupted');
+    throw new GameEndInfoError(false, 'replay corrupted');
   }
 
   const gameStart = getGameStart(replay, payloadsSize, gameStartSize);
@@ -194,29 +200,47 @@ async function getGameEndInfoInner(
     return gameStart[gameInfoOffset + 1];
   });
 
+  const emptySlots = playerTypes.filter((playerType) => playerType === 3);
+  const playerSlots = playerTypes.filter((playerType) => playerType === 0);
+  if (emptySlots.length !== 2 || playerSlots.length !== 2) {
+    return null;
+  }
+
   const gameEndStart = totalLength - gameEndSize;
   const gameEnd = replay.subarray(gameEndStart, totalLength);
   if (gameEnd[0] !== 0x39) {
-    throw new Error('replay corrupted');
+    throw new GameEndInfoError(false, 'replay corrupted');
   }
+
   const definite =
     (gameEnd[1] === 1 || gameEnd[1] === 2 || gameEnd[1] === 3) &&
     gameEnd[2] === 0xff;
-  const placings = [gameEnd[3], gameEnd[4], gameEnd[5], gameEnd[6]];
+  const placings = [gameEnd[3], gameEnd[4], gameEnd[5], gameEnd[6]].filter(
+    (placing) =>
+      placing === 0 || placing === 1 || placing === 2 || placing === 3,
+  );
+  if (placings.length !== 2) {
+    throw new GameEndInfoError(false, 'replay corrupted');
+  }
+  let isWinner: [boolean, boolean] = [placings[0] === 0, placings[1] === 0];
 
   const frameBookendStart = gameEndStart - frameBookendSize;
   const frameBookend = replay.subarray(frameBookendStart, gameEndStart);
   if (frameBookend[0] !== 0x3c) {
-    throw new Error('replay corrupted');
+    throw new GameEndInfoError(false, 'replay corrupted');
   }
   const lastFrameNum = frameBookend.readInt32BE(0x1);
 
   const numPlayers = playerTypes.filter(
-    (playerType) => playerType === 0 || playerType === 1,
+    (playerType) => playerType === 0,
   ).length;
   let currentPostFrameUpdateStart = frameBookendStart - postFrameUpdateSize;
   let postFrameUpdatesSeen = 0;
-  const postFramePlayers: { percent: number; stocks: number }[] = [];
+  const postFramePlayers: {
+    playerIndex: number;
+    percent: number;
+    stocks: number;
+  }[] = [];
   while (postFrameUpdatesSeen < numPlayers) {
     const postFrameUpdate = replay.subarray(
       currentPostFrameUpdateStart,
@@ -231,40 +255,47 @@ async function getGameEndInfoInner(
 
     if (postFrameUpdate[0x6] === 0) {
       postFramePlayers.push({
-        percent: postFrameUpdate.readFloatBE(0x16),
+        playerIndex: postFrameUpdate[0x05],
+        percent: Math.trunc(postFrameUpdate.readFloatBE(0x16)),
         stocks: postFrameUpdate[0x21],
       });
       postFrameUpdatesSeen += 1;
     }
     currentPostFrameUpdateStart -= postFrameUpdateSize;
   }
+  if (postFrameUpdatesSeen !== 2 || postFramePlayers.length !== 2) {
+    throw new GameEndInfoError(false, 'replay corrupted');
+  }
+  postFramePlayers.sort((a, b) => a.playerIndex - b.playerIndex);
 
-  let tie = false;
-  if (postFrameUpdatesSeen === numPlayers && postFramePlayers.length > 1) {
-    const { stocks } = postFramePlayers[0];
-    const percent = Math.trunc(postFramePlayers[0].percent);
-    tie = true;
-    for (let i = 1; i < postFramePlayers.length; i += 1) {
-      const player = postFramePlayers[i];
-      if (
-        player.stocks !== stocks ||
-        (stocks !== 0 && Math.trunc(player.percent) !== percent)
-      ) {
-        tie = false;
-        break;
-      }
+  if (
+    postFramePlayers[0].stocks === postFramePlayers[1].stocks &&
+    postFramePlayers[0].percent === postFramePlayers[1].percent
+  ) {
+    isWinner = [false, false];
+  } else if (gameEnd[1] === 1) {
+    if (postFramePlayers[0].stocks !== postFramePlayers[1].stocks) {
+      isWinner = [
+        postFramePlayers[0].stocks > postFramePlayers[1].stocks,
+        postFramePlayers[1].stocks > postFramePlayers[0].stocks,
+      ];
+    } else {
+      isWinner = [
+        postFramePlayers[0].percent < postFramePlayers[1].percent,
+        postFramePlayers[1].percent < postFramePlayers[0].percent,
+      ];
     }
   }
 
   return {
     definite,
-    placings,
-    playerTypes,
-    tie,
+    isWinner,
   };
 }
 
-export async function getGameEndInfo(filePath: string): Promise<GameEndInfo> {
+export async function getGameEndInfo(
+  filePath: string,
+): Promise<GameEndInfo | null> {
   for (let i = 0; i < 10; i += 1) {
     // eslint-disable-next-line no-await-in-loop
     await new Promise<void>((resolve) => {
@@ -272,10 +303,15 @@ export async function getGameEndInfo(filePath: string): Promise<GameEndInfo> {
         resolve();
       }, 100);
     });
-    // eslint-disable-next-line no-await-in-loop
-    const gameEndInfo = await getGameEndInfoInner(filePath);
-    if (gameEndInfo) {
+    try {
+      // eslint-disable-next-line no-await-in-loop
+      const gameEndInfo = await getGameEndInfoInner(filePath);
       return gameEndInfo;
+    } catch (e: unknown) {
+      if (!(e instanceof GameEndInfoError) || !e.isRetriable()) {
+        throw e;
+      }
+      // if retriable just catch
     }
   }
   throw new Error('timed out');

@@ -102,6 +102,7 @@ import {
   CHECKIN_MESSAGE_DEFAULT,
   REFRESH_CADENCE_MS,
 } from '../common/constants';
+import { getGameEndInfo } from './replay';
 
 const CONFIRMATION_TIMEOUT_MS = 30000;
 const STARTGG_BLACK = '#031221';
@@ -1173,6 +1174,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   // for dev only
   ipcMain.removeHandler('registerSlashCommands');
   ipcMain.handle('registerSlashCommands', () => registerSlashCommands());
+  ipcMain.removeHandler('getGameEndInfo');
+  ipcMain.handle('getGameEndInfo', (event, replayPath: string) =>
+    getGameEndInfo(replayPath),
+  );
 
   /**
    * remote

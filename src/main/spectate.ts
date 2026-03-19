@@ -505,31 +505,13 @@ async function processNewReplay(dolphinId: DolphinId, replayPath: string) {
 
 async function processFinishedReplay(replayPath: string) {
   const gameEndInfo = await getGameEndInfo(replayPath);
-  if (!gameEndInfo.definite || gameEndInfo.tie) {
-    return null;
-  }
-
-  const emptySlots = gameEndInfo.playerTypes.filter(
-    (playerType) => playerType === 3,
-  );
-  const playerSlots = gameEndInfo.playerTypes.filter(
-    (playerType) => playerType === 0,
-  );
-  if (emptySlots.length !== 2 || playerSlots.length !== 2) {
-    return null;
-  }
-
-  const placings = gameEndInfo.placings.filter(
-    (placing) =>
-      placing === 0 || placing === 1 || placing === 2 || placing === 3,
-  );
-  if (placings.length !== 2) {
+  if (!gameEndInfo || !gameEndInfo.definite) {
     return null;
   }
 
   const gameEndScoreboardInfo: MSTGameEndScoreboardInfo = {
-    p1ScoreIncrement: placings[0] === 0,
-    p2ScoreIncrement: placings[1] === 0,
+    p1ScoreIncrement: gameEndInfo.isWinner[0],
+    p2ScoreIncrement: gameEndInfo.isWinner[1],
   };
   return gameEndScoreboardInfo;
 }
