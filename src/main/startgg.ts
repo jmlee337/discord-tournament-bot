@@ -293,6 +293,7 @@ function setSortPred(a: StartggSet, b: StartggSet) {
   throw new Error('unreachable');
 }
 
+const shortRoundTextRegex = /([A-Z]|[0-9])/g;
 const idToSet = new Map<number, StartggSet>();
 const setIdToBestOf = new Map<number, number>();
 export async function getTournamentSets(
@@ -457,6 +458,10 @@ export async function getTournamentSets(
       entrant2Sponsor,
       entrant2Score: set.entrant2Score || 0,
       fullRoundText: set.fullRoundText,
+      shortRoundText: set.fullRoundText
+        .split('')
+        .filter((c) => c.match(shortRoundTextRegex))
+        .join(''),
       round: set.round,
       startedAt: set.startedAt,
       state: set.state,
@@ -786,6 +791,10 @@ function gqlSetToStartggSet(set: GqlSet): StartggSet {
       .join(' / '),
     entrant2Score: set.slots[1].standing?.stats.score.value || 0,
     fullRoundText: set.fullRoundText,
+    shortRoundText: set.fullRoundText
+      .split('')
+      .filter((c) => c.match(shortRoundTextRegex))
+      .join(''),
     round: set.round,
     startedAt: set.startedAt,
     state: set.state,

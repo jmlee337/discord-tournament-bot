@@ -31,6 +31,7 @@ export type StartggSet = {
   entrant2Sponsor: string;
   entrant2Score: number;
   fullRoundText: string;
+  shortRoundText: string;
   round: number;
   // called or started
   startedAt: number | null;

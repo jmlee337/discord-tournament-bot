@@ -58,6 +58,7 @@ const EMPTY_STARTGG_SET: StartggSet = {
   entrant2Sponsor: '',
   entrant2Score: 0,
   fullRoundText: '',
+  shortRoundText: '',
   round: 1,
   startedAt: null,
   state: 1,
@@ -135,7 +136,7 @@ function SetWithHighlightListItemButton({
         >
           <Box width="20px" />
           <Typography flexGrow={1} textAlign="center" variant="caption">
-            {setWithHighlight.set.fullRoundText}
+            {setWithHighlight.set.shortRoundText}
           </Typography>
           {titleEnd}
         </Stack>
