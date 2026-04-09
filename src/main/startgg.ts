@@ -240,6 +240,9 @@ type SetJSON = {
   unreachable: boolean;
   updatedAt: number;
   winnerId: number | null;
+  games: {
+    winnerId: number | null;
+  }[];
 };
 type SetTaskJSON = {
   id: number;
@@ -444,19 +447,34 @@ export async function getTournamentSets(
     const { name: entrant2Name, sponsor: entrant2Sponsor } =
       entrantIdToNameAndSponsor.get(set.entrant2Id!)!;
 
+    let entrant1Score = set.entrant1Score || 0;
+    let entrant2Score = set.entrant2Score || 0;
+    const isDQ = entrant1Score === -1 || entrant2Score === -1;
+    if (Array.isArray(set.games) && set.games.length > 0) {
+      entrant1Score = 0;
+      entrant2Score = 0;
+      set.games.forEach((game) => {
+        if (game.winnerId === set.entrant1Id) {
+          entrant1Score += 1;
+        } else if (game.winnerId === set.entrant2Id) {
+          entrant2Score += 1;
+        }
+      });
+    }
+
     const newSet: StartggSet = {
       id: set.id,
       bestOf: set.bestOf,
       completedAt: set.completedAt,
-      isDQ: set.entrant1Score === -1 || set.entrant2Score === -1,
+      isDQ,
       entrant1Id: set.entrant1Id!,
       entrant1Name,
       entrant1Sponsor,
-      entrant1Score: set.entrant1Score || 0,
+      entrant1Score,
       entrant2Id: set.entrant2Id!,
       entrant2Name,
       entrant2Sponsor,
-      entrant2Score: set.entrant2Score || 0,
+      entrant2Score,
       fullRoundText: set.fullRoundText,
       shortRoundText: set.fullRoundText
         .split('')

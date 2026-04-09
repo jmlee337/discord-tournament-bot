@@ -140,8 +140,11 @@ function SetWithHighlightListItemButton({
           </Typography>
           {titleEnd}
         </Stack>
-        <Typography
-          variant="body2"
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          width="calc(100% + 8px)"
           style={{
             fontWeight:
               setWithHighlight.set.state === 3 &&
@@ -149,6 +152,7 @@ function SetWithHighlightListItemButton({
                 ? 700
                 : undefined,
           }}
+          typography="body2"
         >
           {setWithHighlight.entrant1Highlight ? (
             <>
@@ -173,9 +177,15 @@ function SetWithHighlightListItemButton({
           ) : (
             setWithHighlight.set.entrant1Name
           )}
-        </Typography>
-        <Typography
-          variant="body2"
+          <Box textAlign="center" width="18px">
+            {setWithHighlight.set.entrant1Score}
+          </Box>
+        </Stack>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          width="calc(100% + 8px)"
           style={{
             fontWeight:
               setWithHighlight.set.state === 3 &&
@@ -183,6 +193,7 @@ function SetWithHighlightListItemButton({
                 ? 700
                 : undefined,
           }}
+          typography="body2"
         >
           {setWithHighlight.entrant2Highlight ? (
             <>
@@ -207,7 +218,10 @@ function SetWithHighlightListItemButton({
           ) : (
             setWithHighlight.set.entrant2Name
           )}
-        </Typography>
+          <Box textAlign="center" width="18px">
+            {setWithHighlight.set.entrant2Score}
+          </Box>
+        </Stack>
         {setWithHighlight.set.activeSetTasks.length > 0 && (
           <Typography
             flexGrow={1}
