@@ -35,7 +35,7 @@ import {
   DiscordToPing,
 } from '../common/types';
 import DiscordIcon from './DiscordIcon';
-import getColor from './getColor';
+import { CALLED_COLOR, getColor, STARTED_COLOR } from './getColor';
 import { CHECKIN_MESSAGE_DEFAULT } from '../common/constants';
 
 type SetWithHighlight = {
@@ -63,6 +63,7 @@ const EMPTY_STARTGG_SET: StartggSet = {
   state: 1,
   updatedAt: 0,
   winnerId: null,
+  activeSetTasks: [],
 };
 
 function getBackgroundColor(set: StartggSet) {
@@ -132,6 +133,7 @@ function SetWithHighlightListItemButton({
           width="100%"
           style={{ color: getColor(setWithHighlight.set) }}
         >
+          <Box width="20px" />
           <Typography flexGrow={1} textAlign="center" variant="caption">
             {setWithHighlight.set.fullRoundText}
           </Typography>
@@ -205,6 +207,20 @@ function SetWithHighlightListItemButton({
             setWithHighlight.set.entrant2Name
           )}
         </Typography>
+        {setWithHighlight.set.activeSetTasks.length > 0 && (
+          <Typography
+            flexGrow={1}
+            textAlign="center"
+            variant="caption"
+            color={
+              setWithHighlight.set.activeSetTasks[0].type === 1
+                ? CALLED_COLOR
+                : STARTED_COLOR
+            }
+          >
+            {setWithHighlight.set.activeSetTasks[0].description}
+          </Typography>
+        )}
       </Stack>
     </ListItemButton>
   );
@@ -255,7 +271,7 @@ function mapStartggEventPredicate(
       });
       if (groupSets.length > 0) {
         phases.push(
-          <Box key={`${prefix}${phase.name}${phaseGroup.name}`}>
+          <Box key={`${prefix}${event.name}${phase.name}${phaseGroup.name}`}>
             <Typography variant="subtitle1">
               {event.name}, {phase.name}, {phaseGroup.name}
             </Typography>

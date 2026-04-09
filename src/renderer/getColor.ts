@@ -1,11 +1,13 @@
 import { StartggSet } from '../common/types';
 
-export default function getColor(set: StartggSet) {
+export const CALLED_COLOR = '#f9a825';
+export const STARTED_COLOR = '#0d8225';
+export function getColor(set: StartggSet) {
   if (set.state === 2) {
-    return '#0d8225';
+    return STARTED_COLOR;
   }
   if (set.state === 6) {
-    return '#f9a825';
+    return CALLED_COLOR;
   }
   return undefined;
 }

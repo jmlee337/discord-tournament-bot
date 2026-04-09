@@ -37,6 +37,12 @@ export type StartggSet = {
   state: number;
   updatedAt: number;
   winnerId: number | null;
+  activeSetTasks: {
+    id: number;
+    entrantName: string;
+    description: string;
+    type: number;
+  }[];
 };
 
 export type StartggPhaseGroup = {

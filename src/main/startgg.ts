@@ -241,6 +241,33 @@ type SetJSON = {
   updatedAt: number;
   winnerId: number | null;
 };
+type SetTaskJSON = {
+  id: number;
+  entrantId: number;
+  setId: number;
+  type: number;
+  action: string | null;
+  taskOrder: number;
+  active: boolean;
+  isCompleted: boolean;
+  inDispute: boolean;
+};
+function toDescription(setTask: SetTaskJSON) {
+  switch (setTask.type) {
+    case 1:
+      return 'Checkin';
+    case 2:
+      return 'Connect';
+    case 7:
+      return 'Stage/Char';
+    case 3:
+      return 'Report Game';
+    case 4:
+      return 'Finalize Set';
+    default:
+      return 'unknown';
+  }
+}
 function phaseSortPred(a: StartggPhase, b: StartggPhase) {
   return a.phaseOrder - b.phaseOrder;
 }
@@ -328,6 +355,7 @@ export async function getTournamentSets(
       });
     });
 
+  const setIdToSetTasks = new Map<number, SetTaskJSON[]>();
   const pendingSets: SetJSON[] = [];
   const completedSets: SetJSON[] = [];
   if (eventIds.length > 0 && phaseIds.length > 0 && groupIds.length > 0) {
@@ -358,6 +386,40 @@ export async function getTournamentSets(
               pendingSets.push(set);
             }
           });
+      } else if (pageJson.items?.entities?.sets instanceof Object) {
+        const setJson = pageJson.items.entities.sets as SetJSON;
+        setIdToBestOf.set(setJson.id, setJson.bestOf);
+        if (setJson.entrant1Id && setJson.entrant2Id && !setJson.unreachable) {
+          if (setJson.state === 3) {
+            completedSets.push(setJson);
+          } else {
+            pendingSets.push(setJson);
+          }
+        }
+      }
+
+      if (Array.isArray(pageJson.items?.entities?.setTask)) {
+        const setTasksJson = pageJson.items.entities.setTask as SetTaskJSON[];
+        setTasksJson.forEach((setTask) => {
+          if (setTask.active) {
+            let setTasks = setIdToSetTasks.get(setTask.setId);
+            if (!setTasks) {
+              setTasks = [];
+              setIdToSetTasks.set(setTask.setId, setTasks);
+            }
+            setTasks.push(setTask);
+          }
+        });
+      } else if (pageJson.items?.entities?.setTask instanceof Object) {
+        const setTaskJson = pageJson.items.entities.setTask as SetTaskJSON;
+        if (setTaskJson.active) {
+          let setTasks = setIdToSetTasks.get(setTaskJson.setId);
+          if (!setTasks) {
+            setTasks = [];
+            setIdToSetTasks.set(setTaskJson.setId, setTasks);
+          }
+          setTasks.push(setTaskJson);
+        }
       }
 
       if (
@@ -400,6 +462,20 @@ export async function getTournamentSets(
       state: set.state,
       updatedAt: set.updatedAt,
       winnerId: set.winnerId,
+      activeSetTasks: (setIdToSetTasks.get(set.id) ?? []).map((setTask) => {
+        let entrantName = '';
+        if (setTask.entrantId === set.entrant1Id) {
+          entrantName = entrant1Name;
+        } else if (setTask.entrantId === set.entrant2Id) {
+          entrantName = entrant2Name;
+        }
+        return {
+          id: setTask.id,
+          entrantName,
+          description: toDescription(setTask),
+          type: setTask.type,
+        };
+      }),
     };
     idToSet.set(set.id, newSet);
     return newSet;
@@ -715,6 +791,7 @@ function gqlSetToStartggSet(set: GqlSet): StartggSet {
     state: set.state,
     updatedAt: set.updatedAt,
     winnerId: set.winnerId,
+    activeSetTasks: [],
   };
 }
 const REPORT_BRACKET_SET_MUTATION = `

@@ -7,6 +7,7 @@ import {
   DialogContent,
   DialogTitle,
   Stack,
+  Typography,
 } from '@mui/material';
 import { useMemo, useState } from 'react';
 import {
@@ -17,7 +18,7 @@ import {
 } from '@mui/icons-material';
 import styled from '@emotion/styled';
 import { StartggSet } from '../common/types';
-import getColor from './getColor';
+import { CALLED_COLOR, getColor, STARTED_COLOR } from './getColor';
 
 const Name = styled.div`
   overflow-x: hidden;
@@ -158,6 +159,21 @@ export default function Report({
             </Stack>
           </Stack>
         </Stack>
+        {set.activeSetTasks.length > 0 && (
+          <Stack direction="row" justifyContent="center">
+            <Stack direction="column" alignItems="end">
+              {set.activeSetTasks.map((setTask) => (
+                <Typography
+                  key={setTask.id}
+                  variant="caption"
+                  color={setTask.type === 1 ? CALLED_COLOR : STARTED_COLOR}
+                >
+                  {setTask.entrantName}: {setTask.description}
+                </Typography>
+              ))}
+            </Stack>
+          </Stack>
+        )}
         {reportError && <Alert severity="error">{reportError}</Alert>}
       </DialogContent>
       <DialogActions>
