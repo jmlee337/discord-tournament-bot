@@ -875,7 +875,7 @@ export default function Overlay({
                   label="Caster 1 Twitter"
                   value={caster1Twitter}
                   onChange={(event) => {
-                    setCaster1Twitch(event.target.value);
+                    setCaster1Twitter(event.target.value);
                   }}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') {
@@ -930,7 +930,7 @@ export default function Overlay({
                   label="Caster 2 Twitter"
                   value={caster2Twitter}
                   onChange={(event) => {
-                    setCaster2Twitch(event.target.value);
+                    setCaster2Twitter(event.target.value);
                   }}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter') {
