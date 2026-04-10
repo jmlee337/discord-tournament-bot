@@ -160,7 +160,7 @@ export default function Report({
           </Stack>
         </Stack>
         {set.activeSetTasks.length > 0 && (
-          <Stack direction="row" justifyContent="center">
+          <Stack direction="row" justifyContent="center" marginTop="8px">
             <Stack direction="column" alignItems="end">
               {set.activeSetTasks.map((setTask) => (
                 <Typography
