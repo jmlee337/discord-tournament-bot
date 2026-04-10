@@ -23,6 +23,9 @@ import {
 } from '@mui/material';
 import { JSX, useEffect, useMemo, useState } from 'react';
 import { HourglassTop, NotificationsActive } from '@mui/icons-material';
+import { useStopwatch } from 'react-timer-hook';
+import { UTCDate } from '@date-fns/utc';
+import { format } from 'date-fns';
 import Report from './Report';
 import Reset from './Reset';
 import {
@@ -74,6 +77,15 @@ function getBackgroundColor(set: StartggSet) {
   return '#fafafa';
 }
 
+function Stopwatch({ offsetMs }: { offsetMs: number }) {
+  const { totalMilliseconds } = useStopwatch({
+    autoStart: true,
+    offsetTimestamp: new Date(offsetMs),
+  });
+
+  return format(new UTCDate(totalMilliseconds), 'm:ss');
+}
+
 const WINNER_BACKGROUND_HIGHLIGHT = '#ba68c8';
 const TEXT_COLOR_LIGHT = '#fff';
 function SetWithHighlightListItemButton({
@@ -108,8 +120,21 @@ function SetWithHighlightListItemButton({
         />
       );
     }
-    return <Box width="20px" />;
-  }, [setWithHighlight]);
+    return null;
+  }, [setWithHighlight.set.state]);
+
+  const timeElapsed = useMemo(() => {
+    if (setWithHighlight.set.state !== 2 && setWithHighlight.set.state !== 6) {
+      return null;
+    }
+
+    const nowMs = Date.now();
+    const offsetMs = nowMs - setWithHighlight.set.startedAt! * 1000;
+    if (offsetMs >= 3600000) {
+      return '1hr+';
+    }
+    return <Stopwatch offsetMs={nowMs + offsetMs} />;
+  }, [setWithHighlight.set.state, setWithHighlight.set.startedAt]);
 
   return (
     <ListItemButton
@@ -133,14 +158,17 @@ function SetWithHighlightListItemButton({
           direction="row"
           alignItems="center"
           gap="4px"
+          justifyContent="space-between"
           width="100%"
           style={{ color: getColor(setWithHighlight.set) }}
         >
-          <Box width="20px" />
-          <Typography flexGrow={1} textAlign="center" variant="caption">
+          <Typography variant="caption">
             {setWithHighlight.set.shortRoundText}
           </Typography>
-          {titleEnd}
+          <Stack direction="row" alignItems="center">
+            <Typography variant="caption">{timeElapsed}</Typography>
+            {titleEnd}
+          </Stack>
         </Stack>
         <Stack
           direction="row"
