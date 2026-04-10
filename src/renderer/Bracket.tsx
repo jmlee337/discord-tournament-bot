@@ -74,6 +74,8 @@ function getBackgroundColor(set: StartggSet) {
   return '#fafafa';
 }
 
+const WINNER_BACKGROUND_HIGHLIGHT = '#ba68c8';
+const TEXT_COLOR_LIGHT = '#fff';
 function SetWithHighlightListItemButton({
   setWithHighlight,
   pending,
@@ -126,7 +128,7 @@ function SetWithHighlightListItemButton({
         }
       }}
     >
-      <Stack>
+      <Stack width="146px">
         <Stack
           direction="row"
           alignItems="center"
@@ -154,30 +156,45 @@ function SetWithHighlightListItemButton({
           }}
           typography="body2"
         >
-          {setWithHighlight.entrant1Highlight ? (
-            <>
-              <span>
-                {setWithHighlight.set.entrant1Name.substring(
-                  0,
-                  setWithHighlight.entrant1Highlight.start,
-                )}
-              </span>
-              <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
-                {setWithHighlight.set.entrant1Name.substring(
-                  setWithHighlight.entrant1Highlight.start,
-                  setWithHighlight.entrant1Highlight.end,
-                )}
-              </span>
-              <span>
-                {setWithHighlight.set.entrant1Name.substring(
-                  setWithHighlight.entrant1Highlight.end,
-                )}
-              </span>
-            </>
-          ) : (
-            setWithHighlight.set.entrant1Name
-          )}
-          <Box textAlign="center" width="18px">
+          <Box overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+            {setWithHighlight.entrant1Highlight ? (
+              <>
+                <span>
+                  {setWithHighlight.set.entrant1Name.substring(
+                    0,
+                    setWithHighlight.entrant1Highlight.start,
+                  )}
+                </span>
+                <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+                  {setWithHighlight.set.entrant1Name.substring(
+                    setWithHighlight.entrant1Highlight.start,
+                    setWithHighlight.entrant1Highlight.end,
+                  )}
+                </span>
+                <span>
+                  {setWithHighlight.set.entrant1Name.substring(
+                    setWithHighlight.entrant1Highlight.end,
+                  )}
+                </span>
+              </>
+            ) : (
+              setWithHighlight.set.entrant1Name
+            )}
+          </Box>
+          <Box
+            flexShrink={0}
+            textAlign="center"
+            width="18px"
+            sx={
+              setWithHighlight.set.entrant1Id &&
+              setWithHighlight.set.entrant1Id === setWithHighlight.set.winnerId
+                ? {
+                    backgroundColor: WINNER_BACKGROUND_HIGHLIGHT,
+                    color: TEXT_COLOR_LIGHT,
+                  }
+                : undefined
+            }
+          >
             {setWithHighlight.set.entrant1Score}
           </Box>
         </Stack>
@@ -195,30 +212,45 @@ function SetWithHighlightListItemButton({
           }}
           typography="body2"
         >
-          {setWithHighlight.entrant2Highlight ? (
-            <>
-              <span>
-                {setWithHighlight.set.entrant2Name.substring(
-                  0,
-                  setWithHighlight.entrant2Highlight.start,
-                )}
-              </span>
-              <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
-                {setWithHighlight.set.entrant2Name.substring(
-                  setWithHighlight.entrant2Highlight.start,
-                  setWithHighlight.entrant2Highlight.end,
-                )}
-              </span>
-              <span>
-                {setWithHighlight.set.entrant2Name.substring(
-                  setWithHighlight.entrant2Highlight.end,
-                )}
-              </span>
-            </>
-          ) : (
-            setWithHighlight.set.entrant2Name
-          )}
-          <Box textAlign="center" width="18px">
+          <Box overflow="hidden" textOverflow="ellipsis" whiteSpace="nowrap">
+            {setWithHighlight.entrant2Highlight ? (
+              <>
+                <span>
+                  {setWithHighlight.set.entrant2Name.substring(
+                    0,
+                    setWithHighlight.entrant2Highlight.start,
+                  )}
+                </span>
+                <span style={{ backgroundColor: HIGHLIGHT_COLOR }}>
+                  {setWithHighlight.set.entrant2Name.substring(
+                    setWithHighlight.entrant2Highlight.start,
+                    setWithHighlight.entrant2Highlight.end,
+                  )}
+                </span>
+                <span>
+                  {setWithHighlight.set.entrant2Name.substring(
+                    setWithHighlight.entrant2Highlight.end,
+                  )}
+                </span>
+              </>
+            ) : (
+              setWithHighlight.set.entrant2Name
+            )}
+          </Box>
+          <Box
+            flexShrink={0}
+            textAlign="center"
+            width="18px"
+            sx={
+              setWithHighlight.set.entrant2Id &&
+              setWithHighlight.set.entrant2Id === setWithHighlight.set.winnerId
+                ? {
+                    backgroundColor: WINNER_BACKGROUND_HIGHLIGHT,
+                    color: TEXT_COLOR_LIGHT,
+                  }
+                : undefined
+            }
+          >
             {setWithHighlight.set.entrant2Score}
           </Box>
         </Stack>
