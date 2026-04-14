@@ -19,6 +19,7 @@ import {
   Typography,
 } from '@mui/material';
 import {
+  CloudDownload,
   ContentCopy,
   Settings as SettingsIcon,
   TextSnippet,
@@ -514,15 +515,22 @@ export default function Settings({
             </Tooltip>
           </Stack>
           {needUpdate && (
-            <Alert severity="warning">
-              Update available!{' '}
-              <Link
-                href="https://github.com/jmlee337/discord-tournament-bot/releases/latest"
-                target="_blank"
-                rel="noreferrer"
-              >
-                Version {latestAppVersion}
-              </Link>
+            <Alert
+              severity="warning"
+              style={{ marginTop: '8px' }}
+              action={
+                <Button
+                  endIcon={<CloudDownload />}
+                  variant="contained"
+                  onClick={() => {
+                    window.electron.update();
+                  }}
+                >
+                  Quit and download
+                </Button>
+              }
+            >
+              Update available! Version {latestAppVersion}
             </Alert>
           )}
           <Divider sx={{ marginTop: '4px', typography: 'subtitle2' }}>

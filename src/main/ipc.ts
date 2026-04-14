@@ -30,6 +30,7 @@ import {
   clipboard,
   dialog,
   ipcMain,
+  shell,
 } from 'electron';
 import Store from 'electron-store';
 import { access, constants } from 'fs/promises';
@@ -2016,6 +2017,14 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       return '';
     }
     return latestVersion;
+  });
+
+  ipcMain.removeHandler('update');
+  ipcMain.handle('update', async () => {
+    await shell.openExternal(
+      'https://github.com/jmlee337/discord-tournament-bot/releases/latest',
+    );
+    app.quit();
   });
 
   ipcMain.removeHandler('copyToClipboard');

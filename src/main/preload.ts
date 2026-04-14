@@ -283,6 +283,7 @@ const electronHandler = {
     ipcRenderer.removeAllListeners('scoreboardInfo4');
     ipcRenderer.on('scoreboardInfo4', callback);
   },
+  update: (): Promise<void> => ipcRenderer.invoke('update'),
   isMac: process.platform === 'darwin',
   // exposed for dev only
   registerSlashCommands: (): Promise<void> =>
