@@ -56,6 +56,7 @@ import {
   StartingState,
 } from '../common/types';
 import {
+  assignStream,
   getNotCheckedInParticipantIds,
   getTournamentParticipants,
   getTournaments,
@@ -290,6 +291,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let sets: Sets = {
     pending: [],
     completed: [],
+    streams: [],
   };
   let startggTournament: StartggTournament = {
     name: '',
@@ -1830,6 +1832,19 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       }
 
       await resetSet(setId, startggApiKey);
+      await preemptGetTournamentSets();
+    },
+  );
+
+  ipcMain.removeHandler('assignStream');
+  ipcMain.handle(
+    'assignStream',
+    async (event, setId: number, streamId: number) => {
+      if (!startggApiKey) {
+        throw new Error('Please set start.gg token');
+      }
+
+      await assignStream(setId, streamId, startggApiKey);
       await preemptGetTournamentSets();
     },
   );

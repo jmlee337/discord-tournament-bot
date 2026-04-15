@@ -155,6 +155,8 @@ const electronHandler = {
     ipcRenderer.invoke('reportSet', setId, winnerId, isDQ),
   resetSet: (setId: number): Promise<void> =>
     ipcRenderer.invoke('resetSet', setId),
+  assignStream: (setId: number, streamId: number): Promise<void> =>
+    ipcRenderer.invoke('assignStream', setId, streamId),
   swapWinner: (set: StartggSet): Promise<void> =>
     ipcRenderer.invoke('swapWinner', set),
   getDiscordServers: (): Promise<DiscordServer[]> =>

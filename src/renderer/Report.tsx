@@ -6,18 +6,23 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  List,
+  ListItemButton,
+  ListItemText,
   Stack,
+  Tooltip,
   Typography,
 } from '@mui/material';
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   HourglassTop,
   NotificationsActive,
   Restore,
   SaveAs,
+  Tv,
 } from '@mui/icons-material';
 import styled from '@emotion/styled';
-import { StartggSet } from '../common/types';
+import { StartggSet, StartggStream } from '../common/types';
 import { CALLED_COLOR, getColor, STARTED_COLOR } from './getColor';
 
 const Name = styled.div`
@@ -26,14 +31,26 @@ const Name = styled.div`
   white-space: nowrap;
 `;
 
+function getCombinedStreamName(stream: StartggStream) {
+  let prefix = '';
+  if (stream.domain === 'TWITCH') {
+    prefix = 'ttv/';
+  } else if (stream.domain === 'YOUTUBE') {
+    prefix = 'yt/';
+  }
+  return prefix + stream.path;
+}
+
 export default function Report({
   open,
   setOpen,
   set,
+  streams,
 }: {
   open: boolean;
   setOpen: (open: boolean) => void;
   set: StartggSet;
+  streams: StartggStream[];
 }) {
   const [resetting, setResetting] = useState(false);
   const [reporting, setReporting] = useState(false);
@@ -42,6 +59,9 @@ export default function Report({
   const [entrant1Win, setEntrant1Win] = useState(false);
   const [entrant2Dq, setEntrant2Dq] = useState(false);
   const [entrant2Win, setEntrant2Win] = useState(false);
+
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [assigning, setAssigning] = useState(false);
 
   const resetForm = () => {
     setEntrant1Dq(false);
@@ -64,166 +84,247 @@ export default function Report({
     if (set.state === 6) {
       return <NotificationsActive style={{ color }} />;
     }
+    if (set.state === 1 && set.stream?.path) {
+      return (
+        <Tooltip title={set.stream.path}>
+          <Tv />
+        </Tooltip>
+      );
+    }
     return null;
   }, [set]);
 
-  return (
-    <Dialog
-      open={open}
-      onClose={() => {
+  const filteredStreams = useMemo(
+    () => streams.filter((stream) => stream.id !== set.stream?.id),
+    [set.stream?.id, streams],
+  );
+
+  const assignStream = useCallback(
+    async (streamId: number) => {
+      setAssigning(true);
+      try {
+        await window.electron.assignStream(set.id, streamId);
+        setAssignOpen(false);
         setOpen(false);
-      }}
-    >
-      <Stack
-        alignItems="center"
-        direction="row"
-        justifyContent="space-between"
-        marginRight="24px"
+      } catch {
+        // just catch idk
+      } finally {
+        setAssigning(false);
+      }
+    },
+    [set.id, setOpen],
+  );
+
+  return (
+    <>
+      <Dialog
+        open={assignOpen}
+        onClose={() => {
+          setAssignOpen(false);
+        }}
       >
-        <DialogTitle>Report Set</DialogTitle>
-        {titleEnd}
-      </Stack>
-      <DialogContent sx={{ paddingTop: 0, width: '300px' }}>
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="center"
-          typography="caption"
-        >
-          {set.fullRoundText}
-        </Stack>
-        <Stack
-          alignItems="end"
-          marginTop="4px"
-          spacing="8px"
-          sx={{ typography: 'body2' }}
-        >
-          <Stack
-            alignItems="center"
-            direction="row"
-            justifyContent="space-between"
-            width="100%"
-          >
-            <Name>{set.entrant1Name}</Name>
-            <Stack direction="row" spacing="8px">
-              <Button
-                color="secondary"
-                variant={entrant1Dq ? 'contained' : 'outlined'}
-                onClick={() => {
-                  resetForm();
-                  setEntrant1Dq(true);
-                }}
-              >
-                DQ
-              </Button>
-              <Button
-                color="secondary"
-                variant={entrant1Win ? 'contained' : 'outlined'}
-                onClick={() => {
-                  resetForm();
-                  setEntrant1Win(true);
-                }}
-              >
-                W
-              </Button>
-            </Stack>
-          </Stack>
-          <Stack
-            alignItems="center"
-            direction="row"
-            justifyContent="space-between"
-            width="100%"
-          >
-            <Name>{set.entrant2Name}</Name>
-            <Stack direction="row" spacing="8px">
-              <Button
-                color="secondary"
-                variant={entrant2Dq ? 'contained' : 'outlined'}
-                onClick={() => {
-                  resetForm();
-                  setEntrant2Dq(true);
-                }}
-              >
-                DQ
-              </Button>
-              <Button
-                color="secondary"
-                variant={entrant2Win ? 'contained' : 'outlined'}
-                onClick={() => {
-                  resetForm();
-                  setEntrant2Win(true);
-                }}
-              >
-                W
-              </Button>
-            </Stack>
-          </Stack>
-        </Stack>
-        {set.activeSetTasks.length > 0 && (
-          <Stack direction="row" justifyContent="center" marginTop="8px">
-            <Stack direction="column" alignItems="end">
-              {set.activeSetTasks.map((setTask) => (
-                <Typography
-                  key={setTask.id}
-                  variant="caption"
-                  color={setTask.type === 1 ? CALLED_COLOR : STARTED_COLOR}
+        <DialogTitle>Assign to Stream</DialogTitle>
+        <DialogContent>
+          {set.stream && (
+            <ListItemButton
+              disabled={assigning}
+              disableGutters
+              style={{ marginTop: '8px' }}
+              onClick={() => {
+                assignStream(0);
+              }}
+            >
+              <ListItemText>
+                Remove from {getCombinedStreamName(set.stream)}
+              </ListItemText>
+            </ListItemButton>
+          )}
+          {filteredStreams.length > 0 && (
+            <List disablePadding>
+              {filteredStreams.map((stream) => (
+                <ListItemButton
+                  key={stream.id}
+                  disabled={assigning}
+                  disableGutters
+                  style={{ marginTop: '8px' }}
+                  onClick={() => {
+                    assignStream(stream.id);
+                  }}
                 >
-                  {setTask.entrantName}: {setTask.description}
-                </Typography>
+                  <ListItemText>{getCombinedStreamName(stream)}</ListItemText>
+                </ListItemButton>
               ))}
+            </List>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={open}
+        onClose={() => {
+          setOpen(false);
+        }}
+      >
+        <Stack
+          alignItems="center"
+          direction="row"
+          justifyContent="space-between"
+          marginRight="24px"
+        >
+          <DialogTitle>Report Set</DialogTitle>
+          {titleEnd}
+        </Stack>
+        <DialogContent sx={{ paddingTop: 0, width: '300px' }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="center"
+            typography="caption"
+          >
+            {set.fullRoundText}
+          </Stack>
+          <Stack
+            alignItems="end"
+            marginTop="4px"
+            spacing="8px"
+            sx={{ typography: 'body2' }}
+          >
+            <Stack
+              alignItems="center"
+              direction="row"
+              justifyContent="space-between"
+              width="100%"
+            >
+              <Name>{set.entrant1Name}</Name>
+              <Stack direction="row" spacing="8px">
+                <Button
+                  color="secondary"
+                  variant={entrant1Dq ? 'contained' : 'outlined'}
+                  onClick={() => {
+                    resetForm();
+                    setEntrant1Dq(true);
+                  }}
+                >
+                  DQ
+                </Button>
+                <Button
+                  color="secondary"
+                  variant={entrant1Win ? 'contained' : 'outlined'}
+                  onClick={() => {
+                    resetForm();
+                    setEntrant1Win(true);
+                  }}
+                >
+                  W
+                </Button>
+              </Stack>
+            </Stack>
+            <Stack
+              alignItems="center"
+              direction="row"
+              justifyContent="space-between"
+              width="100%"
+            >
+              <Name>{set.entrant2Name}</Name>
+              <Stack direction="row" spacing="8px">
+                <Button
+                  color="secondary"
+                  variant={entrant2Dq ? 'contained' : 'outlined'}
+                  onClick={() => {
+                    resetForm();
+                    setEntrant2Dq(true);
+                  }}
+                >
+                  DQ
+                </Button>
+                <Button
+                  color="secondary"
+                  variant={entrant2Win ? 'contained' : 'outlined'}
+                  onClick={() => {
+                    resetForm();
+                    setEntrant2Win(true);
+                  }}
+                >
+                  W
+                </Button>
+              </Stack>
             </Stack>
           </Stack>
-        )}
-        {reportError && <Alert severity="error">{reportError}</Alert>}
-      </DialogContent>
-      <DialogActions>
-        <Button
-          color="warning"
-          disabled={set.state === 1 || reporting || resetting}
-          endIcon={resetting ? <CircularProgress size="24px" /> : <Restore />}
-          onClick={async () => {
-            setResetting(true);
-            setReportError('');
-            try {
-              await window.electron.resetSet(set.id);
-              setOpen(false);
-            } catch (e: any) {
-              const message = e instanceof Error ? e.message : e;
-              setReportError(message);
-            } finally {
-              setResetting(false);
-            }
-          }}
-          variant="contained"
-        >
-          Reset Set
-        </Button>
-        <Button
-          disabled={!winnerId || reporting || resetting}
-          endIcon={reporting ? <CircularProgress size="24px" /> : <SaveAs />}
-          onClick={async () => {
-            setReporting(true);
-            setReportError('');
-            try {
-              await window.electron.reportSet(
-                set.id,
-                winnerId,
-                entrant1Dq || entrant2Dq,
-              );
-              resetForm();
-              setOpen(false);
-            } catch (e: any) {
-              const message = e instanceof Error ? e.message : e;
-              setReportError(message);
-            } finally {
-              setReporting(false);
-            }
-          }}
-          variant="contained"
-        >
-          Report
-        </Button>
-      </DialogActions>
-    </Dialog>
+          {set.activeSetTasks.length > 0 && (
+            <Stack direction="row" justifyContent="center" marginTop="8px">
+              <Stack direction="column" alignItems="end">
+                {set.activeSetTasks.map((setTask) => (
+                  <Typography
+                    key={setTask.id}
+                    variant="caption"
+                    color={setTask.type === 1 ? CALLED_COLOR : STARTED_COLOR}
+                  >
+                    {setTask.entrantName}: {setTask.description}
+                  </Typography>
+                ))}
+              </Stack>
+            </Stack>
+          )}
+          {reportError && <Alert severity="error">{reportError}</Alert>}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            color="warning"
+            disabled={set.state === 1 || reporting || resetting}
+            endIcon={resetting ? <CircularProgress size="24px" /> : <Restore />}
+            onClick={async () => {
+              setResetting(true);
+              setReportError('');
+              try {
+                await window.electron.resetSet(set.id);
+                setOpen(false);
+              } catch (e: any) {
+                const message = e instanceof Error ? e.message : e;
+                setReportError(message);
+              } finally {
+                setResetting(false);
+              }
+            }}
+            variant="contained"
+          >
+            Reset
+          </Button>
+          <Button
+            disabled={streams.length === 0 || assigning}
+            endIcon={assigning ? <CircularProgress size="24px" /> : <Tv />}
+            onClick={() => {
+              setAssignOpen(true);
+            }}
+            variant="contained"
+          >
+            Stream
+          </Button>
+          <Button
+            disabled={!winnerId || reporting || resetting}
+            endIcon={reporting ? <CircularProgress size="24px" /> : <SaveAs />}
+            onClick={async () => {
+              setReporting(true);
+              setReportError('');
+              try {
+                await window.electron.reportSet(
+                  set.id,
+                  winnerId,
+                  entrant1Dq || entrant2Dq,
+                );
+                resetForm();
+                setOpen(false);
+              } catch (e: any) {
+                const message = e instanceof Error ? e.message : e;
+                setReportError(message);
+              } finally {
+                setReporting(false);
+              }
+            }}
+            variant="contained"
+          >
+            Report
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </>
   );
 }

@@ -9,6 +9,7 @@ import {
   StartggPhase,
   StartggPhaseGroup,
   StartggSet,
+  StartggStream,
 } from '../common/types';
 
 async function wrappedFetch(
@@ -220,6 +221,11 @@ type TournamentJSON = {
     tournament: {
       name: string;
     };
+    stream: {
+      id: number;
+      streamName: string;
+      streamSource: number;
+    }[];
   };
 };
 type SetJSON = {
@@ -237,6 +243,7 @@ type SetJSON = {
   round: number;
   startedAt: number | null;
   state: number;
+  streamId: number | null;
   unreachable: boolean;
   updatedAt: number;
   winnerId: number | null;
@@ -296,14 +303,32 @@ function setSortPred(a: StartggSet, b: StartggSet) {
   throw new Error('unreachable');
 }
 
+function toStreamSource(streamSource: number) {
+  switch (streamSource) {
+    case 1:
+      return 'TWITCH';
+    case 2:
+      return 'HITBOX';
+    case 3:
+      return 'STREAMME';
+    case 4:
+      return 'MIXER';
+    case 5:
+      return 'YOUTUBE';
+    default:
+      return 'UNKNOWN';
+  }
+}
+
 const shortRoundTextRegex = /([A-Z]|[0-9])/g;
+const idToStream = new Map<number, StartggStream>();
 const idToSet = new Map<number, StartggSet>();
 const setIdToBestOf = new Map<number, number>();
 export async function getTournamentSets(
   slug: string,
 ): Promise<GetTournamentRet> {
   const tournamentResponse = await wrappedFetch(
-    `https://api.start.gg/tournament/${slug}?expand[]=event&expand[]=phase&expand[]=groups&expand[]=entrants`,
+    `https://api.start.gg/tournament/${slug}?expand[]=event&expand[]=phase&expand[]=groups&expand[]=entrants&expand[]=stream`,
   );
   const tournamentJson = (await tournamentResponse.json()) as TournamentJSON;
   const eventIds: number[] = [];
@@ -358,6 +383,18 @@ export async function getTournamentSets(
           .join(' / '),
       });
     });
+  const streams: StartggStream[] = [];
+  if (Array.isArray(tournamentJson.entities.stream)) {
+    tournamentJson.entities.stream.forEach((stream) => {
+      const startggStream: StartggStream = {
+        id: stream.id,
+        domain: toStreamSource(stream.streamSource),
+        path: stream.streamName,
+      };
+      streams.push(startggStream);
+      idToStream.set(stream.id, startggStream);
+    });
+  }
 
   const setIdToSetTasks = new Map<number, SetTaskJSON[]>();
   const pendingSets: SetJSON[] = [];
@@ -462,6 +499,18 @@ export async function getTournamentSets(
       });
     }
 
+    let stream: StartggStream | null | undefined = null;
+    if (set.streamId) {
+      stream = idToStream.get(set.streamId);
+      if (!stream) {
+        stream = {
+          id: -1,
+          domain: '?',
+          path: 'unknown',
+        };
+      }
+    }
+
     const newSet: StartggSet = {
       id: set.id,
       bestOf: set.bestOf,
@@ -483,6 +532,7 @@ export async function getTournamentSets(
       round: set.round,
       startedAt: set.startedAt,
       state: set.state,
+      stream,
       updatedAt: set.updatedAt,
       winnerId: set.winnerId,
       activeSetTasks: (setIdToSetTasks.get(set.id) ?? []).map((setTask) => {
@@ -663,6 +713,7 @@ export async function getTournamentSets(
     sets: {
       completed: completedEvents,
       pending: pendingEvents,
+      streams,
     },
     tournament: {
       slug,
@@ -750,6 +801,11 @@ const GQL_SET_INNER = `
   }
   state
   startedAt
+  stream {
+    id
+    streamName
+    streamSource
+  }
   updatedAt
   winnerId
 `;
@@ -777,6 +833,11 @@ type GqlSet = {
   }[];
   state: number;
   startedAt: number | null;
+  stream: {
+    id: number;
+    streamName: string;
+    streamSource: string;
+  } | null;
   updatedAt: number;
   winnerId: number | null;
 };
@@ -816,6 +877,14 @@ function gqlSetToStartggSet(set: GqlSet): StartggSet {
     round: set.round,
     startedAt: set.startedAt,
     state: set.state,
+    stream:
+      set.stream?.id && set.stream?.streamSource && set.stream?.streamName
+        ? {
+            id: set.stream.id,
+            domain: set.stream.streamSource,
+            path: set.stream.streamName,
+          }
+        : null,
     updatedAt: set.updatedAt,
     winnerId: set.winnerId,
     activeSetTasks: [],
@@ -845,6 +914,20 @@ export async function resetSet(id: number, key: string) {
   const data = await fetchGql(key, RESET_SET_MUTATION, { id });
   if (gqlSetFilterPred(data.resetSet)) {
     const set = gqlSetToStartggSet(data.resetSet);
+    idToSet.set(set.id, set);
+  }
+}
+
+const ASSIGN_STREAM_MUTATION = `
+  mutation AssignStream($id: ID!, $streamId: ID!) {
+    unassignStream: assignStream(setId: $id, streamId: 0) { id }
+    assignStream(setId: $id, streamId: $streamId) {${GQL_SET_INNER}}
+  }
+`;
+export async function assignStream(id: number, streamId: number, key: string) {
+  const data = await fetchGql(key, ASSIGN_STREAM_MUTATION, { id, streamId });
+  if (gqlSetFilterPred(data.assignStream)) {
+    const set = gqlSetToStartggSet(data.assignStream);
     idToSet.set(set.id, set);
   }
 }

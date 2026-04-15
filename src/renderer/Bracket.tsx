@@ -19,10 +19,11 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { JSX, useEffect, useMemo, useState } from 'react';
-import { HourglassTop, NotificationsActive } from '@mui/icons-material';
+import { HourglassTop, NotificationsActive, Tv } from '@mui/icons-material';
 import { useStopwatch } from 'react-timer-hook';
 import { UTCDate } from '@date-fns/utc';
 import { format } from 'date-fns';
@@ -65,6 +66,7 @@ const EMPTY_STARTGG_SET: StartggSet = {
   round: 1,
   startedAt: null,
   state: 1,
+  stream: null,
   updatedAt: 0,
   winnerId: null,
   activeSetTasks: [],
@@ -120,8 +122,15 @@ function SetWithHighlightListItemButton({
         />
       );
     }
+    if (setWithHighlight.set.state === 1 && setWithHighlight.set.stream?.path) {
+      return (
+        <Tooltip title={setWithHighlight.set.stream.path}>
+          <Tv fontSize="small" />
+        </Tooltip>
+      );
+    }
     return null;
-  }, [setWithHighlight.set.state]);
+  }, [setWithHighlight.set.state, setWithHighlight.set.stream?.path]);
 
   const timeElapsed = useMemo(() => {
     if (setWithHighlight.set.state !== 2 && setWithHighlight.set.state !== 6) {
@@ -428,7 +437,11 @@ export default function Bracket({
   discordServerId: string;
   searchSubstr: string;
 }) {
-  const [sets, setSets] = useState<Sets>({ pending: [], completed: [] });
+  const [sets, setSets] = useState<Sets>({
+    pending: [],
+    completed: [],
+    streams: [],
+  });
   const [selectedSet, setSelectedSet] = useState<StartggSet>(EMPTY_STARTGG_SET);
   const [reportingDialogOpen, setReportingDialogOpen] = useState(false);
   const [resetSelectedSet, setResetSelectedSet] =
@@ -645,6 +658,7 @@ export default function Bracket({
         open={reportingDialogOpen}
         setOpen={setReportingDialogOpen}
         set={selectedSet}
+        streams={sets.streams}
       />
       <Reset
         open={resetDialogOpen}

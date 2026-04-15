@@ -17,6 +17,12 @@ export type ReportStartggSet = {
   isDQ: boolean;
 };
 
+export type StartggStream = {
+  id: number;
+  domain: string;
+  path: string;
+};
+
 export type StartggSet = {
   id: number;
   bestOf: number;
@@ -36,6 +42,7 @@ export type StartggSet = {
   // called or started
   startedAt: number | null;
   state: number;
+  stream: StartggStream | null;
   updatedAt: number;
   winnerId: number | null;
   activeSetTasks: {
@@ -66,6 +73,7 @@ export type StartggEvent = {
 export type Sets = {
   pending: StartggEvent[];
   completed: StartggEvent[];
+  streams: StartggStream[];
 };
 
 export type ParticipantSet = StartggSet & {
