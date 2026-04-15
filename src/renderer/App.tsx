@@ -410,6 +410,12 @@ function Hello() {
             aria-controls="tabpanel-broadcasts"
             value={TabValue.BROADCASTS}
           />
+          <Tab
+            label="Bracket"
+            id="tab-bracket"
+            aria-controls="tabpanel-bracket"
+            value={TabValue.BRACKET}
+          />
           {numMSTs > 0 && (
             <Tab
               label="Overlay 1"
@@ -442,12 +448,6 @@ function Hello() {
               value={TabValue.OVERLAY_4}
             />
           )}
-          <Tab
-            label="Bracket"
-            id="tab-bracket"
-            aria-controls="tabpanel-bracket"
-            value={TabValue.BRACKET}
-          />
         </Tabs>
       </AppBar>
       <div style={{ marginTop: '169px' }} />
@@ -457,6 +457,12 @@ function Hello() {
           remoteState={remoteState}
           searchSubstr={searchSubstr}
           showErrorDialog={showErrorDialog}
+        />
+      </TabPanel>
+      <TabPanel value={tabValue} index={TabValue.BRACKET}>
+        <Bracket
+          discordServerId={discordServerId}
+          searchSubstr={searchSubstr}
         />
       </TabPanel>
       {numMSTs > 0 && (
@@ -523,12 +529,6 @@ function Hello() {
           />
         </TabPanel>
       )}
-      <TabPanel value={tabValue} index={TabValue.BRACKET}>
-        <Bracket
-          discordServerId={discordServerId}
-          searchSubstr={searchSubstr}
-        />
-      </TabPanel>
       <Dialog
         open={errorDialogOpen}
         onClose={() => {
