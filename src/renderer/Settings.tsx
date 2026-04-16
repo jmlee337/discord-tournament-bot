@@ -59,7 +59,9 @@ export default function Settings({
   const [discordCommandDq, setDiscordCommandDq] = useState(false);
   const [discordCommandReport, setDiscordCommandReport] = useState(false);
   const [discordCommandReset, setDiscordCommandReset] = useState(false);
+  const [usePhaseRound, setUsePhaseRound] = useState(false);
   const [enableSggSponsors, setEnableSggSponsors] = useState(false);
+  const [clearSetOnStop, setClearSetOnStop] = useState(false);
   const [simpleTextPathA, setSimpleTextPathA] = useState('');
   const [simpleTextPathB, setSimpleTextPathB] = useState('');
   const [simpleTextPathC, setSimpleTextPathC] = useState('');
@@ -82,7 +84,9 @@ export default function Settings({
         window.electron.getDiscordCommandReport();
       const discordCommandResetPromise =
         window.electron.getDiscordCommandReset();
+      const usePhaseRoundPromise = window.electron.getUsePhaseRound();
       const enableSggSponsorsPromise = window.electron.getEnableSggSponsors();
+      const clearSetOnStopPromise = window.electron.getClearSetOnStop();
       const simpleTextPathAPromise = window.electron.getSimpleTextPathA();
       const simpleTextPathBPromise = window.electron.getSimpleTextPathB();
       const simpleTextPathCPromise = window.electron.getSimpleTextPathC();
@@ -95,7 +99,9 @@ export default function Settings({
       setDiscordCommandDq(await discordCommandDqPromise);
       setDiscordCommandReport(await discordCommandReportPromise);
       setDiscordCommandReset(await discordCommandResetPromise);
+      setUsePhaseRound(await usePhaseRoundPromise);
       setEnableSggSponsors(await enableSggSponsorsPromise);
+      setClearSetOnStop(await clearSetOnStopPromise);
       setSimpleTextPathA(await simpleTextPathAPromise);
       setSimpleTextPathB(await simpleTextPathBPromise);
       setSimpleTextPathC(await simpleTextPathCPromise);
@@ -181,6 +187,25 @@ export default function Settings({
           </Typography>
         </Stack>
         <DialogContent sx={{ pt: 0 }}>
+          {needUpdate && (
+            <Alert
+              severity="warning"
+              style={{ marginBottom: '8px' }}
+              action={
+                <Button
+                  endIcon={<CloudDownload />}
+                  variant="contained"
+                  onClick={() => {
+                    window.electron.update();
+                  }}
+                >
+                  Quit and download
+                </Button>
+              }
+            >
+              Update available! Version {latestAppVersion}
+            </Alert>
+          )}
           <DialogContentText>
             Get your start.gg token by clicking “Create new token” in the
             “Personal Access Tokens” tab of{' '}
@@ -363,6 +388,15 @@ export default function Settings({
                 }}
               />
               <LabeledCheckbox
+                checked={usePhaseRound}
+                label="Include phase name in round"
+                labelPlacement="start"
+                set={async (checked) => {
+                  await window.electron.setUsePhaseRound(checked);
+                  setUsePhaseRound(checked);
+                }}
+              />
+              <LabeledCheckbox
                 checked={enableSkinColor}
                 label="Enable character colors"
                 labelPlacement="start"
@@ -378,6 +412,15 @@ export default function Settings({
                 set={async (checked) => {
                   await window.electron.setEnableSggSponsors(checked);
                   setEnableSggSponsors(checked);
+                }}
+              />
+              <LabeledCheckbox
+                checked={clearSetOnStop}
+                label="Clear set when spectate is stopped"
+                labelPlacement="start"
+                set={async (checked) => {
+                  await window.electron.setClearSetOnStop(checked);
+                  setClearSetOnStop(checked);
                 }}
               />
             </Stack>
@@ -514,25 +557,6 @@ export default function Settings({
               </div>
             </Tooltip>
           </Stack>
-          {needUpdate && (
-            <Alert
-              severity="warning"
-              style={{ marginTop: '8px' }}
-              action={
-                <Button
-                  endIcon={<CloudDownload />}
-                  variant="contained"
-                  onClick={() => {
-                    window.electron.update();
-                  }}
-                >
-                  Quit and download
-                </Button>
-              }
-            >
-              Update available! Version {latestAppVersion}
-            </Alert>
-          )}
           <Divider sx={{ marginTop: '4px', typography: 'subtitle2' }}>
             End User License Agreement
           </Divider>

@@ -127,6 +127,11 @@ export function setUpdateAutomatically(newUpdateAutomatically: boolean) {
   updateAutomatically = newUpdateAutomatically;
 }
 
+let clearSetOnStop = false;
+export function setClearSetOnStop(newClearSetOnStop: boolean) {
+  clearSetOnStop = newClearSetOnStop;
+}
+
 const idToSimpleTextPath = new Map([
   [SimpleTextPathId.A, ''],
   [SimpleTextPathId.B, ''],
@@ -347,6 +352,7 @@ function getIntersectingSet(
           : p1Set.entrant1Score,
         p2WL,
         bestOf: p1Set.bestOf === 5 ? 'Bo5' : 'Bo3',
+        phase: p1Set.fullRoundText,
         round: p1Set.fullRoundText,
       };
       return pendingSetsScoreboardInfo;
@@ -964,6 +970,15 @@ export function connect(port: number) {
               message.broadcastId,
             );
             if (dolphinId) {
+              if (clearSetOnStop) {
+                const overlayId = dolphinIdToOverlayId.get(dolphinId);
+                if (overlayId) {
+                  const mstOverlay = getMstOverlay(overlayId);
+                  if (mstOverlay) {
+                    mstOverlay.clearSet();
+                  }
+                }
+              }
               maybeClearSimpleTextTitle(dolphinId);
               dolphinIdToLastReplayPath.delete(dolphinId);
               replayIsCurrentDolphinIds.delete(dolphinId);

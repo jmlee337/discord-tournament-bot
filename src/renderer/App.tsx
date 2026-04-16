@@ -471,8 +471,6 @@ function Hello() {
             enableSkinColor={enableSkinColor}
             windowGetResourcesPath={window.electron.getResourcesPath1}
             windowChooseResourcesPath={window.electron.chooseResourcesPath1}
-            windowGetEnableSggRound={window.electron.getEnableSggRound1}
-            windowSetEnableSggRound={window.electron.setEnableSggRound1}
             windowGetScoreboardInfo={window.electron.getScoreboardInfo1}
             windowSetScoreboardInfo={window.electron.setScoreboardInfo1}
             windowOnScoreboardInfo={window.electron.onScoreboardInfo1}
@@ -487,8 +485,6 @@ function Hello() {
             enableSkinColor={enableSkinColor}
             windowGetResourcesPath={window.electron.getResourcesPath2}
             windowChooseResourcesPath={window.electron.chooseResourcesPath2}
-            windowGetEnableSggRound={window.electron.getEnableSggRound2}
-            windowSetEnableSggRound={window.electron.setEnableSggRound2}
             windowGetScoreboardInfo={window.electron.getScoreboardInfo2}
             windowSetScoreboardInfo={window.electron.setScoreboardInfo2}
             windowOnScoreboardInfo={window.electron.onScoreboardInfo2}
@@ -503,8 +499,6 @@ function Hello() {
             enableSkinColor={enableSkinColor}
             windowGetResourcesPath={window.electron.getResourcesPath3}
             windowChooseResourcesPath={window.electron.chooseResourcesPath3}
-            windowGetEnableSggRound={window.electron.getEnableSggRound3}
-            windowSetEnableSggRound={window.electron.setEnableSggRound3}
             windowGetScoreboardInfo={window.electron.getScoreboardInfo3}
             windowSetScoreboardInfo={window.electron.setScoreboardInfo3}
             windowOnScoreboardInfo={window.electron.onScoreboardInfo3}
@@ -519,8 +513,6 @@ function Hello() {
             enableSkinColor={enableSkinColor}
             windowGetResourcesPath={window.electron.getResourcesPath4}
             windowChooseResourcesPath={window.electron.chooseResourcesPath4}
-            windowGetEnableSggRound={window.electron.getEnableSggRound4}
-            windowSetEnableSggRound={window.electron.setEnableSggRound4}
             windowGetScoreboardInfo={window.electron.getScoreboardInfo4}
             windowSetScoreboardInfo={window.electron.setScoreboardInfo4}
             windowOnScoreboardInfo={window.electron.onScoreboardInfo4}

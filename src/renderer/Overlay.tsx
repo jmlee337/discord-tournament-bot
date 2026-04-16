@@ -28,7 +28,6 @@ import {
   CheckBox,
   CheckBoxOutlineBlank,
   DisplaySettings,
-  OpenInBrowser,
   Restore,
 } from '@mui/icons-material';
 import { blue, green, grey, red, yellow } from '@mui/material/colors';
@@ -60,8 +59,6 @@ export default function Overlay({
   enableSkinColor,
   windowGetResourcesPath,
   windowChooseResourcesPath,
-  windowGetEnableSggRound,
-  windowSetEnableSggRound,
   windowGetScoreboardInfo,
   windowSetScoreboardInfo,
   windowOnScoreboardInfo,
@@ -71,8 +68,6 @@ export default function Overlay({
   enableSkinColor: boolean;
   windowGetResourcesPath: () => Promise<string>;
   windowChooseResourcesPath: () => Promise<string>;
-  windowGetEnableSggRound: () => Promise<boolean>;
-  windowSetEnableSggRound: (enableSggRound: boolean) => Promise<void>;
   windowGetScoreboardInfo: () => Promise<MSTScoreboardInfo>;
   windowSetScoreboardInfo: (
     scoreboardInfo: MSTManualUpdateScoreboardInfo,
@@ -87,18 +82,15 @@ export default function Overlay({
   showErrorDialog: (errors: string[]) => void;
 }) {
   const [resourcesPath, setResourcesPath] = useState('');
-  const [enableSggRound, setEnableSggRound] = useState(false);
   const [got, setGot] = useState(false);
 
   useEffect(() => {
     (async () => {
       const resourcesPathPromise = windowGetResourcesPath();
-      const enableSggRoundPromise = windowGetEnableSggRound();
       setResourcesPath(await resourcesPathPromise);
-      setEnableSggRound(await enableSggRoundPromise);
       setGot(true);
     })();
-  }, [windowGetEnableSggRound, windowGetResourcesPath]);
+  }, [windowGetResourcesPath]);
 
   const [p1Name, setP1Name] = useState('');
   const [p1Team, setP1Team] = useState('');
@@ -232,6 +224,51 @@ export default function Overlay({
     p2WL,
     bestOf,
     round,
+    tournamentName,
+    caster1Name,
+    caster1Twitter,
+    caster1Twitch,
+    caster2Name,
+    caster2Twitter,
+    caster2Twitch,
+    showErrorDialog,
+    windowSetScoreboardInfo,
+  ]);
+
+  const clearSetFunc = useCallback(async () => {
+    try {
+      setUpdating(true);
+      await windowSetScoreboardInfo({
+        p1Name: '',
+        p1Team: '',
+        p1Character: MSTCharacter.RANDOM,
+        p1Skin: 'Default',
+        p1Color: 'Red',
+        p1Score: 0,
+        p1WL: 'Nada',
+        p2Name: '',
+        p2Team: '',
+        p2Character: MSTCharacter.RANDOM,
+        p2Skin: 'Default',
+        p2Color: 'Blue',
+        p2Score: 0,
+        p2WL: 'Nada',
+        bestOf: 'Bo3',
+        round: '',
+        tournamentName,
+        caster1Name,
+        caster1Twitter,
+        caster1Twitch,
+        caster2Name,
+        caster2Twitter,
+        caster2Twitch,
+      });
+    } catch (e: any) {
+      showErrorDialog([e instanceof Error ? e.message : e]);
+    } finally {
+      setUpdating(false);
+    }
+  }, [
     tournamentName,
     caster1Name,
     caster1Twitter,
@@ -741,6 +778,16 @@ export default function Overlay({
                   gap="8px"
                   height="40px"
                 >
+                  <Button
+                    color="warning"
+                    disabled={updating || !resourcesPath}
+                    onClick={() => {
+                      clearSetFunc();
+                    }}
+                    variant="contained"
+                  >
+                    Clear Set
+                  </Button>
                   <ToggleButtonGroup
                     disabled={!resourcesPath}
                     aria-label="Best Of"
@@ -753,32 +800,6 @@ export default function Overlay({
                   >
                     <ToggleButton value="Bo3">BO3</ToggleButton>
                     <ToggleButton value="Bo5">BO5</ToggleButton>
-                  </ToggleButtonGroup>
-                  <ToggleButtonGroup
-                    disabled={!resourcesPath}
-                    aria-label="Auto Round"
-                    exclusive
-                    size="small"
-                    style={{
-                      marginRight: '-8px',
-                    }}
-                    value={enableSggRound}
-                    onChange={async (event, value) => {
-                      await windowSetEnableSggRound(value);
-                      setEnableSggRound(value);
-                    }}
-                  >
-                    <ToggleButton value={false}>Manual</ToggleButton>
-                    <ToggleButton
-                      value
-                      style={{
-                        borderTopRightRadius: 0,
-                        borderBottomRightRadius: 0,
-                        borderRight: 'none',
-                      }}
-                    >
-                      Auto
-                    </ToggleButton>
                   </ToggleButtonGroup>
                 </Stack>
               </TableCell>
@@ -799,14 +820,6 @@ export default function Overlay({
                       event.stopPropagation();
                       updateFunc();
                     }
-                  }}
-                  slotProps={{
-                    input: {
-                      style: {
-                        borderBottomLeftRadius: 0,
-                        borderTopLeftRadius: 0,
-                      },
-                    },
                   }}
                 />
               </TableCell>
@@ -964,12 +977,16 @@ export default function Overlay({
             </TableRow>
           </TableBody>
         </Table>
-        <Stack direction="row" justifyContent="center" spacing="8px">
+        <Stack
+          direction="row"
+          height="40px"
+          justifyContent="center"
+          spacing="8px"
+        >
           <Button
             variant="contained"
             color="warning"
             disabled={resetting || !resourcesPath}
-            endIcon={resetting ? <CircularProgress size="20" /> : <Restore />}
             style={{ width: '109px' }}
             onClick={async () => {
               try {
@@ -988,9 +1005,6 @@ export default function Overlay({
             variant="contained"
             color="success"
             disabled={updating || !resourcesPath}
-            endIcon={
-              updating ? <CircularProgress size="20" /> : <OpenInBrowser />
-            }
             style={{ flexGrow: 1 }}
             onClick={updateFunc}
           >

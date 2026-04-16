@@ -90,22 +90,14 @@ const electronHandler = {
     ipcRenderer.invoke('getEnableSggSponsors'),
   setEnableSggSponsors: (enableSggSponsors: boolean): Promise<void> =>
     ipcRenderer.invoke('setEnableSggSponsors', enableSggSponsors),
-  getEnableSggRound1: (): Promise<boolean> =>
-    ipcRenderer.invoke('getEnableSggRound1'),
-  setEnableSggRound1: (enableSggRound: boolean): Promise<void> =>
-    ipcRenderer.invoke('setEnableSggRound1', enableSggRound),
-  getEnableSggRound2: (): Promise<boolean> =>
-    ipcRenderer.invoke('getEnableSggRound2'),
-  setEnableSggRound2: (enableSggRound: boolean): Promise<void> =>
-    ipcRenderer.invoke('setEnableSggRound2', enableSggRound),
-  getEnableSggRound3: (): Promise<boolean> =>
-    ipcRenderer.invoke('getEnableSggRound3'),
-  setEnableSggRound3: (enableSggRound: boolean): Promise<void> =>
-    ipcRenderer.invoke('setEnableSggRound3', enableSggRound),
-  getEnableSggRound4: (): Promise<boolean> =>
-    ipcRenderer.invoke('getEnableSggRound4'),
-  setEnableSggRound4: (enableSggRound: boolean): Promise<void> =>
-    ipcRenderer.invoke('setEnableSggRound4', enableSggRound),
+  getUsePhaseRound: (): Promise<boolean> =>
+    ipcRenderer.invoke('getUsePhaseRound'),
+  setUsePhaseRound: (usePhaseRound: boolean): Promise<void> =>
+    ipcRenderer.invoke('setUsePhaseRound', usePhaseRound),
+  getClearSetOnStop: (): Promise<boolean> =>
+    ipcRenderer.invoke('getClearSetOnStop'),
+  setClearSetOnStop: (clearSetOnStop: boolean): Promise<void> =>
+    ipcRenderer.invoke('setClearSetOnStop', clearSetOnStop),
   getSimpleTextPathA: (): Promise<string> =>
     ipcRenderer.invoke('getSimpleTextPathA'),
   chooseSimpleTextPathA: (): Promise<string> =>

@@ -75,6 +75,7 @@ import {
   getSpectating,
   initSpectate,
   refreshBroadcasts,
+  setClearSetOnStop,
   setConnectCodes,
   setDolphinOverlayId,
   setParticipantIdToPendingSets,
@@ -204,12 +205,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     discordCommandReport: boolean;
     discordCommandReset: boolean;
     discordRegisteredVersion: string;
+    usePhaseRound: boolean;
     enableSkinColor: boolean;
-    enableSggRound1: boolean;
-    enableSggRound2: boolean;
-    enableSggRound3: boolean;
-    enableSggRound4: boolean;
     enableSggSponsors: boolean;
+    clearSetOnStop: boolean;
     numMSTs: 0 | OverlayId;
     remotePort: number;
     resourcesPath1: string;
@@ -232,12 +231,10 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   let discordCommandReport = store.get('discordCommandReport', true);
   let discordCommandReset = store.get('discordCommandReset', true);
   let discordRegisteredVersion = store.get('discordRegisteredVersion', '');
+  let usePhaseRound = store.get('usePhaseRound', true);
   let enableSkinColor = store.get('enableSkinColor', true);
-  let enableSggRound1 = store.get('enableSggRound1', true);
-  let enableSggRound2 = store.get('enableSggRound2', true);
-  let enableSggRound3 = store.get('enableSggRound3', true);
-  let enableSggRound4 = store.get('enableSggRound4', true);
   let enableSggSponsors = store.get('enableSggSponsors', true);
+  let clearSetOnStop = store.get('clearSetOnStop', false);
   const initNumMSTs = store.get('numMSTs', 0);
   let remotePort = store.get('remotePort', 49809);
   let resourcesPath1 = store.get('resourcesPath1', '');
@@ -262,16 +259,16 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   setEnableSkinColor(enableSkinColor);
   setEnableSggSponsors(enableSggSponsors);
   if (initNumMSTs > 0) {
-    setMstOverlay(1, new MSTOverlay(1, enableSggRound1, resourcesPath1));
+    setMstOverlay(1, new MSTOverlay(1, usePhaseRound, resourcesPath1));
   }
   if (initNumMSTs > 1) {
-    setMstOverlay(2, new MSTOverlay(2, enableSggRound2, resourcesPath2));
+    setMstOverlay(2, new MSTOverlay(2, usePhaseRound, resourcesPath2));
   }
   if (initNumMSTs > 2) {
-    setMstOverlay(3, new MSTOverlay(3, enableSggRound3, resourcesPath3));
+    setMstOverlay(3, new MSTOverlay(3, usePhaseRound, resourcesPath3));
   }
   if (initNumMSTs > 3) {
-    setMstOverlay(4, new MSTOverlay(4, enableSggRound4, resourcesPath4));
+    setMstOverlay(4, new MSTOverlay(4, usePhaseRound, resourcesPath4));
   }
 
   /**
@@ -1253,16 +1250,16 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
 
       if (newNumMSTs > numMSTs) {
         if (newNumMSTs > 0) {
-          setMstOverlay(1, new MSTOverlay(1, enableSggRound1, resourcesPath1));
+          setMstOverlay(1, new MSTOverlay(1, usePhaseRound, resourcesPath1));
         }
         if (newNumMSTs > 1) {
-          setMstOverlay(2, new MSTOverlay(2, enableSggRound2, resourcesPath2));
+          setMstOverlay(2, new MSTOverlay(2, usePhaseRound, resourcesPath2));
         }
         if (newNumMSTs > 2) {
-          setMstOverlay(3, new MSTOverlay(3, enableSggRound3, resourcesPath3));
+          setMstOverlay(3, new MSTOverlay(3, usePhaseRound, resourcesPath3));
         }
         if (newNumMSTs > 3) {
-          setMstOverlay(4, new MSTOverlay(4, enableSggRound4, resourcesPath4));
+          setMstOverlay(4, new MSTOverlay(4, usePhaseRound, resourcesPath4));
         }
       } else {
         if (newNumMSTs < 4) {
@@ -1439,6 +1436,18 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
+  ipcMain.removeHandler('getUsePhaseRound');
+  ipcMain.handle('getUsePhaseRound', () => usePhaseRound);
+
+  ipcMain.removeHandler('setUsePhaseRound');
+  ipcMain.handle('setUsePhaseRound', (event, newUsePhaseRound: boolean) => {
+    store.set('usePhaseRound', newUsePhaseRound);
+    usePhaseRound = newUsePhaseRound;
+    forEachMstOverlay((mstOverlay) => {
+      mstOverlay.setUsePhaseRound(usePhaseRound);
+    });
+  });
+
   ipcMain.removeHandler('getEnableSkinColor');
   ipcMain.handle('getEnableSkinColor', () => enableSkinColor);
 
@@ -1465,77 +1474,15 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
-  ipcMain.removeHandler('getEnableSggRound1');
-  ipcMain.handle('getEnableSggRound1', () => enableSggRound1);
+  ipcMain.removeHandler('getClearSetOnStop');
+  ipcMain.handle('getClearSetOnStop', () => clearSetOnStop);
 
-  ipcMain.removeHandler('setEnableSggRound1');
-  ipcMain.handle(
-    'setEnableSggRound1',
-    (event: IpcMainInvokeEvent, newEnableSggRound: boolean) => {
-      const mstOverlay = getMstOverlay(1);
-      if (!mstOverlay) {
-        throw new Error('no scorboard 1');
-      }
-
-      store.set('enableSggRound1', newEnableSggRound);
-      enableSggRound1 = newEnableSggRound;
-      mstOverlay.setEnableSggRound(enableSggRound1);
-    },
-  );
-
-  ipcMain.removeHandler('getEnableSggRound2');
-  ipcMain.handle('getEnableSggRound2', () => enableSggRound2);
-
-  ipcMain.removeHandler('setEnableSggRound2');
-  ipcMain.handle(
-    'setEnableSggRound2',
-    (event: IpcMainInvokeEvent, newEnableSggRound: boolean) => {
-      const mstOverlay = getMstOverlay(2);
-      if (!mstOverlay) {
-        throw new Error('no scorboard 2');
-      }
-
-      store.set('enableSggRound2', newEnableSggRound);
-      enableSggRound2 = newEnableSggRound;
-      mstOverlay.setEnableSggRound(enableSggRound2);
-    },
-  );
-
-  ipcMain.removeHandler('getEnableSggRound3');
-  ipcMain.handle('getEnableSggRound3', () => enableSggRound3);
-
-  ipcMain.removeHandler('setEnableSggRound3');
-  ipcMain.handle(
-    'setEnableSggRound3',
-    (event: IpcMainInvokeEvent, newEnableSggRound: boolean) => {
-      const mstOverlay = getMstOverlay(3);
-      if (!mstOverlay) {
-        throw new Error('no scorboard 3');
-      }
-
-      store.set('enableSggRound3', newEnableSggRound);
-      enableSggRound3 = newEnableSggRound;
-      mstOverlay.setEnableSggRound(enableSggRound3);
-    },
-  );
-
-  ipcMain.removeHandler('getEnableSggRound4');
-  ipcMain.handle('getEnableSggRound4', () => enableSggRound4);
-
-  ipcMain.removeHandler('setEnableSggRound4');
-  ipcMain.handle(
-    'setEnableSggRound4',
-    (event: IpcMainInvokeEvent, newEnableSggRound: boolean) => {
-      const mstOverlay = getMstOverlay(4);
-      if (!mstOverlay) {
-        throw new Error('no scorboard 4');
-      }
-
-      store.set('enableSggRound4', newEnableSggRound);
-      enableSggRound4 = newEnableSggRound;
-      mstOverlay.setEnableSggRound(enableSggRound4);
-    },
-  );
+  ipcMain.removeHandler('setClearSetOnStop');
+  ipcMain.handle('setClearSetOnStop', (event, newClearSetOnStop: boolean) => {
+    store.set('clearSetOnStop', newClearSetOnStop);
+    clearSetOnStop = newClearSetOnStop;
+    setClearSetOnStop(clearSetOnStop);
+  });
 
   ipcMain.removeHandler('getSimpleTextPathA');
   ipcMain.handle('getSimpleTextPathA', () => simpleTextPathA);

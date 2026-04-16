@@ -12,6 +12,7 @@ import {
   MSTScoreboardInfo,
 } from '../common/mst';
 import { OverlayId } from '../common/types';
+import { toShortRoundText } from './util';
 
 // global
 export function getScoreboardInfoJSONPath(resourcesPath: string) {
@@ -42,15 +43,15 @@ export function setEnableSggSponsors(newEnableSggSponsors: boolean) {
 export class MSTOverlay {
   private id: OverlayId;
 
-  private enableSggRound: boolean;
+  private usePhaseRound: boolean;
 
   private resourcesPath: string;
 
   private scoreboardInfo: MSTScoreboardInfo;
 
-  constructor(id: OverlayId, enableSggRound: boolean, resourcesPath: string) {
+  constructor(id: OverlayId, usePhaseRound: boolean, resourcesPath: string) {
     this.id = id;
-    this.enableSggRound = enableSggRound;
+    this.usePhaseRound = usePhaseRound;
     this.resourcesPath = resourcesPath;
     this.scoreboardInfo = EMPTY_SCOREBOARD_INFO;
   }
@@ -70,8 +71,8 @@ export class MSTOverlay {
     }
   }
 
-  public setEnableSggRound(newEnableSggRound: boolean) {
-    this.enableSggRound = newEnableSggRound;
+  public setUsePhaseRound(newUsePhaseRound: boolean) {
+    this.usePhaseRound = newUsePhaseRound;
   }
 
   public async readScoreboardInfo() {
@@ -152,7 +153,11 @@ export class MSTOverlay {
       this.scoreboardInfo.p1WL = newFileScoreboardInfo.setData.p1WL;
       this.scoreboardInfo.p2WL = newFileScoreboardInfo.setData.p2WL;
       this.scoreboardInfo.bestOf = newFileScoreboardInfo.setData.bestOf;
-      if (this.enableSggRound) {
+      if (this.usePhaseRound) {
+        this.scoreboardInfo.round = `${
+          newFileScoreboardInfo.setData.phase
+        } ${toShortRoundText(newFileScoreboardInfo.setData.round)}`;
+      } else {
         this.scoreboardInfo.round = newFileScoreboardInfo.setData.round;
       }
       if (
@@ -174,9 +179,7 @@ export class MSTOverlay {
       ) {
         this.scoreboardInfo.p1Score = 0;
         this.scoreboardInfo.p2Score = 0;
-        if (this.enableSggRound) {
-          this.scoreboardInfo.round = '';
-        }
+        this.scoreboardInfo.round = '';
       }
       if (requestGetTournamentSets) {
         requestGetTournamentSets();
@@ -216,7 +219,11 @@ export class MSTOverlay {
     this.scoreboardInfo.p1WL = pendingSetsScoreboardInfo.p1WL;
     this.scoreboardInfo.p2WL = pendingSetsScoreboardInfo.p2WL;
     this.scoreboardInfo.bestOf = pendingSetsScoreboardInfo.bestOf;
-    if (this.enableSggRound) {
+    if (this.usePhaseRound) {
+      this.scoreboardInfo.round = `${
+        pendingSetsScoreboardInfo.phase
+      } ${toShortRoundText(pendingSetsScoreboardInfo.round)}`;
+    } else {
       this.scoreboardInfo.round = pendingSetsScoreboardInfo.round;
     }
 
@@ -264,6 +271,27 @@ export class MSTOverlay {
       manualUpdateScoreboardInfo.caster2Twitter;
     this.scoreboardInfo.caster2Twitch =
       manualUpdateScoreboardInfo.caster2Twitch;
+
+    await this.writeScoreboardInfo();
+  }
+
+  public async clearSet() {
+    this.scoreboardInfo.p1Name = '';
+    this.scoreboardInfo.p1Team = '';
+    this.scoreboardInfo.p1Character = MSTCharacter.RANDOM;
+    this.scoreboardInfo.p1Skin = 'Default';
+    this.scoreboardInfo.p1Color = 'Red';
+    this.scoreboardInfo.p1Score = 0;
+    this.scoreboardInfo.p1WL = 'Nada';
+    this.scoreboardInfo.p2Name = '';
+    this.scoreboardInfo.p2Team = '';
+    this.scoreboardInfo.p2Character = MSTCharacter.RANDOM;
+    this.scoreboardInfo.p2Skin = 'Default';
+    this.scoreboardInfo.p2Color = 'Blue';
+    this.scoreboardInfo.p2Score = 0;
+    this.scoreboardInfo.p2WL = 'Nada';
+    this.scoreboardInfo.bestOf = 'Bo3';
+    this.scoreboardInfo.round = '';
 
     await this.writeScoreboardInfo();
   }

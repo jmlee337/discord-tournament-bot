@@ -11,3 +11,11 @@ export function resolveHtmlPath(htmlFileName: string) {
   }
   return `file://${path.resolve(__dirname, '../renderer/', htmlFileName)}`;
 }
+
+const shortRoundTextRegex = /([A-Z]|[0-9])/g;
+export function toShortRoundText(fullRoundText: string) {
+  return fullRoundText
+    .split('')
+    .filter((c) => c.match(shortRoundTextRegex))
+    .join('');
+}

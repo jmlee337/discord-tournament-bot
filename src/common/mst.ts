@@ -63,6 +63,7 @@ export type MSTPendingSetsScoreboardInfo = {
   p2Score: number;
   p2WL: MSTWL;
   bestOf: MSTBestOf;
+  phase: string;
   round: string;
 };
 
@@ -72,6 +73,7 @@ export type MSTSetData = {
   p2Score: number;
   p2WL: MSTWL;
   bestOf: MSTBestOf;
+  phase: string;
   round: string;
 };
 

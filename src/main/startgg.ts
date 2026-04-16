@@ -11,6 +11,7 @@ import {
   StartggSet,
   StartggStream,
 } from '../common/types';
+import { toShortRoundText } from './util';
 
 async function wrappedFetch(
   input: URL | RequestInfo,
@@ -320,7 +321,6 @@ function toStreamSource(streamSource: number) {
   }
 }
 
-const shortRoundTextRegex = /([A-Z]|[0-9])/g;
 const idToStream = new Map<number, StartggStream>();
 const idToSet = new Map<number, StartggSet>();
 const setIdToBestOf = new Map<number, number>();
@@ -525,10 +525,7 @@ export async function getTournamentSets(
       entrant2Sponsor,
       entrant2Score,
       fullRoundText: set.fullRoundText,
-      shortRoundText: set.fullRoundText
-        .split('')
-        .filter((c) => c.match(shortRoundTextRegex))
-        .join(''),
+      shortRoundText: toShortRoundText(set.fullRoundText),
       round: set.round,
       startedAt: set.startedAt,
       state: set.state,
@@ -870,10 +867,7 @@ function gqlSetToStartggSet(set: GqlSet): StartggSet {
       .join(' / '),
     entrant2Score: set.slots[1].standing?.stats.score.value || 0,
     fullRoundText: set.fullRoundText,
-    shortRoundText: set.fullRoundText
-      .split('')
-      .filter((c) => c.match(shortRoundTextRegex))
-      .join(''),
+    shortRoundText: toShortRoundText(set.fullRoundText),
     round: set.round,
     startedAt: set.startedAt,
     state: set.state,
