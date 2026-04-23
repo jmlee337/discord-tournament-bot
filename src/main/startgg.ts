@@ -9,6 +9,7 @@ import {
   StartggPhase,
   StartggPhaseGroup,
   StartggSet,
+  StartggSetTask,
   StartggStream,
 } from '../common/types';
 import { toShortRoundText } from './util';
@@ -511,6 +512,24 @@ export async function getTournamentSets(
       }
     }
 
+    let activeSetTasks: StartggSetTask[] = [];
+    if (set.state !== 3) {
+      activeSetTasks = (setIdToSetTasks.get(set.id) ?? []).map((setTask) => {
+        let entrantName = '';
+        if (setTask.entrantId === set.entrant1Id) {
+          entrantName = entrant1Name;
+        } else if (setTask.entrantId === set.entrant2Id) {
+          entrantName = entrant2Name;
+        }
+        return {
+          id: setTask.id,
+          entrantName,
+          description: toDescription(setTask),
+          type: setTask.type,
+        };
+      });
+    }
+
     const newSet: StartggSet = {
       id: set.id,
       bestOf: set.bestOf,
@@ -533,20 +552,7 @@ export async function getTournamentSets(
       stream,
       updatedAt: set.updatedAt,
       winnerId: set.winnerId,
-      activeSetTasks: (setIdToSetTasks.get(set.id) ?? []).map((setTask) => {
-        let entrantName = '';
-        if (setTask.entrantId === set.entrant1Id) {
-          entrantName = entrant1Name;
-        } else if (setTask.entrantId === set.entrant2Id) {
-          entrantName = entrant2Name;
-        }
-        return {
-          id: setTask.id,
-          entrantName,
-          description: toDescription(setTask),
-          type: setTask.type,
-        };
-      }),
+      activeSetTasks,
     };
     idToSet.set(set.id, newSet);
     return newSet;

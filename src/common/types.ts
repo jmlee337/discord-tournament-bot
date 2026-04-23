@@ -23,6 +23,13 @@ export type StartggStream = {
   path: string;
 };
 
+export type StartggSetTask = {
+  id: number;
+  entrantName: string;
+  description: string;
+  type: number;
+};
+
 export type StartggSet = {
   id: number;
   bestOf: number;
@@ -46,12 +53,7 @@ export type StartggSet = {
   stream: StartggStream | null;
   updatedAt: number;
   winnerId: number | null;
-  activeSetTasks: {
-    id: number;
-    entrantName: string;
-    description: string;
-    type: number;
-  }[];
+  activeSetTasks: StartggSetTask[];
 };
 
 export type StartggPhaseGroup = {
