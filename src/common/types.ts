@@ -36,6 +36,7 @@ export type StartggSet = {
   entrant2Name: string;
   entrant2Sponsor: string;
   entrant2Score: number;
+  phaseName: string;
   fullRoundText: string;
   shortRoundText: string;
   round: number;

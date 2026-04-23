@@ -63,6 +63,7 @@ const EMPTY_STARTGG_SET: StartggSet = {
   entrant2Score: 0,
   fullRoundText: '',
   shortRoundText: '',
+  phaseName: '',
   round: 1,
   startedAt: null,
   state: 1,

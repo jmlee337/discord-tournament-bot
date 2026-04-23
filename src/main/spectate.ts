@@ -352,7 +352,7 @@ function getIntersectingSet(
           : p1Set.entrant1Score,
         p2WL,
         bestOf: p1Set.bestOf === 5 ? 'Bo5' : 'Bo3',
-        phase: p1Set.fullRoundText,
+        phase: p1Set.phaseName,
         round: p1Set.fullRoundText,
       };
       return pendingSetsScoreboardInfo;

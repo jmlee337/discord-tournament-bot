@@ -473,7 +473,7 @@ export async function getTournamentSets(
     }
   }
 
-  const toStartggSet = (set: SetJSON): StartggSet => {
+  const toStartggSet = (set: SetJSON, phaseName: string): StartggSet => {
     const existingSet = idToSet.get(set.id);
     if (existingSet && existingSet.updatedAt > set.updatedAt) {
       return existingSet;
@@ -526,6 +526,7 @@ export async function getTournamentSets(
       entrant2Score,
       fullRoundText: set.fullRoundText,
       shortRoundText: toShortRoundText(set.fullRoundText),
+      phaseName,
       round: set.round,
       startedAt: set.startedAt,
       state: set.state,
@@ -565,16 +566,6 @@ export async function getTournamentSets(
     }
   >();
   completedSets.forEach((set) => {
-    let phaseGroup = idToCompletedPhaseGroup.get(set.phaseGroupId);
-    if (!phaseGroup) {
-      phaseGroup = {
-        name: idToGroup.get(set.phaseGroupId)!.displayIdentifier,
-        sets: [],
-      };
-      idToCompletedPhaseGroup.set(set.phaseGroupId, phaseGroup);
-    }
-    phaseGroup.sets.push(toStartggSet(set));
-
     let phase = idToCompletedPhase.get(set.phaseId);
     if (!phase) {
       const phaseJSON = idToPhase.get(set.phaseId)!;
@@ -586,6 +577,16 @@ export async function getTournamentSets(
       idToCompletedPhase.set(set.phaseId, phase);
     }
     phase.phaseGroupIds.add(set.phaseGroupId);
+
+    let phaseGroup = idToCompletedPhaseGroup.get(set.phaseGroupId);
+    if (!phaseGroup) {
+      phaseGroup = {
+        name: idToGroup.get(set.phaseGroupId)!.displayIdentifier,
+        sets: [],
+      };
+      idToCompletedPhaseGroup.set(set.phaseGroupId, phaseGroup);
+    }
+    phaseGroup.sets.push(toStartggSet(set, phase.name));
 
     let event = idToCompletedEvent.get(set.eventId);
     if (!event) {
@@ -642,16 +643,6 @@ export async function getTournamentSets(
     }
   >();
   pendingSets.forEach((set) => {
-    let phaseGroup = idToPendingPhaseGroup.get(set.phaseGroupId);
-    if (!phaseGroup) {
-      phaseGroup = {
-        name: idToGroup.get(set.phaseGroupId)!.displayIdentifier,
-        sets: [],
-      };
-      idToPendingPhaseGroup.set(set.phaseGroupId, phaseGroup);
-    }
-    phaseGroup.sets.push(toStartggSet(set));
-
     let phase = idToPendingPhase.get(set.phaseId);
     if (!phase) {
       const phaseJSON = idToPhase.get(set.phaseId)!;
@@ -663,6 +654,16 @@ export async function getTournamentSets(
       idToPendingPhase.set(set.phaseId, phase);
     }
     phase.phaseGroupIds.add(set.phaseGroupId);
+
+    let phaseGroup = idToPendingPhaseGroup.get(set.phaseGroupId);
+    if (!phaseGroup) {
+      phaseGroup = {
+        name: idToGroup.get(set.phaseGroupId)!.displayIdentifier,
+        sets: [],
+      };
+      idToPendingPhaseGroup.set(set.phaseGroupId, phaseGroup);
+    }
+    phaseGroup.sets.push(toStartggSet(set, phase.name));
 
     let event = idToPendingEvent.get(set.eventId);
     if (!event) {
@@ -779,6 +780,11 @@ const GQL_SET_INNER = `
   completedAt
   displayScore
   fullRoundText
+  phaseGroup {
+    phase {
+      name
+    }
+  }
   round
   slots {
     entrant {
@@ -811,6 +817,11 @@ type GqlSet = {
   completedAt: number | null;
   displayScore: string;
   fullRoundText: string;
+  phaseGroup: {
+    phase: {
+      name: string;
+    };
+  };
   round: number;
   slots: {
     entrant: {
@@ -868,6 +879,7 @@ function gqlSetToStartggSet(set: GqlSet): StartggSet {
     entrant2Score: set.slots[1].standing?.stats.score.value || 0,
     fullRoundText: set.fullRoundText,
     shortRoundText: toShortRoundText(set.fullRoundText),
+    phaseName: set.phaseGroup.phase.name,
     round: set.round,
     startedAt: set.startedAt,
     state: set.state,
