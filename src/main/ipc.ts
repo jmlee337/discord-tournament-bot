@@ -54,6 +54,8 @@ import {
   StartggSet,
   StartggTournament,
   StartingState,
+  StoreContents,
+  TwitchClient,
 } from '../common/types';
 import {
   assignStream,
@@ -106,6 +108,7 @@ import {
   REFRESH_CADENCE_MS,
 } from '../common/constants';
 import { getGameEndInfo } from './replay';
+import Twitch from './twitch';
 
 const CONFIRMATION_TIMEOUT_MS = 30000;
 const STARTGG_BLACK = '#031221';
@@ -198,30 +201,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   initMST(mainWindow);
   initStartgg();
   initSpectate(mainWindow);
-  const store = new Store<{
-    checkinMessage: string;
-    discordConfig: DiscordConfig;
-    discordCommandDq: boolean;
-    discordCommandReport: boolean;
-    discordCommandReset: boolean;
-    discordRegisteredVersion: string;
-    usePhaseRound: boolean;
-    enableSkinColor: boolean;
-    enableSggSponsors: boolean;
-    clearSetOnStop: boolean;
-    numMSTs: 0 | OverlayId;
-    remotePort: number;
-    resourcesPath1: string;
-    resourcesPath2: string;
-    resourcesPath3: string;
-    resourcesPath4: string;
-    simpleTextPathA: string;
-    simpleTextPathB: string;
-    simpleTextPathC: string;
-    simpleTextPathD: string;
-    startggApiKey: string;
-    updateAutomatically: boolean;
-  }>();
+  const store = new Store<StoreContents>();
   let checkinMessage = store.get('checkinMessage', CHECKIN_MESSAGE_DEFAULT);
   let discordConfig = store.get('discordConfig', {
     applicationId: '',
@@ -1665,6 +1645,39 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   );
 
   /**
+   * twitch
+   */
+  const twitch = new Twitch(store, mainWindow);
+  twitch.maybeStartBot();
+
+  ipcMain.removeHandler('startTwitchCallbackServer');
+  ipcMain.handle('startTwitchCallbackServer', () =>
+    twitch.startCallbackServer(),
+  );
+
+  ipcMain.removeHandler('stopTwitchCallbackServer');
+  ipcMain.handle('stopTwitchCallbackServer', () => twitch.stopCallbackServer());
+
+  ipcMain.removeHandler('getTwitchClient');
+  ipcMain.handle('getTwitchClient', () => twitch.getClient());
+
+  ipcMain.removeHandler('setTwitchClient');
+  ipcMain.handle('setTwitchClient', (event, twitchClient: TwitchClient) => {
+    twitch.setClient(twitchClient);
+  });
+
+  ipcMain.removeHandler('getTwitchStatus');
+  ipcMain.handle('getTwitchStatus', () => twitch.getStatus());
+
+  ipcMain.removeHandler('getTwitchCallbackServerStatus');
+  ipcMain.handle('getTwitchCallbackServerStatus', () =>
+    twitch.getCallbackServerStatus(),
+  );
+
+  ipcMain.removeHandler('getTwitchUserName');
+  ipcMain.handle('getTwitchUserName', () => twitch.getUserName());
+
+  /**
    * start.gg
    */
   ipcMain.removeHandler('getStartggApiKey');
@@ -1706,10 +1719,11 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
         updateParticipants(participants);
         updateParticipantIdToSet(getTournamentRet);
         startggTournament = getTournamentRet.tournament;
+        twitch.setSlug(startggTournament.slug);
         if (updateAutomatically) {
           forEachMstOverlay((mstOverlay) => {
             mstOverlay
-              .tournamentNameUpdate(getTournamentRet.tournament.name)
+              .tournamentNameUpdate(startggTournament.name)
               .catch(() => {
                 // just catch
               });

@@ -28,6 +28,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { lt, valid } from 'semver';
 import { AdminedTournament, OverlayId } from '../common/types';
 import LabeledCheckbox from './LabeledCheckbox';
+import Twitch from './Twitch';
 
 export default function Settings({
   showErrorDialog,
@@ -557,6 +558,13 @@ export default function Settings({
               </div>
             </Tooltip>
           </Stack>
+          <Divider
+            textAlign="right"
+            sx={{ margin: '8px 0', typography: 'body2' }}
+          >
+            Twitch
+          </Divider>
+          <Twitch />
           <Divider sx={{ marginTop: '4px', typography: 'subtitle2' }}>
             End User License Agreement
           </Divider>

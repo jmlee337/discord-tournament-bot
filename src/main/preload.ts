@@ -19,6 +19,9 @@ import {
   StartggSet,
   StartggTournament,
   StartingState,
+  TwitchCallbackServerStatus,
+  TwitchClient,
+  TwitchStatus,
 } from '../common/types';
 import {
   MSTManualUpdateScoreboardInfo,
@@ -134,6 +137,20 @@ const electronHandler = {
   setScoreboardInfo4: (
     scoreboardInfo: MSTManualUpdateScoreboardInfo,
   ): Promise<void> => ipcRenderer.invoke('setScoreboardInfo4', scoreboardInfo),
+  startTwitchCallbackServer: (): Promise<void> =>
+    ipcRenderer.invoke('startTwitchCallbackServer'),
+  stopTwitchCallbackServer: (): Promise<void> =>
+    ipcRenderer.invoke('stopTwitchCallbackServer'),
+  getTwitchClient: (): Promise<TwitchClient> =>
+    ipcRenderer.invoke('getTwitchClient'),
+  setTwitchClient: (twitchClient: TwitchClient): Promise<void> =>
+    ipcRenderer.invoke('setTwitchClient', twitchClient),
+  getTwitchStatus: (): Promise<TwitchStatus> =>
+    ipcRenderer.invoke('getTwitchStatus'),
+  getTwitchCallbackServerStatus: (): Promise<TwitchCallbackServerStatus> =>
+    ipcRenderer.invoke('getTwitchCallbackServerStatus'),
+  getTwitchUserName: (): Promise<string> =>
+    ipcRenderer.invoke('getTwitchUserName'),
   getStartggApiKey: (): Promise<string> =>
     ipcRenderer.invoke('getStartggApiKey'),
   setStartggApiKey: (startggApiKey: string): Promise<void> =>
@@ -276,6 +293,27 @@ const electronHandler = {
   ) => {
     ipcRenderer.removeAllListeners('scoreboardInfo4');
     ipcRenderer.on('scoreboardInfo4', callback);
+  },
+  onTwitchCallbackServerStatus: (
+    callback: (
+      event: IpcRendererEvent,
+      status: TwitchCallbackServerStatus,
+    ) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('twitchCallbackServerStatus');
+    ipcRenderer.on('twitchCallbackServerStatus', callback);
+  },
+  onTwitchStatus: (
+    callback: (event: IpcRendererEvent, status: TwitchStatus) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('twitchStatus');
+    ipcRenderer.on('twitchStatus', callback);
+  },
+  onTwitchUserName: (
+    callback: (event: IpcRendererEvent, userName: string) => void,
+  ) => {
+    ipcRenderer.removeAllListeners('twitchUserName');
+    ipcRenderer.on('twitchUserName', callback);
   },
   update: (): Promise<void> => ipcRenderer.invoke('update'),
   isMac: process.platform === 'darwin',

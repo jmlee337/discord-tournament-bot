@@ -1,3 +1,5 @@
+import { AccessToken } from '@twurple/auth';
+
 export enum DiscordStatus {
   NONE,
   STARTING,
@@ -223,3 +225,52 @@ export type GetTournamentRet = {
 };
 
 export type OverlayId = 1 | 2 | 3 | 4;
+
+export type TwitchClient = {
+  clientId: string;
+  clientSecret: string;
+};
+
+export enum Status {
+  STOPPED,
+  STARTING,
+  STARTED,
+}
+
+export type TwitchStatus = {
+  status: Status;
+  message: string;
+};
+
+export type TwitchCallbackServerStatus = {
+  status: Status;
+  port: number;
+};
+
+export type StoreContents = {
+  checkinMessage: string;
+  discordConfig: DiscordConfig;
+  discordCommandDq: boolean;
+  discordCommandReport: boolean;
+  discordCommandReset: boolean;
+  discordRegisteredVersion: string;
+  usePhaseRound: boolean;
+  enableSkinColor: boolean;
+  enableSggSponsors: boolean;
+  clearSetOnStop: boolean;
+  numMSTs: 0 | OverlayId;
+  remotePort: number;
+  resourcesPath1: string;
+  resourcesPath2: string;
+  resourcesPath3: string;
+  resourcesPath4: string;
+  simpleTextPathA: string;
+  simpleTextPathB: string;
+  simpleTextPathC: string;
+  simpleTextPathD: string;
+  startggApiKey: string;
+  twitchAccessToken: AccessToken;
+  twitchEnabled: boolean;
+  twitchClient: TwitchClient;
+  updateAutomatically: boolean;
+};
