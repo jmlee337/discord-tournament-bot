@@ -562,7 +562,7 @@ export default function Settings({
             textAlign="right"
             sx={{ margin: '8px 0', typography: 'body2' }}
           >
-            Twitch
+            !bracket
           </Divider>
           <Twitch />
           <Divider sx={{ marginTop: '4px', typography: 'subtitle2' }}>
