@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
+  Box,
   Button,
   Card,
-  CardActions,
   CardContent,
-  CardHeader,
   CircularProgress,
   FormControl,
   IconButton,
@@ -456,17 +455,54 @@ function OverlayCard({
             }
       }
     >
-      <CardHeader title={spectate.dolphinId} />
       <CardContent
         style={{
           display: 'flex',
           flexDirection: 'column',
-          paddingTop: 0,
-          paddingBottom: 0,
+          padding: '12px',
         }}
       >
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+        >
+          <DroppableChip
+            label={spectate.dolphinId}
+            selectedChipBroadcastId={selectedChipBroadcastId}
+            onClickOrDrop={async (broadcastId) => {
+              if (broadcastId !== spectate.broadcast?.id) {
+                await window.electron.startSpectating(
+                  broadcastId,
+                  spectate.dolphinId,
+                );
+              }
+              setSelectedChipBroadcastId('');
+            }}
+          />
+          {spectate.broadcast && (
+            <Box position="relative">
+              <Tooltip title="Stop" style={{ zIndex: 2 }}>
+                <IconButton
+                  onClick={async () => {
+                    await window.electron.stopSpectating(
+                      spectate.broadcast!.id,
+                    );
+                  }}
+                >
+                  <Stop />
+                </IconButton>
+              </Tooltip>
+              <CircularProgress
+                enableTrackSlot
+                color="success"
+                style={{ position: 'absolute', left: 0 }}
+              />
+            </Box>
+          )}
+        </Stack>
         {spectate.broadcast && (
-          <Typography variant="caption">
+          <Typography variant="caption" marginTop="8px">
             {spectate.broadcast.connectCode && spectate.broadcast.slippiName ? (
               <>
                 {lastReplaySet &&
@@ -495,44 +531,6 @@ function OverlayCard({
           setDolphinIdToOverlayId={setDolphinIdToOverlayId}
         />
       </CardContent>
-      <CardActions
-        disableSpacing
-        style={{
-          justifyContent: 'space-between',
-          position: 'relative',
-        }}
-      >
-        <DroppableChip
-          selectedChipBroadcastId={selectedChipBroadcastId}
-          onClickOrDrop={async (broadcastId) => {
-            if (broadcastId !== spectate.broadcast?.id) {
-              await window.electron.startSpectating(
-                broadcastId,
-                spectate.dolphinId,
-              );
-            }
-            setSelectedChipBroadcastId('');
-          }}
-        />
-        {spectate.broadcast && (
-          <>
-            <Tooltip title="Stop" style={{ zIndex: 2 }}>
-              <IconButton
-                onClick={async () => {
-                  await window.electron.stopSpectating(spectate.broadcast!.id);
-                }}
-              >
-                <Stop />
-              </IconButton>
-            </Tooltip>
-            <CircularProgress
-              enableTrackSlot
-              color="success"
-              style={{ position: 'absolute', right: '8px' }}
-            />
-          </>
-        )}
-      </CardActions>
     </Card>
   );
 }

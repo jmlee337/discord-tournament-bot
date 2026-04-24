@@ -1,6 +1,12 @@
-import { Chip, createTheme, ThemeProvider, Tooltip } from '@mui/material';
+import {
+  Chip,
+  createTheme,
+  ThemeProvider,
+  Tooltip,
+  Typography,
+} from '@mui/material';
 import { DragEvent, useCallback, useMemo } from 'react';
-import { LiveTv, PlayArrow } from '@mui/icons-material';
+import { PlayArrow } from '@mui/icons-material';
 import { Broadcast } from '../common/types';
 
 function dragStart(event: DragEvent<HTMLDivElement>) {
@@ -92,9 +98,11 @@ export function DraggableChip({
 }
 
 export function DroppableChip({
+  label,
   selectedChipBroadcastId,
   onClickOrDrop,
 }: {
+  label: string;
   selectedChipBroadcastId: string;
   onClickOrDrop: (broadcastId: string) => void;
 }) {
@@ -117,18 +125,6 @@ export function DroppableChip({
   return (
     <ThemeProvider
       theme={createTheme({
-        components: {
-          MuiChip: {
-            styleOverrides: {
-              icon: {
-                margin: 0,
-              },
-              label: {
-                padding: 0,
-              },
-            },
-          },
-        },
         palette: {
           secondary: {
             contrastText: '#FFF',
@@ -145,7 +141,7 @@ export function DroppableChip({
       >
         <Chip
           color={hasSelectedChip ? 'secondary' : undefined}
-          icon={<LiveTv />}
+          label={<Typography variant="h6">{label}</Typography>}
           onClick={
             hasSelectedChip
               ? (event) => {
@@ -158,12 +154,14 @@ export function DroppableChip({
           onDragEnter={dragEnterOver}
           onDragOver={dragEnterOver}
           sx={{
-            backgroundColor: (theme) => theme.palette.background.default,
-            borderRadius: '20px',
-            height: '40px',
-            width: '40px',
+            backgroundColor: (theme) =>
+              hasSelectedChip ? undefined : theme.palette.background.default,
           }}
-          variant="outlined"
+          style={{
+            height: '40px',
+            borderRadius: '20px',
+          }}
+          variant={hasSelectedChip ? 'filled' : 'outlined'}
         />
       </Tooltip>
     </ThemeProvider>
