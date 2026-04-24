@@ -47,6 +47,7 @@ import Bracket from './Bracket';
 import Remote from './Remote';
 import { pushWindowEventListener, WindowEvent } from './windowEvent';
 import Overlay from './Overlay';
+import Twitch from './Twitch';
 
 enum TabValue {
   BRACKET = 'bracket',
@@ -367,6 +368,7 @@ function Hello() {
               latestAppVersion={latestAppVersion}
               gotSettings={gotSettings}
             />
+            <Twitch />
             <ConnectCodes connectCodes={connectCodes} />
             <DiscordUsernames discordUsernames={discordUsernames} />
             <SearchBar
