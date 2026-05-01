@@ -1454,6 +1454,7 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
     },
   );
 
+  setClearSetOnStop(clearSetOnStop);
   ipcMain.removeHandler('getClearSetOnStop');
   ipcMain.handle('getClearSetOnStop', () => clearSetOnStop);
 
