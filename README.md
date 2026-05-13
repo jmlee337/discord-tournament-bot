@@ -111,10 +111,10 @@ git clone https://github.com/jmlee337/discord-tournament-bot.git discord-tournam
 cd discord-tournament-bot
 ```
 
-I use Node 20
+I use Node 22
 
 ```bash
-nvm use 20
+nvm use 22
 npm install
 ```
 
