@@ -18,6 +18,9 @@ import { toShortRoundText } from './util';
 export function getScoreboardInfoJSONPath(resourcesPath: string) {
   return path.join(resourcesPath, 'Texts', 'ScoreboardInfo.json');
 }
+export function getGameScoreboardJsPath(resourcesPath: string) {
+  return path.join(resourcesPath, 'Scripts', 'Game Scoreboard.js');
+}
 
 // local
 let mainWindow: BrowserWindow | undefined;

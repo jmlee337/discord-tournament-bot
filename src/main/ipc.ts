@@ -33,7 +33,8 @@ import {
   shell,
 } from 'electron';
 import Store from 'electron-store';
-import { access, constants } from 'fs/promises';
+import { access, constants, copyFile } from 'fs/promises';
+import path from 'path';
 import {
   ConnectCode,
   DiscordChannel,
@@ -92,6 +93,7 @@ import {
 import {
   deleteMstOverlay,
   forEachMstOverlay,
+  getGameScoreboardJsPath,
   getMstOverlay,
   getMstOverlaysLength,
   getScoreboardInfoJSONPath,
@@ -197,7 +199,10 @@ function updateIsDiscordServerMember(
   });
 }
 
-export default function setupIPCs(mainWindow: BrowserWindow) {
+export default function setupIPCs(
+  mainWindow: BrowserWindow,
+  assetsPath: string,
+) {
   initMST(mainWindow);
   initStartgg();
   initSpectate(mainWindow);
@@ -236,6 +241,60 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
   setUpdateAutomatically(updateAutomatically);
 
   // mst
+  const resourcesPaths = new Set<string>();
+  if (resourcesPath1) {
+    resourcesPaths.add(resourcesPath1);
+  }
+  if (resourcesPath2) {
+    if (resourcesPaths.has(resourcesPath2)) {
+      resourcesPath2 = '';
+      store.set('resourcesPath2', resourcesPath2);
+    } else {
+      resourcesPaths.add(resourcesPath2);
+    }
+  }
+  if (resourcesPath3) {
+    if (resourcesPaths.has(resourcesPath3)) {
+      resourcesPath3 = '';
+      store.set('resourcesPath3', resourcesPath3);
+    } else {
+      resourcesPaths.add(resourcesPath3);
+    }
+  }
+  if (resourcesPath4) {
+    if (resourcesPaths.has(resourcesPath4)) {
+      resourcesPath4 = '';
+      store.set('resourcesPath4', resourcesPath4);
+    } else {
+      resourcesPaths.add(resourcesPath4);
+    }
+  }
+  const maybeOverwriteGameScorboardJs = async (resourcesPath: string) => {
+    if (!resourcesPath) {
+      return;
+    }
+
+    const gameScoreboardJsPath = getGameScoreboardJsPath(resourcesPath);
+    try {
+      // eslint-disable-next-line no-bitwise
+      await access(gameScoreboardJsPath, constants.R_OK | constants.W_OK);
+    } catch {
+      return;
+    }
+
+    try {
+      await copyFile(
+        path.join(assetsPath, 'mst', 'Game Scoreboard.js'),
+        gameScoreboardJsPath,
+      );
+    } catch {
+      // just catch
+    }
+  };
+  maybeOverwriteGameScorboardJs(resourcesPath1);
+  maybeOverwriteGameScorboardJs(resourcesPath2);
+  maybeOverwriteGameScorboardJs(resourcesPath3);
+  maybeOverwriteGameScorboardJs(resourcesPath4);
   setEnableSkinColor(enableSkinColor);
   setEnableSggSponsors(enableSggSponsors);
   if (initNumMSTs > 0) {
@@ -1282,10 +1341,26 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       try {
         // eslint-disable-next-line no-bitwise
         await access(scoreboardInfoJSONPath, constants.R_OK | constants.W_OK);
-      } catch (e: any) {
+      } catch {
         throw new Error(
           `Invalid Resources folder: cannot access ${scoreboardInfoJSONPath}`,
         );
+      }
+      const gameScoreboardJsPath = getGameScoreboardJsPath(newResourcesPath);
+      try {
+        // eslint-disable-next-line no-bitwise
+        await access(gameScoreboardJsPath, constants.R_OK | constants.W_OK);
+      } catch {
+        throw new Error(
+          `Invalid Resources folder: cannot access ${gameScoreboardJsPath}`,
+        );
+      }
+      if (
+        newResourcesPath === resourcesPath2 ||
+        newResourcesPath === resourcesPath3 ||
+        newResourcesPath === resourcesPath4
+      ) {
+        throw new Error(`${newResourcesPath} is already in use.`);
       }
 
       store.set('resourcesPath1', newResourcesPath);
@@ -1318,10 +1393,26 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       try {
         // eslint-disable-next-line no-bitwise
         await access(scoreboardInfoJSONPath, constants.R_OK | constants.W_OK);
-      } catch (e: any) {
+      } catch {
         throw new Error(
           `Invalid Resources folder: cannot access ${scoreboardInfoJSONPath}`,
         );
+      }
+      const gameScoreboardJsPath = getGameScoreboardJsPath(newResourcesPath);
+      try {
+        // eslint-disable-next-line no-bitwise
+        await access(gameScoreboardJsPath, constants.R_OK | constants.W_OK);
+      } catch {
+        throw new Error(
+          `Invalid Resources folder: cannot access ${gameScoreboardJsPath}`,
+        );
+      }
+      if (
+        newResourcesPath === resourcesPath1 ||
+        newResourcesPath === resourcesPath3 ||
+        newResourcesPath === resourcesPath4
+      ) {
+        throw new Error(`${newResourcesPath} is already in use.`);
       }
 
       store.set('resourcesPath2', newResourcesPath);
@@ -1354,10 +1445,26 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       try {
         // eslint-disable-next-line no-bitwise
         await access(scoreboardInfoJSONPath, constants.R_OK | constants.W_OK);
-      } catch (e: any) {
+      } catch {
         throw new Error(
           `Invalid Resources folder: cannot access ${scoreboardInfoJSONPath}`,
         );
+      }
+      const gameScoreboardJsPath = getGameScoreboardJsPath(newResourcesPath);
+      try {
+        // eslint-disable-next-line no-bitwise
+        await access(gameScoreboardJsPath, constants.R_OK | constants.W_OK);
+      } catch {
+        throw new Error(
+          `Invalid Resources folder: cannot access ${gameScoreboardJsPath}`,
+        );
+      }
+      if (
+        newResourcesPath === resourcesPath1 ||
+        newResourcesPath === resourcesPath2 ||
+        newResourcesPath === resourcesPath4
+      ) {
+        throw new Error(`${newResourcesPath} is already in use.`);
       }
 
       store.set('resourcesPath3', newResourcesPath);
@@ -1390,10 +1497,26 @@ export default function setupIPCs(mainWindow: BrowserWindow) {
       try {
         // eslint-disable-next-line no-bitwise
         await access(scoreboardInfoJSONPath, constants.R_OK | constants.W_OK);
-      } catch (e: any) {
+      } catch {
         throw new Error(
           `Invalid Resources folder: cannot access ${scoreboardInfoJSONPath}`,
         );
+      }
+      const gameScoreboardJsPath = getGameScoreboardJsPath(newResourcesPath);
+      try {
+        // eslint-disable-next-line no-bitwise
+        await access(gameScoreboardJsPath, constants.R_OK | constants.W_OK);
+      } catch {
+        throw new Error(
+          `Invalid Resources folder: cannot access ${gameScoreboardJsPath}`,
+        );
+      }
+      if (
+        newResourcesPath === resourcesPath1 ||
+        newResourcesPath === resourcesPath2 ||
+        newResourcesPath === resourcesPath3
+      ) {
+        throw new Error(`${newResourcesPath} is already in use.`);
       }
 
       store.set('resourcesPath4', newResourcesPath);
